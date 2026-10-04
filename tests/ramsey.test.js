@@ -33,6 +33,7 @@ for (const time of ['discrete', 'continuous'])
           for (const shockPersistence of ['permanent', 'temporary']) {
             if (utility === 'cara' && variant === 'tp') continue;
             if (shockTarget === 'sigma' && utility !== 'crra') continue;
+            if (shockTarget === 'tfp' && variant !== 'tp') continue;
             if (shockTarget === 'theta' && utility !== 'cara') continue;
             const sizes = { tfp: 10, k: -20, beta: 0.01, rho: -0.01, sigma: 1, theta: 0.5, delta: 0.02 };
             const o = { time, variant, utility, shockTarget, shockTiming, shockPersistence, shockSize: sizes[shockTarget],
@@ -46,7 +47,7 @@ bad.forEach((b) => console.log('FAIL', b[0], b[3]));
 assert.equal(bad.length, 0);
 
 // 5. Неожиданный перманентный TFP: k не прыгает в t̂, c прыгает; до t̂ всё в стационаре
-r = run({ variant: 'tp' });
+r = run({ variant: 'tp', shockTarget: 'tfp', shockSize: 10 });
 const jh = 15;
 near(r.irf.k[jh], 0, 1e-9, 'k фиксирован в t̂'); assert.ok(Math.abs(r.irf.c[jh]) > 0.1);
 near(r.irf.c[jh - 1], 0, 1e-9, 'до шока стационар');
@@ -54,8 +55,11 @@ near(r.irf.c[jh - 1], 0, 1e-9, 'до шока стационар');
 near(r.irf.k[60], 10, 0.3, 'k → +10%'); near(r.irf.c[60], 10, 0.3, 'c → +10%');
 
 // 6. Ожидаемый: реакция начинается в t0=5
-r = run({ variant: 'tp', shockTiming: 'expected' });
+r = run({ variant: 'tp', shockTarget: 'tfp', shockSize: 10, shockTiming: 'expected' });
 near(r.irf.c[4], 0, 1e-9, 'до t0 нет реакции'); assert.ok(Math.abs(r.irf.c[5]) > 0.1, 'c прыгает в t0');
+
+// 6b. TFP-шок без ТП запрещён
+assert.equal(run({ shockTarget: 'tfp' }).ok, false);
 
 // 7. Непрерывное время сходится к дискретному стационару с ρ
 r = run({ time: 'continuous', rho: 0.04, variant: 'tp' });

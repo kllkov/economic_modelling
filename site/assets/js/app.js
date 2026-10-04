@@ -17,18 +17,29 @@ const el = (tag, attrs = {}, ...kids) => {
 };
 const val = (x, s) => (typeof x === 'function' ? x(s) : x);
 
+const hasKatex = () => typeof katex !== 'undefined';
 function tex(str, display = true) {
-  const span = el('div', { class: display ? 'tex' : 'tex-inline' });
-  if (typeof katex !== 'undefined') {
-    katex.render(str, span, { displayMode: display, throwOnError: false, strict: 'ignore' });
-  } else span.textContent = str;
-  return span;
+  const box = el('div', { class: 'tex' });
+  if (hasKatex()) katex.render(str, box, { displayMode: display, throwOnError: false, strict: 'ignore' });
+  else box.textContent = str;
+  return box;
 }
 function texInline(str) {
   const s = el('span');
-  if (typeof katex !== 'undefined') katex.render(str, s, { displayMode: false, throwOnError: false, strict: 'ignore' });
+  if (hasKatex()) katex.render(str, s, { displayMode: false, throwOnError: false, strict: 'ignore' });
   else s.textContent = str;
   return s;
+}
+// Текст с формулами между $…$ (и HTML-курсивом в ссылках, если html=true)
+function rich(str, tag = 'span', attrs = {}, html = false) {
+  const node = el(tag, attrs);
+  String(str ?? '').split('$').forEach((part, i) => {
+    if (!part) return;
+    if (i % 2 === 1) node.append(texInline(part));
+    else if (html) node.append(el('span', { html: part }));
+    else node.append(document.createTextNode(part));
+  });
+  return node;
 }
 
 function glyph(name, w = 100, h = 64) {
@@ -52,13 +63,16 @@ function renderTiles() {
   box.innerHTML = '';
   for (const m of MODELS) {
     const ready = !!m.load;
-    box.append(el('button', { class: `tile${ready ? ' featured' : ''}`, type: 'button', onclick: () => { location.hash = m.id; } },
+    box.append(el('article', { class: `tile${ready ? ' featured' : ''}` },
       el('div', { class: 'tile-top' }, glyph(m.glyph),
-        el('span', { class: `status ${ready ? 'ready' : 'soon'}` }, ready ? 'Доступна' : 'Скоро')),
+        el('span', { class: `status ${ready ? 'ready' : 'soon'}` }, ready ? 'Симуляция доступна' : 'Симуляция скоро')),
       el('h3', {}, m.title),
       el('div', { class: 'sub' }, m.subtitle),
       el('p', {}, m.blurb),
       el('div', { class: 'chips' }, m.tags.map((t) => el('span', { class: 'chip' }, t))),
+      el('div', { class: 'tile-actions' },
+        el('a', { class: 'btn btn-ghost btn-sm', href: `#${m.id}/about` }, 'О модели'),
+        el('a', { class: `btn btn-sm ${ready ? 'btn-primary' : 'btn-ghost'}`, href: `#${m.id}` }, 'Симуляция')),
     ));
   }
 }
@@ -67,9 +81,9 @@ function renderTiles() {
 
 function parseHash() {
   const raw = decodeURIComponent(location.hash.slice(1));
-  const [id, query = ''] = raw.split('?');
-  const params = Object.fromEntries(new URLSearchParams(query));
-  return { id, params };
+  const [path, query = ''] = raw.split('?');
+  const [id, page = 'sim'] = path.split('/');
+  return { id, page, params: Object.fromEntries(new URLSearchParams(query)) };
 }
 
 function writeHash(id, state, defaults) {
@@ -85,7 +99,7 @@ let current = null; // { model, mod, state, charts: [] }
 const view = { levelUnits: 'worker', levelScale: 'linear' };
 
 async function route() {
-  const { id, params } = parseHash();
+  const { id, page, params } = parseHash();
   const model = MODELS.find((m) => m.id === id);
   destroyCharts();
   if (!model) {
@@ -97,8 +111,14 @@ async function route() {
   }
   $('#catalog').classList.add('hidden');
   $('#workspace').classList.remove('hidden');
-  document.title = `${model.title} — симулятор`;
   window.scrollTo({ top: 0 });
+  if (page === 'about') {
+    document.title = `${model.title} — о модели`;
+    current = null;
+    renderAbout(model);
+    return;
+  }
+  document.title = `${model.title} — симуляция`;
   if (!model.load) { renderStub(model); current = null; return; }
   const mod = await model.load();
   const state = { ...mod.defaults };
@@ -112,35 +132,55 @@ async function route() {
   run();
 }
 
-function wsHeader(model, extra) {
+function wsHeader(model, page) {
   return el('div', { class: 'ws-head' },
     el('div', {},
-      el('button', { class: 'back-link', type: 'button', onclick: () => { history.pushState(null, '', location.pathname); route(); } },
-        '← Все модели'),
+      el('a', { class: 'back-link', href: 'models.html' }, '← Все модели'),
       el('h1', {}, model.title),
       el('div', { class: 'sub' }, model.subtitle)),
-    extra || null);
+    el('div', { class: 'seg tabs' },
+      el('a', { class: page === 'about' ? 'on' : '', href: `#${model.id}/about` }, 'О модели'),
+      el('a', { class: page === 'sim' ? 'on' : '', href: `#${model.id}` }, 'Симуляция')));
+}
+
+function renderAbout(model) {
+  const ws = $('#workspace .wrap');
+  ws.innerHTML = '';
+  ws.append(wsHeader(model, 'about'));
+  const a = model.about;
+  ws.append(el('div', { class: 'about' },
+    el('section', { class: 'block about-lead' }, a.lead.map((p) => rich(p, 'p'))),
+    ...a.sections.map((sec, i) => el('section', { class: 'block' },
+      el('div', { class: 'block-head' }, el('h2', {}, el('span', { class: 'n' }, String(i + 1)), sec.title)),
+      el('div', { class: 'sys' }, sec.eqs.map((e) => el('div', { class: 'sys-row' },
+        rich(e.label, 'div', { class: 'lab' }), tex(e.tex)))))),
+    el('section', { class: 'block refs' },
+      el('div', { class: 'block-head' }, el('h2', {}, 'Исходные статьи')),
+      el('ol', {}, a.refs.map((r) => el('li', { html: r })))),
+    el('div', { class: 'about-cta' },
+      el('a', { class: `btn ${model.load ? 'btn-primary' : 'btn-ghost'}`, href: `#${model.id}` },
+        model.load ? 'Перейти к симуляции →' : 'Симуляция — в разработке'))));
 }
 
 function renderStub(model) {
   const ws = $('#workspace .wrap');
   ws.innerHTML = '';
-  ws.append(wsHeader(model, el('span', { class: 'chip' }, 'Модель в разработке')));
+  ws.append(wsHeader(model, 'sim'));
   ws.append(el('div', { class: 'block stub' },
     el('div', {},
       el('div', { class: 'block-head' }, el('h2', {}, 'Что будет в симуляторе')),
-      el('ul', { class: 'stub-list' }, model.planned.map(([k, v]) => el('li', {}, el('b', {}, k), el('span', {}, v))))),
+      el('ul', { class: 'stub-list' }, model.planned.map(([k, v]) => el('li', {}, el('b', {}, k), rich(v))))),
     el('div', { class: 'stub-visual' },
       el('div', {}, glyph(model.glyph, 180, 110),
         el('p', { style: 'margin:0' }, 'Симулятор появится после того, как заработает модель Рамсея.'),
-        el('p', { style: 'margin:8px 0 0' }, el('a', { href: '#ramsey' }, 'Открыть модель Рамсея →'))))));
+        el('p', { style: 'margin:8px 0 0' }, el('a', { href: '#ramsey' }, 'Открыть симуляцию модели Рамсея →'))))));
 }
 
 function renderWorkspace() {
   const { model } = current;
   const ws = $('#workspace .wrap');
   ws.innerHTML = '';
-  ws.append(wsHeader(model, el('span', { class: 'chip teal' }, 'Perfect foresight · численное решение')));
+  ws.append(wsHeader(model, 'sim'));
   ws.append(el('div', { class: 'ws-grid' },
     el('aside', { class: 'panel', id: 'panel' }),
     el('div', { class: 'results', id: 'results' })));
@@ -150,6 +190,7 @@ function renderWorkspace() {
 function renderPanel() {
   const { mod, state } = current;
   const panel = $('#panel');
+  const scroll = panel.scrollTop;
   panel.innerHTML = '';
   panel.append(el('div', { class: 'panel-title' }, el('h2', {}, 'Настройки симуляции')));
   let grid = null;
@@ -157,7 +198,7 @@ function renderPanel() {
     if (c.section) { panel.append(el('div', { class: 'sec' }, c.section)); grid = null; continue; }
     if (c.show && !c.show(state)) continue;
     const node = control(c);
-    if (c.type === 'number') {
+    if (c.type === 'number' && !c.slider) {
       if (!grid) { grid = el('div', { class: 'num-row' }); panel.append(grid); }
       grid.append(node);
     } else { grid = null; panel.append(node); }
@@ -166,6 +207,7 @@ function renderPanel() {
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => {
       current.state = { ...mod.defaults }; renderPanel(); schedule(); } }, 'Сбросить'),
     el('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => run() }, 'Симулировать')));
+  panel.scrollTop = scroll;
 }
 
 function control(c) {
@@ -175,11 +217,11 @@ function control(c) {
   const wrap = el('div', { class: 'ctl' });
   const id = `c-${c.id}`;
   if (c.type === 'segmented') {
-    wrap.append(el('div', { class: 'lbl' }, label));
+    wrap.append(rich(label, 'div', { class: 'lbl' }));
     wrap.append(el('div', { class: 'seg', role: 'group' }, val(c.options, state).map((o) =>
-      el('button', { type: 'button', class: state[c.id] === o.v ? 'on' : '', onclick: () => set(c.id, o.v) }, o.l))));
+      el('button', { type: 'button', class: state[c.id] === o.v ? 'on' : '', onclick: () => set(c.id, o.v) }, rich(o.l)))));
   } else if (c.type === 'select') {
-    wrap.append(el('label', { for: id }, label));
+    wrap.append(rich(label, 'label', { for: id }));
     const sel = el('select', { id, onchange: (e) => set(c.id, e.target.value) });
     const opts = val(c.options, state);
     if (c.groupLabel) {
@@ -194,13 +236,29 @@ function control(c) {
     if (opts.length < 2) sel.disabled = true;
     wrap.append(sel);
   } else if (c.type === 'number') {
-    wrap.append(el('label', { for: id }, label));
-    const inp = el('input', { id, type: 'number', value: state[c.id], step: val(c.step, state), min: c.min, max: c.max,
-      oninput: (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) { state[c.id] = v; schedule(); } },
-      onchange: (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) set(c.id, v); } });
-    wrap.append(inp);
+    wrap.append(rich(label, 'label', { for: id }));
+    const inp = el('input', { id, type: 'number', value: state[c.id], step: val(c.step, state), min: c.min, max: c.max });
+    if (c.slider) {
+      const range = el('input', { type: 'range', class: 'range', value: state[c.id], step: val(c.step, state), min: c.min, max: c.max,
+        'aria-label': c.id });
+      const paint = () => {
+        const p = ((+range.value - c.min) / (c.max - c.min)) * 100;
+        range.style.setProperty('--p', `${Math.max(0, Math.min(100, p))}%`);
+      };
+      paint();
+      range.addEventListener('input', () => { inp.value = range.value; state[c.id] = +range.value; paint(); schedule(); });
+      inp.addEventListener('input', () => {
+        const v = parseFloat(inp.value);
+        if (Number.isFinite(v)) { state[c.id] = v; range.value = v; paint(); schedule(); }
+      });
+      wrap.append(el('div', { class: 'slider-row' }, range, inp));
+    } else {
+      inp.addEventListener('input', (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) { state[c.id] = v; schedule(); } });
+      inp.addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) set(c.id, v); });
+      wrap.append(inp);
+    }
   }
-  if (hint) wrap.append(el('div', { class: 'hint' }, hint));
+  if (hint) wrap.append(rich(hint, 'div', { class: 'hint' }));
   return wrap;
 }
 
@@ -227,6 +285,11 @@ function block(n, title, note, ...body) {
     ...body);
 }
 
+// формула + та же формула в числах при текущих параметрах
+function eqWithNum(t, num) {
+  return el('div', { class: 'eq' }, tex(t), num ? el('div', { class: 'eq-num' }, tex(num)) : null);
+}
+
 function run() {
   if (!current) return;
   const { mod, state, model } = current;
@@ -246,15 +309,16 @@ function run() {
 
   // 2. равновесие и шок
   const sys = el('div', { class: 'sys' },
-    F.system.map((r) => el('div', { class: 'sys-row' }, el('div', { class: 'lab' }, r.label), tex(r.tex))),
-    el('div', { class: 'sys-row shock' }, el('div', { class: 'lab' }, 'Шок'), tex(F.shock[0])));
-  out.append(block(2, 'Условия равновесия', null, sys,
-    el('div', { class: 'callout' }, F.shockInfo,
-      cen ? ' Уравнения динамики совпадают с децентрализованной версией — траектории идентичны.' : '')));
+    F.system.map((r) => el('div', { class: 'sys-row' }, el('div', { class: 'lab' }, r.label), eqWithNum(r.tex, r.num))),
+    el('div', { class: 'sys-row shock' }, el('div', { class: 'lab' }, 'Шок'), eqWithNum(F.shock[0].tex, F.shock[0].num)));
+  out.append(block(2, 'Условия равновесия', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys,
+    rich(F.shockInfo + (cen ? ' Уравнения динамики совпадают с децентрализованной версией — траектории идентичны.' : ''), 'div', { class: 'callout' })));
 
   const res = mod.solve(state);
   if (!res.ok) {
-    out.append(el('div', { class: 'callout err' }, el('b', {}, 'Не удалось решить модель. '), res.errors.join(' ')));
+    const box = el('div', { class: 'callout err' }, el('b', {}, 'Не удалось решить модель. '));
+    res.errors.forEach((e) => box.append(rich(`${e} `)));
+    out.append(box);
     return;
   }
 
@@ -265,12 +329,12 @@ function run() {
     el('thead', {}, el('tr', {}, el('th', {}, 'Величина'), el('th', {}, 'Смысл'),
       el('th', { class: 'v' }, showAfter ? 'до шока' : 'значение'), showAfter ? el('th', { class: 'v' }, 'после шока') : null)),
     el('tbody', {}, rows.map((r) => el('tr', {},
-      el('td', {}, texInline(r.sym)), el('td', { class: 'name' }, r.name),
+      el('td', {}, texInline(r.sym)), rich(r.name, 'td', { class: 'name' }),
       el('td', { class: 'v' }, r.before),
       showAfter ? el('td', { class: `v${r.after !== r.before ? ' chg' : ''}` }, r.after) : null))));
   out.append(block(3, 'Стационарное состояние', el('span', { class: 'note' }, showAfter ? 'Перманентный шок сдвигает стационар'
       : res.permanentChange ? 'В единицах на эффективного работника стационар не меняется' : 'Шок не меняет стационар'),
-    el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((t) => tex(t))), el('div', { style: 'overflow-x:auto' }, table))));
+    el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table))));
 
   // 4. IRF и 5. уровни
   const specs = mod.chartSpecs(state);
@@ -281,15 +345,15 @@ function run() {
   const legendItems = (withBase) => el('div', { class: 'chart-legend' },
     el('span', {}, el('i', { style: `border-color:${COLORS.path}` }), withBase ? 'траектория после шока' : 'отклик'),
     withBase ? el('span', {}, el('i', { class: 'dot', style: `border-color:${COLORS.base}` }), 'базовый путь без шока') : null,
-    res.marks.t0 != null ? el('span', {}, el('i', { class: 'v', style: `border-color:${COLORS.announce}` }), `объявление t₀ = ${res.marks.t0}`) : null,
-    el('span', {}, el('i', { class: 'v', style: `border-color:${COLORS.shock}` }), `шок t̂ = ${res.marks.tHat}`));
+    res.marks.t0 != null ? el('span', {}, el('i', { class: 'v', style: `border-color:${COLORS.announce}` }), rich(`объявление $t_0 = ${res.marks.t0}$`)) : null,
+    el('span', {}, el('i', { class: 'v', style: `border-color:${COLORS.shock}` }), rich(`шок $\\hat t = ${res.marks.tHat}$`)));
 
   const flat = specs.every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
   const irfGrid = el('div', { class: 'charts' });
   out.append(block(4, `Импульсные отклики (IRF), ${discrete ? 'дискретное' : 'непрерывное'} время`,
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadCSV(res, specs) }, 'Скачать CSV'),
     legendItems(false),
-    flat ? el('div', { class: 'callout warn', style: 'margin:0 0 12px' }, 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, σ влияет на стационар только при g > 0.') : null,
+    flat ? rich('Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
     irfGrid));
 
   const lvlGrid = el('div', { class: 'charts' });
@@ -307,7 +371,6 @@ function run() {
   const xmax = state.horizon;
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);
   for (const sp of specs) {
-    // IRF
     const c1 = el('canvas');
     irfGrid.append(el('div', { class: 'chart-card' },
       el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sp.sym)), el('span', { class: 'u' }, sp.irfUnit)),
@@ -315,7 +378,6 @@ function run() {
     current.charts.push(drawChart(c1, [{ label: sp.irfUnit === 'п.п.' ? 'откл., п.п.' : 'откл., %', data: pairs(res.irf[sp.id]) }],
       { discrete, zero: true, lines, xmax }));
 
-    // уровни
     const useEff = view.levelUnits === 'eff' && sp.effAvailable;
     const y = useEff ? res.eff[sp.id] : res.levels[sp.id];
     const b = useEff ? res.baseEff[sp.id] : res.baseLevels[sp.id];

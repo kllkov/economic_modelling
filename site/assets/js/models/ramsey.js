@@ -1,33 +1,34 @@
-// Модель Рамсея (Рамсей – Касс – Купманс): настройки, решатель, формулы.
+// Модель Рамсея (Ramsey–Cass–Koopmans): настройки, решатель, формулы.
 // Обозначения следуют презентации курса: b_t — активы, r_t — ставка процента,
 // w_t — зарплата, k_t — капитал на работника, f(k) = k^α, E_t — эффективность труда,
 // тильда — величины на эффективного работника.
+// В подписях интерфейса фрагменты между $…$ рендерятся KaTeX.
 
 import { newtonTridiagonal } from '../solver.js';
 
 // ───────────────────────────── Настройки ─────────────────────────────
 
 const SHOCK_TARGETS = {
-  tfp:   { label: 'Технология E_t (уровень)', kind: 'param', unit: '%', def: 10, step: 1,
-           note: 'φ — скачок уровня эффективности труда E_t, %' },
-  k:     { label: 'Капитал k_t (state)', kind: 'state', unit: '%', def: -20, step: 1,
+  tfp:   { label: 'Уровень технологии E', kind: 'param', unit: '%', def: 10, step: 1, variant: 'tp',
+           note: '$\\varphi$ — скачок уровня $E_t$, %' },
+  k:     { label: 'Капитал k', kind: 'state', unit: '%', def: -20, step: 1,
            note: 'Разовое изменение запаса капитала, %' },
   beta:  { label: 'Дисконт-фактор β', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete',
-           note: 'Абсолютное изменение β' },
+           note: 'Абсолютное изменение $\\Delta\\beta$' },
   rho:   { label: 'Ставка дисконтирования ρ', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous',
-           note: 'Абсолютное изменение ρ' },
+           note: 'Абсолютное изменение $\\Delta\\rho$' },
   sigma: { label: 'Неприятие риска σ', kind: 'param', unit: 'Δ', def: 1, step: 0.25, utility: 'crra',
-           note: 'Абсолютное изменение σ (1/σ — эластичность замещения)' },
-  theta: { label: 'Коэффициент CARA θ', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara',
-           note: 'Абсолютное изменение θ' },
+           note: 'Абсолютное изменение $\\Delta\\sigma$; $1/\\sigma$ — эластичность межвременного замещения' },
+  theta: { label: 'Неприятие риска θ', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara',
+           note: 'Абсолютное изменение $\\Delta\\theta$' },
   delta: { label: 'Норма амортизации δ', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005,
-           note: 'Абсолютное изменение δ' },
+           note: 'Абсолютное изменение $\\Delta\\delta$' },
 };
 
 export const meta = {
   id: 'ramsey',
   title: 'Модель Рамсея',
-  subtitle: 'Рамсей – Касс – Купманс',
+  subtitle: 'Ramsey–Cass–Koopmans model',
   ready: true,
 };
 
@@ -35,14 +36,15 @@ export const defaults = {
   time: 'discrete', version: 'decentralized', variant: 'base',
   utility: 'crra', production: 'cd',
   alpha: 0.3, beta: 0.96, rho: 0.04, delta: 0.1, sigma: 2, theta: 1, g: 0.02,
-  shockTarget: 'tfp', shockSize: 10, shockTiming: 'unexpected', tHat: 15, t0: 5,
+  shockTarget: 'k', shockSize: -20, shockTiming: 'unexpected', tHat: 15, t0: 5,
   shockPersistence: 'permanent', rhoS: 0.8,
   horizon: 60,
 };
 
 function shockTargetsFor(s) {
   return Object.entries(SHOCK_TARGETS)
-    .filter(([, d]) => (!d.time || d.time === s.time) && (!d.utility || d.utility === s.utility))
+    .filter(([, d]) => (!d.time || d.time === s.time) && (!d.utility || d.utility === s.utility)
+      && (!d.variant || d.variant === s.variant))
     .map(([v, d]) => ({ v, l: d.label }));
 }
 
@@ -55,53 +57,53 @@ export const controls = [
     options: [{ v: 'decentralized', l: 'Децентрализованная' }, { v: 'centralized', l: 'Централизованная' }] },
   { id: 'variant', label: 'Вариация', type: 'select',
     options: [
-      { v: 'base', l: 'Базовая, без ТП' },
-      { v: 'tp', l: 'С ТП по Харроду (E_t растёт темпом g)' },
+      { v: 'base', l: 'Без технологического прогресса' },
+      { v: 'tp', l: 'С трудоувеличивающим ТП' },
     ] },
 
   { section: 'Функции' },
   { id: 'utility', label: 'Полезность домохозяйств', type: 'select',
     options: [
-      { v: 'crra', l: 'CRRA (параметр σ)' },
-      { v: 'log', l: 'Логарифмическая, ln c' },
-      { v: 'cara', l: 'CARA (параметр θ)' },
+      { v: 'crra', l: 'CRRA' },
+      { v: 'log', l: 'Логарифмическая' },
+      { v: 'cara', l: 'CARA' },
     ] },
   { id: 'production', label: 'Производственная функция', type: 'select',
     options: [{ v: 'cd', l: 'Кобба–Дугласа' }],
     hint: 'Другие формы появятся позже' },
 
   { section: 'Параметры' },
-  { id: 'alpha', label: 'α — доля капитала', type: 'number', min: 0.05, max: 0.95, step: 0.01 },
-  { id: 'beta', label: 'β — дисконт-фактор', type: 'number', min: 0.5, max: 0.999, step: 0.005,
+  { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.05, max: 0.95, step: 0.01 },
+  { id: 'beta', label: '$\\beta$ — дисконт-фактор', type: 'number', min: 0.5, max: 0.999, step: 0.005,
     show: (s) => s.time === 'discrete' },
-  { id: 'rho', label: 'ρ — ставка дисконтирования', type: 'number', min: 0.001, max: 0.5, step: 0.005,
+  { id: 'rho', label: '$\\rho$ — ставка дисконтирования', type: 'number', min: 0.001, max: 0.5, step: 0.005,
     show: (s) => s.time === 'continuous' },
-  { id: 'delta', label: 'δ — амортизация', type: 'number', min: 0, max: 0.5, step: 0.01 },
-  { id: 'sigma', label: 'σ — неприятие риска', type: 'number', min: 0.1, max: 10, step: 0.1,
+  { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.5, step: 0.01 },
+  { id: 'sigma', label: '$\\sigma$ — неприятие риска', type: 'number', min: 0.1, max: 10, step: 0.1,
     show: (s) => s.utility === 'crra' },
-  { id: 'theta', label: 'θ — абсолютное неприятие риска', type: 'number', min: 0.05, max: 10, step: 0.05,
+  { id: 'theta', label: '$\\theta$ — неприятие риска', type: 'number', min: 0.05, max: 10, step: 0.05,
     show: (s) => s.utility === 'cara' },
-  { id: 'g', label: 'g — темп роста E_t', type: 'number', min: 0, max: 0.1, step: 0.005,
+  { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 0.1, step: 0.005,
     show: (s) => s.variant === 'tp' },
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', options: shockTargetsFor,
-    groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'state' ? 'state' : 'параметр') },
-  { id: 'shockSize', label: (s) => `Величина (${SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? '%' : 'Δ'})`,
+    groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'state' ? 'state-переменная' : 'параметр') },
+  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, %' : 'Величина, $\\Delta$'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
     options: [{ v: 'unexpected', l: 'Неожиданный' }, { v: 'expected', l: 'Ожидаемый' }] },
-  { id: 'tHat', label: (s) => (s.time === 'discrete' ? 'Период шока t̂' : 'Момент шока t̂'),
+  { id: 'tHat', label: (s) => (s.time === 'discrete' ? 'Период шока $\\hat t$' : 'Момент шока $\\hat t$'),
     type: 'number', min: 0, max: 100, step: 1 },
-  { id: 't0', label: 'Объявление t₀', type: 'number', min: 0, max: 100, step: 1,
-    show: (s) => s.shockTiming === 'expected', hint: 'Должно быть меньше t̂' },
+  { id: 't0', label: 'Объявление $t_0$', type: 'number', min: 0, max: 100, step: 1,
+    show: (s) => s.shockTiming === 'expected', hint: 'Должно быть меньше $\\hat t$' },
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }],
     show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' },
-  { id: 'rhoS', label: 'Персистентность ρ_s', type: 'number', min: 0, max: 0.999, step: 0.05,
+  { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
     show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && s.shockPersistence === 'temporary',
-    hint: 'Отклонение затухает как ρ_s^{t−t̂}' },
+    hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
 
   { section: 'Отображение' },
   { id: 'horizon', label: 'Горизонт графиков', type: 'number', min: 20, max: 200, step: 5 },
@@ -114,7 +116,7 @@ export function normalize(s, changed) {
     // соответствие β ↔ ρ при смене времени
     if (s.shockTarget === 'beta' && allowed.includes('rho')) s.shockTarget = 'rho';
     else if (s.shockTarget === 'rho' && allowed.includes('beta')) s.shockTarget = 'beta';
-    else s.shockTarget = 'tfp';
+    else s.shockTarget = 'k';
     changed = 'shockTarget';
   }
   if (changed === 'shockTarget') s.shockSize = SHOCK_TARGETS[s.shockTarget].def;
@@ -178,23 +180,24 @@ function validate(s) {
   const errors = [];
   const g = s.variant === 'tp' ? s.g : 0;
   if (s.utility === 'cara' && s.variant === 'tp' && s.g > 0)
-    errors.push('CARA-полезность несовместима со сбалансированным ростом: при g > 0 нет стационара в эффективных единицах. Выберите CRRA/ln или вариант без ТП.');
-  if (s.time === 'discrete' && !(s.beta > 0 && s.beta < 1)) errors.push('β должен лежать в (0, 1).');
-  if (s.time === 'continuous' && !(s.rho > 0)) errors.push('ρ должна быть положительной.');
-  if (!(s.alpha > 0 && s.alpha < 1)) errors.push('α должна лежать в (0, 1).');
-  if (s.utility === 'crra' && !(s.sigma > 0)) errors.push('σ должна быть положительной.');
-  if (s.utility === 'cara' && !(s.theta > 0)) errors.push('θ должна быть положительной.');
+    errors.push('CARA несовместима со сбалансированным ростом: при $g > 0$ нет стационара в эффективных единицах. Выберите CRRA, логарифмическую полезность или вариант без ТП.');
+  if (s.time === 'discrete' && !(s.beta > 0 && s.beta < 1)) errors.push('$\\beta$ должен лежать в $(0,1)$.');
+  if (s.time === 'continuous' && !(s.rho > 0)) errors.push('$\\rho$ должна быть положительной.');
+  if (!(s.alpha > 0 && s.alpha < 1)) errors.push('$\\alpha$ должна лежать в $(0,1)$.');
+  if (s.utility === 'crra' && !(s.sigma > 0)) errors.push('$\\sigma$ должна быть положительной.');
+  if (s.utility === 'cara' && !(s.theta > 0)) errors.push('$\\theta$ должна быть положительной.');
   const sig = s.utility === 'log' ? 1 : s.sigma;
   if (s.utility !== 'cara') {
     if (s.time === 'discrete' && s.beta * Math.pow(1 + g, 1 - sig) >= 1)
-      errors.push('Нарушено условие ограниченности полезности: нужно β(1+g)^{1−σ} < 1.');
+      errors.push('Нарушено условие ограниченности полезности: нужно $\\beta(1+g)^{1-\\sigma} < 1$.');
     if (s.time === 'continuous' && s.rho <= (1 - sig) * g)
-      errors.push('Нарушено условие ограниченности полезности: нужно ρ > (1−σ)g.');
+      errors.push('Нарушено условие ограниченности полезности: нужно $\\rho > (1-\\sigma)g$.');
   }
   if (s.shockTiming === 'expected' && !(s.t0 < s.tHat))
-    errors.push('Для ожидаемого шока момент объявления t₀ должен быть раньше t̂.');
+    errors.push('Для ожидаемого шока момент объявления $t_0$ должен быть раньше $\\hat t$.');
+  if (s.shockTarget === 'tfp' && s.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
   if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капитал не может упасть больше чем на 100%.');
-  if (s.shockTarget === 'tfp' && s.shockSize <= -100) errors.push('Уровень E_t не может упасть больше чем на 100%.');
+  if (s.shockTarget === 'tfp' && s.shockSize <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
   return errors;
 }
 
@@ -339,166 +342,210 @@ export function chartSpecs(s) {
   const tp = s.variant === 'tp';
   const D = s.time === 'discrete';
   const x = (v) => (D ? `${v}_t` : `${v}(t)`);
+  const k = tp ? '\\tilde k' : 'k';
   return [
     { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '% откл.' },
     { id: 'k', title: 'Капитал', sym: x('k'), irfUnit: '% откл.' },
     { id: 'y', title: 'Выпуск', sym: x('y'), irfUnit: '% откл.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), irfUnit: '% откл.' },
-    cen ? { id: 'r', title: 'Доходность капитала', sym: "f'(k)-\\delta", irfUnit: 'п.п.', lvlUnit: '%', noEff: true }
+    cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: 'п.п.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: 'п.п.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: "f(k)-f'(k)\\,k", irfUnit: '% откл.' }
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '% откл.' }
         : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '% откл.' },
     { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: 'п.п.', lvlUnit: '%', noEff: true },
-  ].map((c) => ({ ...c, effAvailable: !c.noEff && (tp || s.shockTarget === 'tfp') }));
+  ].map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }
 
 // ───────────────────────────── Формулы ─────────────────────────────
 
-function fmtTex(x, d = 3) {
+function fmtTex(x, d = 4) {
   if (!Number.isFinite(x)) return '?';
   let t = x.toFixed(d);
   if (t.includes('.')) t = t.replace(/0+$/, '').replace(/\.$/, '');
   return t === '-0' ? '0' : t;
 }
 const fmt = (x, d = 3) => (Number.isFinite(x) ? fmtTex(x, d).replace('-', '−') : '—');
+const n = (x) => fmtTex(x, 4);
+// «+ 0.9» / «- 0.1» для подстановки чисел
+const pm = (x) => (x < 0 ? `-${n(-x)}` : `+${n(x)}`);
 
+// Все формулы — уже с подставленными функциями (Кобб–Дуглас, выбранная полезность).
 export function formulas(s) {
   const D = s.time === 'discrete';
   const tp = s.variant === 'tp';
   const cen = s.version === 'centralized';
   const ut = s.utility;
-  const T = (x) => (D ? `${x}_t` : `${x}(t)`);
-  const T1 = (x) => `${x}_{t+1}`;
-  const tl = (x) => (tp ? `\\tilde ${x}` : x);
+  const sig = ut === 'log' ? 1 : s.sigma;
+  const g = tp ? s.g : 0;
+  const a = s.alpha, d = s.delta;
+  const T = (v) => (D ? `${v}_t` : `${v}(t)`);
+  const tl = (v) => (tp ? `\\tilde ${v}` : v);
   const fs = { dec: [], cen: [], system: [], shock: [], ss: [] };
 
-  // функция полезности
-  const uTex = ut === 'crra' ? 'u(c)=\\dfrac{c^{1-\\sigma}-1}{1-\\sigma}'
-    : ut === 'log' ? 'u(c)=\\ln c' : 'u(c)=-\\dfrac{1}{\\theta}\\,e^{-\\theta c}';
-  const fTex = tp
-    ? 'F(K_t,E_tL_t)=K_t^{\\alpha}(E_tL_t)^{1-\\alpha},\\qquad f(\\tilde k)=\\tilde k^{\\alpha}'
-    : 'F(K_t,L_t)=K_t^{\\alpha}L_t^{1-\\alpha},\\qquad f(k)=k^{\\alpha}';
-  const fTexC = tp
-    ? 'F(K,EL)=K^{\\alpha}(EL)^{1-\\alpha},\\qquad f(\\tilde k)=\\tilde k^{\\alpha}'
-    : 'F(K,L)=K^{\\alpha}L^{1-\\alpha},\\qquad f(k)=k^{\\alpha}';
-  const tpNote = tp
-    ? (D ? 'E_{t+1}=(1+g)E_t,\\quad \\tilde x_t \\equiv x_t/E_t' : '\\dot E/E = g,\\quad \\tilde x(t) \\equiv x(t)/E(t)')
-    : null;
+  // полезность и предельная полезность от аргумента
+  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}\\,e^{-\\theta ${c}}`);
+  const Up = (c) => (ut === 'crra' ? `${c}^{-\\sigma}` : ut === 'log' ? `\\dfrac{1}{${c}}` : `e^{-\\theta ${c}}`);
+  const cT = D ? '{c_t}' : 'c(t)';
+  const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t,\\qquad \\tilde x_t\\equiv x_t/E_t' : '\\dot E/E=g,\\qquad \\tilde x\\equiv x/E';
 
   // ── децентрализованная
   if (D) {
     fs.dec.push({ agent: 'Домохозяйства', items: [
-      '\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t u(c_t)',
+      `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}`,
       '\\text{s.t.}\\quad b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
       ...(tp ? ['\\Leftrightarrow\\quad (1+g)\\,\\tilde b_{t+1}=(1+r_t)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t'] : []),
-      '\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\beta^t u\'(c_t)\\,b_t=0',
-      uTex,
+      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\beta^t\\,${Up(cT)}\\,b_t=0`,
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K_t,L_t}\\; \\pi_t=F(K_t,E_tL_t)-w_tL_t-(r_t+\\delta)K_t'
-         : '\\max_{K_t,L_t}\\; \\pi_t=F(K_t,L_t)-w_tL_t-(r_t+\\delta)K_t',
-      fTex,
-      tp ? 'r_t=f\'(\\tilde k_t)-\\delta,\\qquad \\tilde w_t=f(\\tilde k_t)-f\'(\\tilde k_t)\\tilde k_t,\\qquad w_t=E_t\\tilde w_t'
-         : 'r_t=f\'(k_t)-\\delta,\\qquad w_t=f(k_t)-f\'(k_t)\\,k_t',
+      tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
+         : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
+      tp ? 'r_t=\\alpha\\,\\tilde k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,E_t\\,\\tilde k_t^{\\alpha}'
+         : 'r_t=\\alpha\\,k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,k_t^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
       tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)},\\qquad L_t=1' : 'b_t=k_t\\quad\\text{(рынок капитала)},\\qquad L_t=1',
-      ...(tpNote ? [tpNote] : []),
+      ...(tp ? [tpLaw] : []),
     ] });
   } else {
     fs.dec.push({ agent: 'Домохозяйства', items: [
-      '\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,u\\big(c(t)\\big)\\,dt',
-      '\\text{s.t.}\\quad \\dot b(t)=r(t)\\,b(t)+w(t)-c(t),\\qquad b(0)\\ \\text{задано}',
+      `\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
+      '\\text{s.t.}\\quad \\dot b=r(t)\\,b+w(t)-c(t),\\qquad b(0)\\ \\text{задано}',
       ...(tp ? ['\\Leftrightarrow\\quad \\dot{\\tilde b}=(r-g)\\,\\tilde b+\\tilde w-\\tilde c'] : []),
-      '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-\\rho t}u\'\\big(c(t)\\big)\\,b(t)=0',
-      uTex,
+      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-\\rho t}\\,${Up(cT)}\\,b(t)=0`,
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K,L}\\; \\pi(t)=F\\big(K,E(t)L\\big)-w(t)L-\\big(r(t)+\\delta\\big)K'
-         : '\\max_{K,L}\\; \\pi(t)=F(K,L)-w(t)L-\\big(r(t)+\\delta\\big)K',
-      fTexC,
-      tp ? 'r=f\'(\\tilde k)-\\delta,\\qquad \\tilde w=f(\\tilde k)-f\'(\\tilde k)\\tilde k'
-         : 'r=f\'(k)-\\delta,\\qquad w=f(k)-f\'(k)\\,k',
+      tp ? '\\max_{K,L}\\; \\pi=K^{\\alpha}\\big(E(t)L\\big)^{1-\\alpha}-w(t)L-\\big(r(t)+\\delta\\big)K'
+         : '\\max_{K,L}\\; \\pi=K^{\\alpha}L^{1-\\alpha}-w(t)L-\\big(r(t)+\\delta\\big)K',
+      tp ? 'r=\\alpha\\,\\tilde k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,E\\,\\tilde k^{\\alpha}'
+         : 'r=\\alpha\\,k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,k^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
       tp ? '\\tilde b(t)=\\tilde k(t),\\qquad L=1' : 'b(t)=k(t),\\qquad L=1',
-      ...(tpNote ? [tpNote] : []),
+      ...(tp ? [tpLaw] : []),
     ] });
   }
 
   // ── централизованная
   if (D) {
     fs.cen.push({ agent: 'Центральный планировщик', items: [
-      tp ? '\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; \\sum_{t=0}^{\\infty}\\beta^t u(\\tilde c_tE_t)'
-         : '\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t u(c_t)',
-      tp ? '\\text{s.t.}\\quad (1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\tilde k_t+f(\\tilde k_t)-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
-         : '\\text{s.t.}\\quad k_{t+1}=(1-\\delta)k_t+f(k_t)-c_t,\\qquad k_0>0\\ \\text{задано}',
-      '\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\beta^t u\'(c_t)\\,k_{t+1}=0',
-      uTex, tp ? 'f(\\tilde k)=\\tilde k^{\\alpha},\\qquad ' + tpNote : 'f(k)=k^{\\alpha}',
+      tp ? `\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; \\sum_{t=0}^{\\infty}\\beta^t\\,${U('(\\tilde c_tE_t)')}`
+         : `\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}`,
+      tp ? '\\text{s.t.}\\quad (1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\,\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
+         : '\\text{s.t.}\\quad k_{t+1}=(1-\\delta)\\,k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
+      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\beta^t\\,${Up(cT)}\\,k_{t+1}=0`,
+      ...(tp ? [tpLaw] : []),
     ] });
   } else {
     fs.cen.push({ agent: 'Центральный планировщик', items: [
-      '\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,u\\big(c(t)\\big)\\,dt',
-      tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}=f(\\tilde k)-\\tilde c-(\\delta+g)\\,\\tilde k,\\qquad \\tilde k(0)\\ \\text{задано}'
-         : '\\text{s.t.}\\quad \\dot k=f(k)-c-\\delta k,\\qquad k(0)>0\\ \\text{задано}',
-      '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-\\rho t}u\'\\big(c(t)\\big)\\,k(t)=0',
-      uTex, tp ? 'f(\\tilde k)=\\tilde k^{\\alpha},\\qquad ' + tpNote : 'f(k)=k^{\\alpha}',
+      `\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
+      tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}=\\tilde k^{\\alpha}-\\tilde c-(\\delta+g)\\,\\tilde k,\\qquad \\tilde k(0)\\ \\text{задано}'
+         : '\\text{s.t.}\\quad \\dot k=k^{\\alpha}-c-\\delta k,\\qquad k(0)>0\\ \\text{задано}',
+      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-\\rho t}\\,${Up(cT)}\\,k(t)=0`,
+      ...(tp ? [tpLaw] : []),
     ] });
   }
 
-  // ── итоговая система
-  const R1 = cen ? (tp ? 'f\'(\\tilde k_{t+1})+1-\\delta' : 'f\'(k_{t+1})+1-\\delta') : '1+r_{t+1}';
-  const Rc = cen ? (tp ? 'f\'(\\tilde k)-\\delta' : 'f\'(k)-\\delta') : 'r';
-  let euler;
+  // ── итоговая система (с подставленными функциями) и та же система в числах
+  const K1 = D ? `${tl('k')}_{t+1}` : tl('k');
+  const mpk = `\\alpha\\,${K1}^{\\alpha-1}`;
+  const mpkN = `${n(a)}\\,${K1}^{${n(a - 1)}}`;
+  let euler, eulerN;
   if (D) {
-    if (ut === 'crra') euler = tp ? `(1+g)^{\\sigma}\\left(\\dfrac{\\tilde c_{t+1}}{\\tilde c_t}\\right)^{\\sigma}=\\beta\\,[${R1}]`
-                                  : `\\left(\\dfrac{c_{t+1}}{c_t}\\right)^{\\sigma}=\\beta\\,[${R1}]`;
-    else if (ut === 'log') euler = tp ? `(1+g)\\,\\dfrac{\\tilde c_{t+1}}{\\tilde c_t}=\\beta\\,[${R1}]`
-                                     : `\\dfrac{c_{t+1}}{c_t}=\\beta\\,[${R1}]`;
-    else euler = `e^{\\theta(c_{t+1}-c_t)}=\\beta\\,[${R1}]`;
-    euler = `\\dfrac{u'(c_t)}{u'(c_{t+1})}=\\beta\\,[${R1}]\\quad\\Rightarrow\\quad ` + euler;
+    const R = `\\beta\\left(${mpk}+1-\\delta\\right)`;
+    const RN = `${n(s.beta)}\\left(${mpkN}${pm(1 - d)}\\right)`;
+    const pre = cen ? '' : '\\beta\\,(1+r_{t+1})=';
+    if (ut === 'cara') {
+      euler = `e^{\\theta\\,(c_{t+1}-c_t)}=${pre}${R}`;
+      eulerN = `e^{${n(s.theta)}\\,(c_{t+1}-c_t)}=${RN}`;
+    } else {
+      const ratio = tp ? '\\dfrac{\\tilde c_{t+1}}{\\tilde c_t}' : '\\dfrac{c_{t+1}}{c_t}';
+      const growth = tp ? (ut === 'log' ? '(1+g)' : '(1+g)^{\\sigma}') : '';
+      const growthN = tp ? `${n(1 + g)}${ut === 'log' ? '' : `^{${n(sig)}}`}` : '';
+      euler = ut === 'log' ? `${growth}\\,${ratio}=${pre}${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${pre}${R}`;
+      eulerN = ut === 'log' ? `${growthN}\\,${ratio}=${RN}` : `${growthN}\\left(${ratio}\\right)^{${n(sig)}}=${RN}`;
+    }
   } else {
-    if (ut === 'crra') euler = tp ? `\\dfrac{\\dot{\\tilde c}}{\\tilde c}=\\dfrac{${Rc}-\\rho-\\sigma g}{\\sigma}` : `\\dfrac{\\dot c}{c}=\\dfrac{${Rc}-\\rho}{\\sigma}`;
-    else if (ut === 'log') euler = tp ? `\\dfrac{\\dot{\\tilde c}}{\\tilde c}=${Rc}-\\rho-g` : `\\dfrac{\\dot c}{c}=${Rc}-\\rho`;
-    else euler = `\\dot c=\\dfrac{${Rc}-\\rho}{\\theta}`;
+    const k = tl('k');
+    const pre = cen ? '' : (ut === 'cara' ? '\\dfrac{r-\\rho}{\\theta}=' : ut === 'log' ? (tp ? 'r-\\rho-g=' : 'r-\\rho=') : (tp ? '\\dfrac{r-\\rho-\\sigma g}{\\sigma}=' : '\\dfrac{r-\\rho}{\\sigma}='));
+    const lhs = ut === 'cara' ? '\\dot c' : (tp ? '\\dfrac{\\dot{\\tilde c}}{\\tilde c}' : '\\dfrac{\\dot c}{c}');
+    const extra = ut === 'cara' ? '' : (tp ? (ut === 'log' ? '-g' : '-\\sigma g') : '');
+    const num = `\\alpha\\,${k}^{\\alpha-1}-\\delta-\\rho${extra}`;
+    const cst = d + s.rho + (ut === 'cara' ? 0 : sig * g);
+    const numN = `${n(a)}\\,${k}^{${n(a - 1)}}${pm(-cst)}`;
+    if (ut === 'log') { euler = `${lhs}=${pre}${num}`; eulerN = `${lhs}=${numN}`; }
+    else {
+      const den = ut === 'cara' ? '\\theta' : '\\sigma';
+      const denN = n(ut === 'cara' ? s.theta : sig);
+      euler = `${lhs}=${pre}\\dfrac{${num}}{${den}}`;
+      eulerN = `${lhs}=\\dfrac{${numN}}{${denN}}`;
+    }
   }
-  const accum = D
-    ? (tp ? '(1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\,\\tilde k_t+f(\\tilde k_t)-\\tilde c_t' : 'k_{t+1}=(1-\\delta)\\,k_t+f(k_t)-c_t')
-    : (tp ? '\\dot{\\tilde k}=f(\\tilde k)-\\tilde c-(\\delta+g)\\,\\tilde k' : '\\dot k=f(k)-c-\\delta k');
-  fs.system.push({ label: 'Уравнение Эйлера', tex: euler });
-  if (!cen) fs.system.push({ label: 'Цены факторов', tex: D
-    ? (tp ? 'r_t=f\'(\\tilde k_t)-\\delta,\\qquad \\tilde w_t=f(\\tilde k_t)-f\'(\\tilde k_t)\\,\\tilde k_t' : 'r_t=f\'(k_t)-\\delta,\\qquad w_t=f(k_t)-f\'(k_t)\\,k_t')
-    : (tp ? 'r=f\'(\\tilde k)-\\delta,\\qquad \\tilde w=f(\\tilde k)-f\'(\\tilde k)\\,\\tilde k' : 'r=f\'(k)-\\delta,\\qquad w=f(k)-f\'(k)\\,k') });
-  fs.system.push({ label: cen ? 'Ресурсное ограничение' : 'Динамика капитала (бюджет + b = k + FOC фирмы)', tex: accum });
+  fs.system.push({ label: 'Уравнение Эйлера', tex: euler, num: eulerN });
+
+  if (!cen) {
+    const k = D ? `${tl('k')}_t` : tl('k');
+    const r = D ? 'r_t' : 'r', w = D ? 'w_t' : 'w';
+    const wl = tp ? (D ? 'w_t=(1-\\alpha)\\,E_t' : 'w=(1-\\alpha)\\,E') : `${w}=(1-\\alpha)\\,`;
+    const wlN = tp ? (D ? `w_t=${n(1 - a)}\\,E_t` : `w=${n(1 - a)}\\,E`) : `${w}=${n(1 - a)}\\,`;
+    fs.system.push({ label: 'Цены факторов (FOC фирмы)',
+      tex: `${r}=\\alpha\\,${k}^{\\alpha-1}-\\delta,\\qquad ${wl}${k}^{\\alpha}`,
+      num: `${r}=${n(a)}\\,${k}^{${n(a - 1)}}${pm(-d)},\\qquad ${wlN}${k}^{${n(a)}}`,
+    });
+  }
+
+  let accum, accumN;
+  if (D) {
+    const k = tl('k'), c = tl('c');
+    accum = `${tp ? '(1+g)\\,' : ''}${k}_{t+1}=(1-\\delta)\\,${k}_t+${k}_t^{\\alpha}-${c}_t`;
+    accumN = `${tp ? `${n(1 + g)}\\,` : ''}${k}_{t+1}=${n(1 - d)}\\,${k}_t+${k}_t^{${n(a)}}-${c}_t`;
+  } else {
+    const k = tl('k'), c = tl('c');
+    accum = `\\dot{${k}}=${k}^{\\alpha}-${c}-${tp ? '(\\delta+g)' : '\\delta'}\\,${k}`;
+    accumN = `\\dot{${k}}=${k}^{${n(a)}}-${c}-${n(d + g)}\\,${k}`;
+  }
+  fs.system.push({ label: cen ? 'Ресурсное ограничение' : 'Динамика капитала (бюджет + рынок + FOC фирмы)', tex: accum, num: accumN });
 
   // ── шок
   const tg = s.shockTarget;
-  const prof = s.shockPersistence === 'permanent' || SHOCK_TARGETS[tg].kind === 'state'
-    ? (D ? '\\mathbb 1\\{t\\ge\\hat t\\}' : '\\mathbb 1\\{t\\ge\\hat t\\}')
-    : '\\rho_s^{\\,t-\\hat t}\\,\\mathbb 1\\{t\\ge\\hat t\\}';
-  const trend = tp ? (D ? '(1+g)^t' : 'e^{gt}') : '';
-  let shockTex;
-  if (tg === 'tfp') shockTex = `E_t=${trend}\\big(1+\\varphi\\cdot ${prof}\\big),\\qquad \\varphi=${fmtTex(s.shockSize / 100, 4)}`;
-  else if (tg === 'k') shockTex = `k_{\\hat t}=(1+\\varphi_k)\\,k_{\\hat t}^{-},\\qquad \\varphi_k=${fmtTex(s.shockSize / 100, 4)}`;
-  else {
+  const persistent = s.shockPersistence === 'temporary' && SHOCK_TARGETS[tg].kind !== 'state';
+  const prof = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\mathbb 1\\{t\\ge\\hat t\\}' : '\\mathbb 1\\{t\\ge\\hat t\\}';
+  let shockTex, shockNum;
+  if (tg === 'tfp') {
+    shockTex = `${D ? 'E_t=(1+g)^t' : 'E(t)=e^{gt}'}\\big(1+\\varphi\\cdot ${prof}\\big)`;
+    shockNum = `\\varphi=${n(s.shockSize / 100)}`;
+  } else if (tg === 'k') {
+    shockTex = `${D ? 'k_{\\hat t}' : 'k(\\hat t)'}=(1+\\varphi_k)\\,${D ? 'k_{\\hat t}^{-}' : 'k(\\hat t^{-})'}`;
+    shockNum = `\\varphi_k=${n(s.shockSize / 100)}`;
+  } else {
     const sym = { beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta', delta: '\\delta' }[tg];
-    shockTex = `${sym}_t=${sym}+\\Delta${sym}\\cdot ${prof},\\qquad \\Delta${sym}=${fmtTex(s.shockSize, 4)}`;
+    shockTex = `${sym}${D ? '_t' : '(t)'}=${sym}+\\Delta${sym}\\cdot ${prof}`;
+    shockNum = `\\Delta${sym}=${n(s.shockSize)}`;
   }
-  if (!D) shockTex = shockTex.replace(/_t=/, '(t)=').replace(/_\{\\hat t\}/g, '(\\hat t)');
-  fs.shock.push(shockTex);
+  shockNum += `,\\qquad \\hat t=${s.tHat}`;
+  if (persistent) shockNum += `,\\qquad \\rho_s=${n(s.rhoS)}`;
+  fs.shock.push({ tex: shockTex, num: shockNum });
   fs.shockInfo = s.shockTiming === 'expected' && s.t0 < s.tHat
-    ? `Ожидаемый шок: объявлен в t₀ = ${s.t0}, происходит в t̂ = ${s.tHat}. С момента t₀ агенты знают весь будущий путь и сразу пересчитывают план.`
-    : `Неожиданный шок: до t̂ = ${s.tHat} экономика в стационаре; в t̂ агенты узнают о шоке и пересчитывают план.`;
+    ? `Ожидаемый шок: объявлен в $t_0 = ${s.t0}$, происходит в $\\hat t = ${s.tHat}$. С момента $t_0$ агенты знают весь будущий путь и сразу пересчитывают план.`
+    : `Неожиданный шок: до $\\hat t = ${s.tHat}$ экономика в стационаре; в $\\hat t$ агенты узнают о шоке и пересчитывают план.`;
 
-  // ── стационар
-  const sig = ut === 'cara' ? null : ut === 'log' ? '1' : '\\sigma';
-  let rss;
-  if (D) rss = sig && tp ? `1+r^*=\\dfrac{(1+g)^{${sig}}}{\\beta}` : '1+r^*=\\dfrac{1}{\\beta}';
-  else rss = sig && tp ? `r^*=\\rho+${sig === '1' ? '' : '\\sigma '}g` : 'r^*=\\rho';
+  // ── стационар (с подстановкой и в числах)
+  let rss, rssN, rv;
+  if (D) {
+    if (ut === 'cara' || !tp) { rss = '1+r^*=\\dfrac{1}{\\beta}'; rv = 1 / s.beta - 1; }
+    else { rss = `1+r^*=\\dfrac{(1+g)^{${ut === 'log' ? '' : '\\sigma'}}}{\\beta}`.replace('^{}', ''); rv = Math.pow(1 + g, sig) / s.beta - 1; }
+  } else {
+    if (ut === 'cara' || !tp) { rss = 'r^*=\\rho'; rv = s.rho; }
+    else { rss = `r^*=\\rho+${ut === 'log' ? '' : '\\sigma '}g`; rv = s.rho + sig * g; }
+  }
+  rssN = `r^*=${n(rv)}`;
+  const kv = Math.pow(a / (rv + d), 1 / (1 - a));
+  const cv = Math.pow(kv, a) - (d + g) * kv;
   fs.ss = [
-    rss,
-    `${tl('k')}^*=\\left(\\dfrac{\\alpha}{r^*+\\delta}\\right)^{\\frac{1}{1-\\alpha}}`,
-    tp ? `\\tilde c^*=f(\\tilde k^*)-(\\delta+g)\\,\\tilde k^*` : `c^*=f(k^*)-\\delta\\,k^*`,
+    { tex: rss, num: rssN },
+    { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{r^*+\\delta}\\right)^{\\frac{1}{1-\\alpha}}`,
+      num: `${tl('k')}^*=\\left(\\dfrac{${n(a)}}{${n(rv)}+${n(d)}}\\right)^{${n(1 / (1 - a))}}=${n(kv)}` },
+    { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-(\\delta${tp ? '+g' : ''})\\,${tl('k')}^*`,
+      num: `${tl('c')}^*=${n(cv)}` },
   ];
   return fs;
 }
@@ -510,11 +557,11 @@ export function steadyTable(s, res) {
   const rows = [
     { sym: tp ? '\\tilde k^*' : 'k^*', name: `капитал ${e}`, key: 'k' },
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
-    { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: tp ? 'инвестиции (δ+g)k̃*' : 'инвестиции (= износ δk*)', key: 'i' },
+    { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: tp ? 'инвестиции $(\\delta+g)\\tilde k^*$' : 'инвестиции $\\delta k^*$ (= износ)', key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
     { sym: tp ? '\\tilde w^*' : 'w^*', name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
-    { sym: 'r^*', name: cen ? 'доходность капитала f′(k*)−δ' : 'ставка процента', key: 'r', pct: true },
-    { sym: 's^*', name: 'норма сбережения i*/y*', key: 's', pct: true },
+    { sym: 'r^*', name: cen ? 'доходность капитала $\\alpha k^{*\\,\\alpha-1}-\\delta$' : 'ставка процента', key: 'r', pct: true },
+    { sym: 's^*', name: 'норма сбережения $i^*/y^*$', key: 's', pct: true },
   ];
   const v = (ss, r, Z) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key] / Z, 3));
   const ZF = tp ? res.ZF : 1;
