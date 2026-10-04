@@ -147,6 +147,13 @@ function renderAbout(model) {
   const ws = $('#workspace .wrap');
   ws.innerHTML = '';
   ws.append(wsHeader(model, 'about'));
+  if (!model.load) {
+    ws.append(el('div', { class: 'block stub-visual', style: 'min-height:260px' },
+      el('div', {}, glyph(model.glyph, 180, 110),
+        el('p', { style: 'margin:0' }, 'Описание модели появится вместе с её симулятором.'),
+        el('p', { style: 'margin:8px 0 0' }, el('a', { href: '#ramsey/about' }, 'Открыть описание модели Рамсея →')))));
+    return;
+  }
   const a = model.about;
   ws.append(el('div', { class: 'about' },
     el('section', { class: 'block about-lead' }, a.lead.map((p) => rich(p, 'p'))),
