@@ -390,11 +390,10 @@ function run() {
 
   const lvlGrid = el('div', { class: 'charts' });
   const effPossible = specs.some((s) => s.effAvailable);
-  if (!effPossible) view.levelUnits = 'worker';
+  if (!effPossible && view.levelUnits === 'eff') view.levelUnits = 'worker';
+  const unitBtn = (v, label) => el('button', { type: 'button', class: view.levelUnits === v ? 'on' : '', onclick: () => { view.levelUnits = v; run(); } }, label);
   const toggles = el('div', { class: 'toggles' },
-    effPossible ? el('div', { class: 'seg' },
-      el('button', { type: 'button', class: view.levelUnits === 'worker' ? 'on' : '', onclick: () => { view.levelUnits = 'worker'; run(); } }, 'на работника'),
-      el('button', { type: 'button', class: view.levelUnits === 'eff' ? 'on' : '', onclick: () => { view.levelUnits = 'eff'; run(); } }, 'на эфф. работника')) : null,
+    el('div', { class: 'seg' }, unitBtn('agg', 'в уровнях'), unitBtn('worker', 'на работника'), effPossible ? unitBtn('eff', 'на эфф. работника') : null),
     el('div', { class: 'seg' },
       el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
       el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
@@ -411,10 +410,11 @@ function run() {
       { discrete, zero: true, lines, xmax }));
 
     const useEff = view.levelUnits === 'eff' && sp.effAvailable;
-    const y = useEff ? res.eff[sp.id] : res.levels[sp.id];
-    const b = useEff ? res.baseEff[sp.id] : res.baseLevels[sp.id];
+    const useAgg = view.levelUnits === 'agg' && sp.aggSym;
+    const y = useEff ? res.eff[sp.id] : useAgg ? res.agg[sp.id] : res.levels[sp.id];
+    const b = useEff ? res.baseEff[sp.id] : useAgg ? res.baseAgg[sp.id] : res.baseLevels[sp.id];
     const unit = sp.lvlUnit || '';
-    const sym = useEff ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : sp.sym;
+    const sym = useEff ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : useAgg ? sp.aggSym : sp.sym;
     const c2 = el('canvas');
     lvlGrid.append(el('div', { class: 'chart-card' },
       el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sym)), el('span', { class: 'u' }, unit)),

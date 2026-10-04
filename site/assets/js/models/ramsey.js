@@ -304,7 +304,10 @@ export function solve(s) {
   const lnG1 = Math.log(1 + g * h);
   const t = [], series = { c: [], k: [], y: [], i: [], r: [], w: [], s: [] };
   const eff = { c: [], k: [], y: [], i: [], w: [] };
-  const lvl = { c: [], k: [], y: [], i: [], w: [], r: [], s: [] };
+  const lvl = { c: [], k: [], y: [], i: [], w: [], r: [], s: [], E: [] };
+  series.E = [];
+  const agg = { c: [], k: [], y: [], i: [] }, baseAgg = { c: [], k: [], y: [], i: [] };
+  const L = 1; // численность занятых нормирована: L_t = 1 (как в презентации)
   const baseLvl = { c: [], k: [], y: [], i: [], w: [] };
   const stride = Math.max(1, Math.round(0.1 / h)); // на графики — точки с шагом 0.1
   for (let j = 0; j <= Np; j += stride) {
@@ -327,16 +330,20 @@ export function solve(s) {
     series.s.push(100 * (ih / yh - ss0.s));
     lvl.r.push(100 * r);
     lvl.s.push((100 * ih) / yh);
+    lvl.E.push(G * Z);
+    series.E.push(100 * (Z - 1));
+    for (const v of ['c', 'k', 'y', 'i']) { agg[v].push(hat[v] * G * L); baseAgg[v].push(ss0[v] * G * L); }
   }
   baseLvl.r = t.map(() => 100 * ss0.r);
   baseLvl.s = t.map(() => 100 * ss0.s);
+  baseLvl.E = t.map((_, i) => Math.exp(i * stride * lnG1));
   const baseEff = {};
   for (const v of ['c', 'k', 'y', 'i', 'w']) baseEff[v] = t.map(() => ss0[v]);
 
   const exact0 = steady(s, buildPaths({ ...s, shockSize: 0 }, N, h, 0), 0, h, g, true);
   const exactF = steady(s, P, N + 1, h, g, true);
   return {
-    ok: true, h: h * stride, t, irf: series, levels: lvl, eff, baseLevels: baseLvl, baseEff,
+    ok: true, h: h * stride, t, irf: series, levels: lvl, eff, baseLevels: baseLvl, baseEff, agg, baseAgg,
     ss0: exact0, ssF: exactF, ZF: P.Z[N + 1],
     permanentChange: Math.abs(exactF.k - exact0.k) / exact0.k > 1e-9 || Math.abs(exactF.r - exact0.r) > 1e-12,
     marks: { tHat: s.tHat, t0: sol.expected ? s.t0 : null },
@@ -351,17 +358,19 @@ export function chartSpecs(s) {
   const D = s.time === 'discrete';
   const x = (v) => (D ? `${v}_t` : `${v}(t)`);
   const k = tp ? '\\tilde k' : 'k';
-  return [
-    { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 'k', title: 'Капитал', sym: x('k'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 'y', title: 'Выпуск', sym: x('y'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 'i', title: 'Инвестиции', sym: x('i'), irfUnit: '$\\Delta$(%) от s.s.' },
+  const specs = [
+    ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
+    { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta$(%) от s.s.' },
+    { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta$(%) от s.s.' },
+    { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta$(%) от s.s.' },
+    { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta$(%) от s.s.' },
     cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'w', title: 'Предельный продукт труда', sym: `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
         : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-  ].map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
+  ];
+  return specs.map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }
 
 // ───────────────────────────── Формулы ─────────────────────────────
