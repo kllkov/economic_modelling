@@ -391,3 +391,6 @@ input.range::-moz-range-thumb {
 .about-lead p:last-child { margin-bottom: 0; }
 .refs ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; color: var(--ink-2); font-size: 15px; }
 .about-cta { display: flex; justify-content: flex-end; }
+
+.hero.hero-single .wrap { grid-template-columns: 1fr; }
+.hero.hero-single .hero-lead { max-width: 760px; }
