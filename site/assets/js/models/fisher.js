@@ -10,8 +10,7 @@ const MIT_NOTE = 'Только неожиданный перманентный: 
 const SHOCK_TARGETS = {
   b:     { label: 'Активы $b_t$', kind: 'state', unit: 'abs', def: 2, step: 0.5,
            note: 'Разовое изменение активов $\\Delta b$ (наследство, потеря сбережений)' },
-  w:     { label: 'Трудовой доход $w_t$', kind: 'param', group: 'state', unit: '%', def: -10, step: 1,
-           note: '$\\varphi$ — изменение уровня дохода, %' },
+  w:     { label: 'Трудовой доход $w_t$', kind: 'param', group: 'state', unit: '%', def: -10, step: 1 },
   r:     { label: 'Ставка процента $r$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005,
            note: 'Абсолютное изменение $\\Delta r$' },
   beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete',
