@@ -9,7 +9,7 @@ import { newtonTridiagonal } from '../solver.js';
 // ───────────────────────────── Настройки ─────────────────────────────
 
 const SHOCK_TARGETS = {
-  tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', unit: '%', def: 10, step: 1, variant: 'tp',
+  tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp',
            note: '$\\varphi$ — скачок уровня $E_t$, %' },
   k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -20, step: 1,
            note: 'Разовое изменение запаса капитала, %' },
@@ -45,7 +45,7 @@ function shockTargetsFor(s) {
   return Object.entries(SHOCK_TARGETS)
     .filter(([, d]) => (!d.time || d.time === s.time) && (!d.utility || d.utility === s.utility)
       && (!d.variant || d.variant === s.variant))
-    .sort(([, a], [, b]) => (a.kind === 'state' ? 0 : 1) - (b.kind === 'state' ? 0 : 1))
+    .sort(([, a], [, b]) => ((a.group ?? a.kind) === 'state' ? 0 : 1) - ((b.group ?? b.kind) === 'state' ? 0 : 1))
     .map(([v, d]) => ({ v, l: d.label }));
 }
 
@@ -70,8 +70,7 @@ export const controls = [
       { v: 'cara', l: 'CARA' },
     ] },
   { id: 'production', label: 'Производственная функция', type: 'select',
-    options: [{ v: 'cd', l: 'Кобба–Дугласа' }],
-    hint: 'Другие формы появятся позже' },
+    options: [{ v: 'cd', l: 'Кобба–Дугласа' }] },
 
   { section: 'Параметры' },
   { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.05, max: 0.95, step: 0.01 },
@@ -89,7 +88,7 @@ export const controls = [
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
-    groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'state' ? 'state-переменная' : 'параметр') },
+    groupLabel: (v) => ((SHOCK_TARGETS[v]?.group ?? SHOCK_TARGETS[v]?.kind) === 'state' ? 'state-переменные' : 'параметры') },
   { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, %' : 'Величина, $\\Delta$'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
