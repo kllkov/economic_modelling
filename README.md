@@ -29,5 +29,7 @@ tests/ramsey.test.js       — проверка решателя против ч
 ## Тесты
 
 ```
-node tests/ramsey.test.js
+node tests/ramsey.test.js        # стационар и седловая траектория против чисел из лекции, все комбинации настроек
+node tests/verify.mjs            # аналитические решения (ln, δ=1), сходимость по шагу и горизонту, инвариантность к сдвигу даты
+python3 tests/independent_scipy.py   # независимый решатель на scipy (запускать после verify.mjs)
 ```

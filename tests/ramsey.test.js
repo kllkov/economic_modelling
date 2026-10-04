@@ -34,6 +34,7 @@ for (const time of ['discrete', 'continuous'])
             if (utility === 'cara' && variant === 'tp') continue;
             if (shockTarget === 'sigma' && utility !== 'crra') continue;
             if (shockTarget === 'tfp' && variant !== 'tp') continue;
+            if ((shockTarget === 'sigma' || shockTarget === 'theta') && (shockTiming === 'expected' || shockPersistence === 'temporary')) continue;
             if (shockTarget === 'theta' && utility !== 'cara') continue;
             const sizes = { tfp: 10, k: -20, beta: 0.01, rho: -0.01, sigma: 1, theta: 0.5, delta: 0.02 };
             const o = { time, variant, utility, shockTarget, shockTiming, shockPersistence, shockSize: sizes[shockTarget],
@@ -57,6 +58,9 @@ near(r.irf.k[60], 10, 0.3, 'k → +10%'); near(r.irf.c[60], 10, 0.3, 'c → +10%
 // 6. Ожидаемый: реакция начинается в t0=5
 r = run({ variant: 'tp', shockTarget: 'tfp', shockSize: 10, shockTiming: 'expected' });
 near(r.irf.c[4], 0, 1e-9, 'до t0 нет реакции'); assert.ok(Math.abs(r.irf.c[5]) > 0.1, 'c прыгает в t0');
+
+// 6a. σ-шок только неожиданный перманентный
+assert.equal(run({ utility: 'crra', shockTarget: 'sigma', shockSize: 1, shockTiming: 'expected' }).ok, false);
 
 // 6b. TFP-шок без ТП запрещён
 assert.equal(run({ shockTarget: 'tfp' }).ok, false);

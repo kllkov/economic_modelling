@@ -17,10 +17,10 @@ const SHOCK_TARGETS = {
            note: 'Абсолютное изменение $\\Delta\\beta$' },
   rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous',
            note: 'Абсолютное изменение $\\Delta\\rho$' },
-  sigma: { label: 'Неприятие риска $\\sigma$', kind: 'param', unit: 'Δ', def: 1, step: 0.25, utility: 'crra',
-           note: 'Абсолютное изменение $\\Delta\\sigma$; $1/\\sigma$ — эластичность межвременного замещения' },
-  theta: { label: 'Неприятие риска $\\theta$', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara',
-           note: 'Абсолютное изменение $\\Delta\\theta$' },
+  sigma: { label: 'Неприятие риска $\\sigma$', kind: 'param', unit: 'Δ', def: 1, step: 0.25, utility: 'crra', onlyMIT: true,
+           note: 'Абсолютное изменение $\\Delta\\sigma$. Только неожиданный перманентный: при смене функции полезности во времени сравнение $u\'(c_t)$ и $u\'(c_{t+1})$ зависело бы от единиц измерения $c$' },
+  theta: { label: 'Неприятие риска $\\theta$', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara', onlyMIT: true,
+           note: 'Абсолютное изменение $\\Delta\\theta$. Только неожиданный перманентный: при смене функции полезности во времени сравнение $u\'(c_t)$ и $u\'(c_{t+1})$ зависело бы от единиц измерения $c$' },
   delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005,
            note: 'Абсолютное изменение $\\Delta\\delta$' },
 };
@@ -94,16 +94,17 @@ export const controls = [
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
-    options: [{ v: 'unexpected', l: 'Неожиданный' }, { v: 'expected', l: 'Ожидаемый' }] },
+    options: [{ v: 'unexpected', l: 'Неожиданный' }, { v: 'expected', l: 'Ожидаемый' }],
+    show: (s) => !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
   { id: 'tHat', label: (s) => (s.time === 'discrete' ? 'Период шока $\\hat t$' : 'Момент шока $\\hat t$'),
     type: 'number', min: 0, max: 100, step: 1 },
   { id: 't0', label: 'Объявление $t_0$', type: 'number', min: 0, max: 100, step: 1,
     show: (s) => s.shockTiming === 'expected', hint: 'Должно быть меньше $\\hat t$' },
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }],
-    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' },
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
   { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
-    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && s.shockPersistence === 'temporary',
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary',
     hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
 
   { section: 'Отображение' },
@@ -121,6 +122,7 @@ export function normalize(s, changed) {
     changed = 'shockTarget';
   }
   if (changed === 'shockTarget') s.shockSize = SHOCK_TARGETS[s.shockTarget].def;
+  if (SHOCK_TARGETS[s.shockTarget].onlyMIT) { s.shockTiming = 'unexpected'; s.shockPersistence = 'permanent'; }
   if (changed === 'time') {
     if (s.time === 'continuous') s.rho = +(-Math.log(s.beta)).toFixed(4);
     else s.beta = +Math.exp(-s.rho).toFixed(4);
@@ -196,6 +198,8 @@ function validate(s) {
   }
   if (s.shockTiming === 'expected' && !(s.t0 < s.tHat))
     errors.push('Для ожидаемого шока момент объявления $t_0$ должен быть раньше $\\hat t$.');
+  if (SHOCK_TARGETS[s.shockTarget]?.onlyMIT && (s.shockTiming === 'expected' || s.shockPersistence === 'temporary'))
+    errors.push('Шок параметра неприятия риска допускается только неожиданным и перманентным.');
   if (s.shockTarget === 'tfp' && s.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
   if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капитал не может упасть больше чем на 100%.');
   if (s.shockTarget === 'tfp' && s.shockSize <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
@@ -238,7 +242,7 @@ function solvePath(s, h, N, scale, guess) {
       if (!(k[j] > 0)) return false;
       const y = Math.pow(k[j], a) * Math.pow(P.Z[j], 1 - a);
       c[j] = ((1 - P.delta[j] * h) * k[j] + h * y - (1 + g * h) * k[j + 1] / P.D[j + 1]) / h;
-      if (util !== 'cara' && !(c[j] > 0)) return false;
+      if (!(c[j] > 0)) return false;
     }
     return true;
   };
@@ -261,9 +265,11 @@ function solvePath(s, h, N, scale, guess) {
   else {
     x0 = new Float64Array(n);
     const k0 = k[jStart];
+    const Dhat = jHat > jStart ? P.D[jHat] : 1; // ожидаемый скачок капитала: закладываем его в начальное приближение
     for (let i = 0; i < n; i++) {
-      const t = (i + 1) * h;
+      const j = jStart + 1 + i, t = (i + 1) * h;
       x0[i] = ssF.k + (k0 - ssF.k) * Math.exp(-0.08 * t);
+      if (Dhat !== 1 && j >= jHat) x0[i] += (Dhat - 1) * ss0.k * Math.exp(-0.08 * (j - jHat) * h);
     }
   }
   const res = newtonTridiagonal(residual, x0, { tol: 1e-11, maxIter: 80 });
@@ -276,8 +282,9 @@ function solvePath(s, h, N, scale, guess) {
 export function solve(s) {
   const errors = validate(s);
   if (errors.length) return { ok: false, errors };
-  const h = s.time === 'discrete' ? 1 : 0.1;
-  const Tsolve = Math.max(300, s.horizon + 250, s.tHat + 250);
+  // dt и Tsolve — служебные параметры для проверок точности (в интерфейсе не используются)
+  const h = s.time === 'discrete' ? 1 : (s.dt || 0.02);
+  const Tsolve = Math.max(300, s.horizon + 250, s.tHat + 250, s.Tsolve || 0);
   const N = Math.round(Tsolve / h);
 
   let sol = solvePath(s, h, N, 1);
@@ -300,7 +307,8 @@ export function solve(s) {
   const eff = { c: [], k: [], y: [], i: [], w: [] };
   const lvl = { c: [], k: [], y: [], i: [], w: [], r: [], s: [] };
   const baseLvl = { c: [], k: [], y: [], i: [], w: [] };
-  for (let j = 0; j <= Np; j++) {
+  const stride = Math.max(1, Math.round(0.1 / h)); // на графики — точки с шагом 0.1
+  for (let j = 0; j <= Np; j += stride) {
     const G = Math.exp(j * lnG1);
     const Z = P.Z[j];
     const yh = Math.pow(k[j], a) * Math.pow(Z, 1 - a);
@@ -329,7 +337,7 @@ export function solve(s) {
   const exact0 = steady(s, buildPaths({ ...s, shockSize: 0 }, N, h, 0), 0, h, g, true);
   const exactF = steady(s, P, N + 1, h, g, true);
   return {
-    ok: true, h, t, irf: series, levels: lvl, eff, baseLevels: baseLvl, baseEff,
+    ok: true, h: h * stride, t, irf: series, levels: lvl, eff, baseLevels: baseLvl, baseEff,
     ss0: exact0, ssF: exactF, ZF: P.Z[N + 1],
     permanentChange: Math.abs(exactF.k - exact0.k) / exact0.k > 1e-9 || Math.abs(exactF.r - exact0.r) > 1e-12,
     marks: { tHat: s.tHat, t0: sol.expected ? s.t0 : null },
