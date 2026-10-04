@@ -405,15 +405,15 @@ function run() {
   for (const sp of specs) {
     const c1 = el('canvas');
     irfGrid.append(el('div', { class: 'chart-card' },
-      el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sp.sym)), el('span', { class: 'u' }, sp.irfUnit)),
+      el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sp.sym)), rich(sp.irfUnit, 'span', { class: 'u' })),
       el('div', { class: 'chart-box' }, c1)));
-    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.startsWith('п.п.') ? 'откл., п.п.' : 'откл., %', data: pairs(res.irf[sp.id]) }],
+    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? 'Δ (п.п.)' : 'Δ (%)', data: pairs(res.irf[sp.id]) }],
       { discrete, zero: true, lines, xmax }));
 
     const useEff = view.levelUnits === 'eff' && sp.effAvailable;
     const y = useEff ? res.eff[sp.id] : res.levels[sp.id];
     const b = useEff ? res.baseEff[sp.id] : res.baseLevels[sp.id];
-    const unit = sp.lvlUnit || (useEff ? 'на эфф. работника' : 'на работника');
+    const unit = sp.lvlUnit || '';
     const sym = useEff ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : sp.sym;
     const c2 = el('canvas');
     lvlGrid.append(el('div', { class: 'chart-card' },

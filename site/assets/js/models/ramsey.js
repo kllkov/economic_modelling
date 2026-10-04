@@ -345,15 +345,15 @@ export function chartSpecs(s) {
   const x = (v) => (D ? `${v}_t` : `${v}(t)`);
   const k = tp ? '\\tilde k' : 'k';
   return [
-    { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '% откл. от s.s.' },
-    { id: 'k', title: 'Капитал', sym: x('k'), irfUnit: '% откл. от s.s.' },
-    { id: 'y', title: 'Выпуск', sym: x('y'), irfUnit: '% откл. от s.s.' },
-    { id: 'i', title: 'Инвестиции', sym: x('i'), irfUnit: '% откл. от s.s.' },
-    cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: 'п.п. от s.s.', lvlUnit: '%', noEff: true }
-        : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: 'п.п. от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '% откл. от s.s.' }
-        : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '% откл. от s.s.' },
-    { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: 'п.п. от s.s.', lvlUnit: '%', noEff: true },
+    { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '$\\Delta$(%) от s.s.' },
+    { id: 'k', title: 'Капитал', sym: x('k'), irfUnit: '$\\Delta$(%) от s.s.' },
+    { id: 'y', title: 'Выпуск', sym: x('y'), irfUnit: '$\\Delta$(%) от s.s.' },
+    { id: 'i', title: 'Инвестиции', sym: x('i'), irfUnit: '$\\Delta$(%) от s.s.' },
+    cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
+        : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
+        : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
+    { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
   ].map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }
 
@@ -507,7 +507,7 @@ export function formulas(s) {
   // ── шок
   const tg = s.shockTarget;
   const persistent = s.shockPersistence === 'temporary' && SHOCK_TARGETS[tg].kind !== 'state';
-  const prof = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\mathbb 1\\{t\\ge\\hat t\\}' : '\\mathbb 1\\{t\\ge\\hat t\\}';
+  const prof = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'tfp') {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E(t)=e^{gt}'}\\big(1+\\varphi\\cdot ${prof}\\big)`;
