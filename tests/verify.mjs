@@ -1,7 +1,7 @@
 // Независимые проверки решателя Рамсея: аналитические решения, сходимость по шагу и горизонту.
 import { solve, defaults } from '../site/assets/js/models/ramsey.js';
 import fs from 'node:fs';
-const run = (o) => solve({ ...defaults, ...o });
+const run = (o) => solve({ ...defaults, n: 0, ...o });
 const maxAbs = (a) => Math.max(...a.map(Math.abs));
 const out = {};
 
@@ -56,28 +56,46 @@ const out = {};
 }
 // 6. Данные для независимого решателя на Python (CRRA, ТП, ожидаемый временный TFP-шок)
 {
-  const o = { variant: 'tp', shockTarget: 'tfp', shockSize: 10, shockTiming: 'expected', t0: 5, tHat: 15, shockPersistence: 'temporary', rhoS: 0.8, horizon: 60 };
+  const o = { variant: 'tp', n: 0.015, objective: 'mill', shockTarget: 'tfp', shockSize: 10, shockTiming: 'expected', t0: 5, tHat: 15, shockPersistence: 'temporary', rhoS: 0.8, horizon: 60 };
   const r = run(o);
   fs.writeFileSync('/tmp/claude-0/verify/js_path.json', JSON.stringify({ c: r.levels.c, k: r.levels.k, r: r.levels.r }));
 }
 // 7. Инвариантность к сдвигу даты: один и тот же шок в стационаре должен давать один и тот же отклик
 {
-  const sizes = { tfp: 10, k: -20, beta: 0.01, rho: -0.01, sigma: 1, theta: 0.5, delta: 0.02 };
+  const sizes = { tfp: 10, k: -20, n: 0.01, beta: 0.01, rho: -0.01, sigma: 1, theta: 0.5, delta: 0.02 };
   const bad = [];
-  for (const time of ['discrete', 'continuous']) for (const variant of ['base', 'tp']) for (const utility of ['crra', 'log', 'cara']) {
+  for (const time of ['discrete', 'continuous']) for (const variant of ['base', 'tp']) for (const utility of ['crra', 'log', 'cara']) for (const objective of ['mill', 'bentham']) {
     if (utility === 'cara' && variant === 'tp') continue;
-    for (const tg of ['tfp', 'k', time === 'discrete' ? 'beta' : 'rho', 'sigma', 'theta', 'delta']) {
+    for (const tg of ['tfp', 'k', 'n', time === 'discrete' ? 'beta' : 'rho', 'sigma', 'theta', 'delta']) {
       if (tg === 'tfp' && variant !== 'tp') continue; if (tg === 'sigma' && utility !== 'crra') continue; if (tg === 'theta' && utility !== 'cara') continue;
       for (const shockTiming of ['unexpected', 'expected']) for (const shockPersistence of ['permanent', 'temporary']) {
-        const o = { time, variant, utility, shockTarget: tg, shockSize: sizes[tg], shockTiming, shockPersistence, horizon: 80, rho: 0.04 };
+        const o = { time, variant, utility, shockTarget: tg, shockSize: sizes[tg], shockTiming, shockPersistence, horizon: 80, rho: 0.04, n: 0.01, objective };
         const A = run({ ...o, t0: 5, tHat: 15 }), B = run({ ...o, t0: 20, tHat: 30 });
         if (!A.ok || !B.ok) continue; // недопустимые комбинации отсекаются валидацией
         let e = 0;
         for (const v of ['c', 'k', 'r']) for (let t = 0; t <= 30; t++) e = Math.max(e, Math.abs(A.irf[v][Math.round((5 + t) / A.h)] - B.irf[v][Math.round((20 + t) / B.h)]));
-        if (e > 1e-6) bad.push(`${time} ${variant} ${utility} ${tg} ${shockTiming} ${shockPersistence}: ${e}`);
+        if (e > 1e-6) bad.push(`${time} ${variant} ${utility} ${objective} ${tg} ${shockTiming} ${shockPersistence}: ${e}`);
       }
     }
   }
   out.timeShiftInvariance = bad.length ? bad : 'ok';
+}
+// 8. Рост населения, ln и δ = 1: s_t = x_t/(1+x_t), x_t = αβ·m_t·(1+x_{t+1}),
+//    m_t = 1 у Милля и m_t = 1+n_t у Бентама (точное решение с ожидаемым временным шоком n)
+for (const objective of ['mill', 'bentham']) {
+  const a = 0.3, b = 0.96, n = 0.02, t0 = 5, th = 15, T = 400;
+  const r = run({ utility: 'log', delta: 1, n, objective, shockTarget: 'n', shockSize: 0.01, shockTiming: 'expected', t0, tHat: th, shockPersistence: 'temporary', rhoS: 0.7, horizon: 40 });
+  const nt = (t) => n + (t >= th ? 0.01 * 0.7 ** (t - th) : 0);
+  const m = (t, nn) => (objective === 'mill' ? 1 : 1 + nn);
+  const x = new Array(T + 1).fill(0);
+  x[T] = a * b * m(T, n) / (1 - a * b * m(T, n));
+  for (let t = T - 1; t >= 0; t--) x[t] = a * b * m(t, nt(t)) * (1 + x[t + 1]);
+  const xBase = a * b * m(0, n) / (1 - a * b * m(0, n));
+  let e = 0;
+  for (let t = 0; t < 40; t++) {
+    const sx = t < t0 ? xBase / (1 + xBase) : x[t] / (1 + x[t]);
+    e = Math.max(e, Math.abs(r.levels.s[t] / 100 - sx));
+  }
+  out[`closedForm_population_${objective}`] = { maxErr_s: e };
 }
 console.log(JSON.stringify(out, null, 2));

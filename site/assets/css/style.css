@@ -312,7 +312,7 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .ss td.name { color: var(--ink-2); }
 
 .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--ink-2); margin-bottom: 12px; }
-.chart-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.chart-legend > span { display: inline-flex; align-items: center; gap: 8px; }
 .chart-legend i { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid; }
 .chart-legend i.dash { border-top-style: dashed; }
 .chart-legend i.dot { border-top-style: dotted; }

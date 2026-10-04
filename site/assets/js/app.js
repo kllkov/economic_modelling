@@ -331,7 +331,7 @@ function run() {
   const cen = state.version === 'centralized';
 
   // 1. оптимизационная задача
-  const groups = cen ? F.cen : F.dec;
+  const groups = F.problem || (cen ? F.cen : F.dec);
   const cls = (a) => (a.startsWith('Домох') ? 'hh' : a.startsWith('Фирм') ? 'firm' : a.startsWith('Рынк') ? 'mkt' : 'plan wide');
   out.append(block(1, 'Оптимизационная задача', null,
     el('div', { class: 'agents' }, groups.map((g) =>
@@ -343,8 +343,8 @@ function run() {
   const sys = el('div', { class: 'sys' },
     F.system.map((r) => el('div', { class: 'sys-row' }, el('div', { class: 'lab' }, r.label), eqWithNum(r.tex, r.num))),
     el('div', { class: 'sys-row shock' }, el('div', { class: 'lab' }, 'Шок'), eqWithNum(F.shock[0].tex, F.shock[0].num)));
-  out.append(block(2, 'Условия равновесия', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys,
-    rich(F.shockInfo + (cen ? ' Уравнения динамики совпадают с децентрализованной версией — траектории идентичны.' : ''), 'div', { class: 'callout' })));
+  out.append(block(2, F.systemTitle || 'Условия равновесия', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys,
+    rich(F.shockInfo + (cen && !F.problem ? ' Уравнения динамики совпадают с децентрализованной версией — траектории идентичны.' : ''), 'div', { class: 'callout' })));
 
   const res = mod.solve(state);
   if (!res.ok) {
@@ -359,12 +359,12 @@ function run() {
   const showAfter = rows.some((r) => r.after !== r.before);
   const table = el('table', { class: 'ss' },
     el('thead', {}, el('tr', {}, el('th', {}, 'Величина'), el('th', {}, 'Смысл'),
-      el('th', { class: 'v' }, showAfter ? 'до шока' : 'значение'), showAfter ? el('th', { class: 'v' }, 'после шока') : null)),
+      el('th', { class: 'v' }, showAfter ? (F.ssCols?.[0] || 'до шока') : 'значение'), showAfter ? el('th', { class: 'v' }, F.ssCols?.[1] || 'после шока') : null)),
     el('tbody', {}, rows.map((r) => el('tr', {},
       el('td', {}, texInline(r.sym)), rich(r.name, 'td', { class: 'name' }),
       el('td', { class: 'v' }, r.before),
       showAfter ? el('td', { class: `v${r.after !== r.before ? ' chg' : ''}` }, r.after) : null))));
-  out.append(block(3, 'Стационарное состояние', el('span', { class: 'note' }, showAfter ? 'Перманентный шок сдвигает стационар'
+  out.append(block(3, F.ssTitle || 'Стационарное состояние', el('span', { class: 'note' }, F.ssNote ? F.ssNote(showAfter) : showAfter ? 'Перманентный шок сдвигает стационар'
       : res.permanentChange ? 'В единицах на эффективного работника стационар не меняется' : 'Шок не меняет стационар'),
     el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table))));
 
@@ -385,15 +385,16 @@ function run() {
   out.append(block(4, 'Импульсные отклики (IRF)',
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadCSV(res, specs) }, 'Скачать CSV'),
     legendItems(false),
-    flat ? rich('Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
+    flat ? rich(F.flatNote || 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
     irfGrid));
 
   const lvlGrid = el('div', { class: 'charts' });
   const effPossible = specs.some((s) => s.effAvailable);
+  const aggPossible = specs.some((s) => s.aggSym);
   if (!effPossible && view.levelUnits === 'eff') view.levelUnits = 'worker';
   const unitBtn = (v, label) => el('button', { type: 'button', class: view.levelUnits === v ? 'on' : '', onclick: () => { view.levelUnits = v; run(); } }, label);
   const toggles = el('div', { class: 'toggles' },
-    el('div', { class: 'seg' }, unitBtn('agg', 'в уровнях'), unitBtn('worker', 'на работника'), effPossible ? unitBtn('eff', 'на эфф. работника') : null),
+    aggPossible ? el('div', { class: 'seg' }, unitBtn('agg', 'в уровнях'), unitBtn('worker', 'на работника'), effPossible ? unitBtn('eff', 'на эфф. работника') : null) : null,
     el('div', { class: 'seg' },
       el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
       el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));

@@ -1,13 +1,13 @@
-# Независимый решатель (scipy, своя постановка в эффективных единицах, как в презентации)
+# Независимый решатель (scipy, своя постановка в эффективных единицах): рост населения n, целевая функция Милля
 import json, numpy as np
 from scipy.optimize import root
-a,b,d,sig,g = .3,.96,.1,2.,.02
+a,b,d,sig,g,n_pop = .3,.96,.1,2.,.02,.015
 phi, t0, th, rhoS = .10, 5, 15, .8
 T = 400
 Z = np.array([1+(phi*rhoS**(t-th) if t>=th else 0) for t in range(T+2)])
 E = np.array([(1+g)**t for t in range(T+2)])*Z          # E_t = (1+g)^t (1+φ ρ^{t-t̂} 1{t≥t̂})
-r_ss = (1+g)**sig/b-1
-kt_ss = (a/(r_ss+d))**(1/(1-a)); ct_ss = kt_ss**a-(d+g)*kt_ss
+r_ss = (1+n_pop)*(1+g)**sig/b-1   # Милль: 1+r* = (1+n)(1+g)^σ/β
+kt_ss = (a/(r_ss+d))**(1/(1-a)); ct_ss = kt_ss**a-((1+n_pop)*(1+g)-1+d)*kt_ss
 # до t0 — стационар; с t0 агенты знают весь путь E_t. Неизвестные: c̃_t, k̃_{t+1}, t=t0..T-1; k̃_T = k̃*
 n = T-t0
 def F(x):
@@ -16,11 +16,11 @@ def F(x):
     for i in range(n):
         t=t0+i
         # ресурсное ограничение в эффективных единицах: (E_{t+1}/E_t) k̃_{t+1} = (1-δ)k̃_t + k̃_t^α - c̃_t
-        res.append(E[t+1]/E[t]*k[i+1]-((1-d)*k[i]+k[i]**a-c[i]))
+        res.append((1+n_pop)*E[t+1]/E[t]*k[i+1]-((1-d)*k[i]+k[i]**a-c[i]))
     for i in range(n-1):
         t=t0+i
         # Эйлер в уровнях: (c_{t+1}/c_t)^σ = β(α k̃_{t+1}^{α-1}+1-δ), c_t = c̃_t E_t
-        res.append((c[i+1]*E[t+1]/(c[i]*E[t]))**sig - b*(a*k[i+1]**(a-1)+1-d))
+        res.append((c[i+1]*E[t+1]/(c[i]*E[t]))**sig - b/(1+n_pop)*(a*k[i+1]**(a-1)+1-d))
     return np.array(res)
 x0 = np.concatenate([np.full(n,ct_ss), np.full(n-1,kt_ss)])
 sol = root(F, x0, method='hybr', options={'xtol':1e-13})

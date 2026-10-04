@@ -2,7 +2,7 @@ import { solve, defaults } from '../site/assets/js/models/ramsey.js';
 import assert from 'node:assert/strict';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
-const run = (o) => { const t0 = Date.now(); const r = solve({ ...defaults, ...o }); r.ms = Date.now() - t0; return r; };
+const run = (o) => { const t0 = Date.now(); const r = solve({ ...defaults, n: 0, ...o }); r.ms = Date.now() - t0; return r; };
 
 // 1. Стационар без ТП совпадает с презентацией (α=.3, β=.96, δ=.1)
 let r = run({ shockSize: 0 });
@@ -28,7 +28,7 @@ const combos = [];
 for (const time of ['discrete', 'continuous'])
   for (const variant of ['base', 'tp'])
     for (const utility of ['crra', 'log', 'cara'])
-      for (const shockTarget of ['tfp', 'k', time === 'discrete' ? 'beta' : 'rho', 'sigma', 'theta', 'delta'])
+      for (const shockTarget of ['tfp', 'k', 'n', time === 'discrete' ? 'beta' : 'rho', 'sigma', 'theta', 'delta'])
         for (const shockTiming of ['unexpected', 'expected'])
           for (const shockPersistence of ['permanent', 'temporary']) {
             if (utility === 'cara' && variant === 'tp') continue;
@@ -36,9 +36,9 @@ for (const time of ['discrete', 'continuous'])
             if (shockTarget === 'tfp' && variant !== 'tp') continue;
             if ((shockTarget === 'sigma' || shockTarget === 'theta') && (shockTiming === 'expected' || shockPersistence === 'temporary')) continue;
             if (shockTarget === 'theta' && utility !== 'cara') continue;
-            const sizes = { tfp: 10, k: -20, beta: 0.01, rho: -0.01, sigma: 1, theta: 0.5, delta: 0.02 };
+            const sizes = { tfp: 10, k: -20, n: 0.01, beta: 0.01, rho: -0.01, sigma: 1, theta: 0.5, delta: 0.02 };
             const o = { time, variant, utility, shockTarget, shockTiming, shockPersistence, shockSize: sizes[shockTarget],
-                        rho: 0.04, beta: 0.96 };
+                        rho: 0.04, beta: 0.96, n: 0.01, objective: combos.length % 2 ? 'mill' : 'bentham' };
             const res = run(o);
             combos.push([JSON.stringify(o), res.ok, res.ms, res.ok ? '' : res.errors.join(';')]);
           }
@@ -68,4 +68,18 @@ assert.equal(run({ shockTarget: 'tfp' }).ok, false);
 // 7. Непрерывное время сходится к дискретному стационару с ρ
 r = run({ time: 'continuous', rho: 0.04, variant: 'tp' });
 near(r.ss0.r, 0.04 + 2 * 0.02, 1e-12, 'r*=ρ+σg');
+// 8. Рост населения: стационарная ставка — Милль 1+r* = (1+n)(1+g)^σ/β, Бентам 1+r* = (1+g)^σ/β
+r = run({ n: 0.01, objective: 'mill', shockSize: 0 });
+near(1 + r.ss0.r, 1.01 / 0.96, 1e-12, 'r* Милль');
+r = run({ n: 0.01, objective: 'bentham', shockSize: 0 });
+near(1 + r.ss0.r, 1 / 0.96, 1e-12, 'r* Бентам');
+r = run({ n: 0.01, objective: 'mill', variant: 'tp', shockSize: 0, shockTarget: 'tfp' });
+near(1 + r.ss0.r, 1.01 * 1.02 ** 2 / 0.96, 1e-12, 'r* Милль с ТП');
+r = run({ time: 'continuous', n: 0.01, objective: 'mill', variant: 'tp', rho: 0.04, shockSize: 0, shockTarget: 'tfp' });
+near(r.ss0.r, 0.04 + 0.01 + 2 * 0.02, 1e-12, 'r*=ρ+n+σg');
+// 9. Уровни = на работника × L_t
+r = run({ n: 0.02, shockTarget: 'n', shockSize: 0.01, tHat: 10 });
+near(r.agg.k[30] / r.levels.k[30], r.levels.L[30], 1e-12, 'K = k·L');
+near(r.levels.L[10], 1.02 ** 10, 1e-12, 'L до шока растёт темпом n');
+near(r.levels.L[11] / r.levels.L[10], 1.03, 1e-12, 'L после шока растёт темпом n+Δn');
 console.log('Все проверки пройдены');
