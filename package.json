@@ -1,0 +1,1 @@
+{ "name": "economic-modelling", "private": true, "type": "module", "scripts": { "test": "node tests/ramsey.test.js" } }

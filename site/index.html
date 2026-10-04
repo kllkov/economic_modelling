@@ -3,11 +3,239 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Экономическое моделирование</title>
-<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:15vh auto;padding:0 16px;color:#222}h1{font-weight:600}</style>
+<title>Экономическое моделирование — Центральный университет</title>
+<meta name="description" content="Курс «Экономическое моделирование» в Центральном университете, направление «Количественная экономика». Силлабус, команда курса и симулятор динамических экономических моделей.">
+<link rel="stylesheet" href="assets/vendor/fonts.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%238a6fe0'/%3E%3Cstop offset='1' stop-color='%2319a99a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpath d='M6 24 C 12 12, 18 10, 26 8' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 </head>
 <body>
-<h1>Симулятор динамических экономических моделей</h1>
-<p>Сайт в разработке.</p>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 19 C 8 9, 13 7, 21 5"/><circle cx="21" cy="5" r="1.2" fill="currentColor"/></svg></span>
+      <span class="brand-text">Экономическое моделирование<small>Центральный университет</small></span>
+    </a>
+    <nav class="nav">
+      <a href="./" class="active">Курс</a>
+      <a href="models.html">Модели</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <div class="hero-tags">
+        <span class="chip">Центральный университет</span>
+        <span class="chip teal">Направление «Количественная экономика»</span>
+        <span class="chip">Осень 2026 · бакалавриат</span>
+      </div>
+      <h1>Экономическое <span>моделирование</span></h1>
+      <p class="hero-lead">На этом курсе ты узнаешь, как экономическая теория описывает решения экономических агентов — фирм, домохозяйств и государства — на языке математики. Ты научишься переводить эти модели в программный код и с их помощью анализировать экономическое равновесие, динамику и реакции на внешние шоки, например на рост уровня технологий.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="models.html">Открыть симулятор моделей
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost" href="#team">Команда курса</a>
+      </div>
+    </div>
+    <div class="hero-facts">
+      <div class="fact"><b>2 блока</b><span>микро- и макроэкономика</span></div>
+      <div class="fact"><b>15 тем</b><span>в тематическом плане</span></div>
+      <div class="fact"><b>40</b><span>студентов — лимит набора</span></div>
+      <div class="fact"><b>2026–2030</b><span>поток</span></div>
+      <div class="fact wide"><b>Excel · Python</b><span>модели реальных экономических процессов в коде</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="about">
+  <div class="wrap">
+    <div class="section-head"><div><h2>О курсе</h2></div></div>
+    <div class="about-grid">
+      <div class="card">
+        <p>Также изучишь, как индивидуальные решения, которые описывает микроэкономика, складываются в макроэкономические показатели: общий уровень потребления, процентные ставки, инфляцию и темпы технологического развития.</p>
+        <p style="margin:0">Этот курс подойдёт, если ты уже уверенно владеешь базовыми экономическими понятиями, рассматриваешь направление «Бизнес и аналитика» как основное и планируешь строить карьеру в сфере экономики и финансов. Ты получишь профессиональные компетенции в области экономического прогнозирования.</p>
+      </div>
+      <div class="card feature">
+        <h3>Фича</h3>
+        <p style="margin:0">Будешь программировать модели реальных экономических процессов и анализировать, как экономика реагирует на шоки. Также тебя ждут стратегические контесты без верного ответа: твоя оценка будет зависеть от решений и стратегий других участников.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="team" style="padding-top:8px">
+  <div class="wrap">
+    <div class="section-head"><div><h2>Команда курса</h2></div></div>
+    <div class="team-grid">
+      <article class="card person-main">
+        <div class="person-photo"><img src="assets/img/kirill.jpg" alt="Кирилл Ковыршин"></div>
+        <div class="person-body">
+          <h3>Кирилл Ковыршин</h3>
+          <div class="person-role">Лектор и автор курса</div>
+          <ul class="person-list">
+            <li>Академический руководитель направления «Количественная экономика»</li>
+            <li>Тренер олимпиадной сборной ЦУ по экономике</li>
+            <li>Лектор и автор курса «Экономическое моделирование»</li>
+          </ul>
+          <div class="mini-head">Преподавательский бэкграунд</div>
+          <div class="chips">
+            <span class="chip">Московская школа управления СКОЛКОВО</span>
+            <span class="chip">ВШЭ</span>
+            <span class="chip">РЭШ</span>
+            <span class="chip">Центральный университет</span>
+          </div>
+          <div class="mini-head">Работа в олимпиадах по экономике</div>
+          <div class="olymp">
+            <div><b>ВсОШ — ЦПМК</b><span>жюри и автор задач заключительного этапа</span></div>
+            <div><b>«Высшая проба» — методическая комиссия</b><span>жюри и автор задач заключительного этапа</span></div>
+            <div><b>DANO</b><span>жюри-эксперт</span></div>
+          </div>
+          <a class="tg-link" href="https://t.me/thekirkov" target="_blank" rel="noopener">
+            <span class="tg-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.4 3.6 2.9 10.7c-1 .4-1 1.8.1 2.1l4.6 1.4 1.8 5.5c.3.8 1.3 1 1.9.4l2.6-2.5 4.7 3.5c.7.5 1.7.1 1.9-.7l3.1-15.4c.2-1-.8-1.8-1.7-1.4zM9.6 14.2l8.2-7.3-6.3 8.5-.3 3-1.6-4.2z"/></svg></span>
+            Homo Ecønomicus <small>· t.me/thekirkov</small>
+          </a>
+        </div>
+      </article>
+      <article class="card person-side">
+        <div class="avatar" aria-hidden="true">ДТ</div>
+        <h3>Дарья Табашникова</h3>
+        <p>Команда курса</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="plan" style="padding-top:8px">
+  <div class="wrap">
+    <div class="section-head"><div><h2>Тематический план</h2></div></div>
+    <div class="plan-grid">
+      <div class="card plan">
+        <h3><span class="num">Блок 1</span>Микроэкономика</h3>
+        <ol>
+          <li>Введение. Теория потребителя</li>
+          <li>Моделирование домохозяйств</li>
+          <li>Поведенческие особенности потребителя</li>
+          <li>Теория производства</li>
+          <li>Рыночное равновесие. Провалы рынка и вмешательство государства</li>
+          <li>Рыночные структуры. Часть 1</li>
+          <li>Рыночные структуры. Часть 2</li>
+        </ol>
+      </div>
+      <div class="card plan macro">
+        <h3><span class="num">Блок 2</span>Макроэкономика</h3>
+        <ol>
+          <li>Введение в макроэкономику</li>
+          <li>Экономический рост</li>
+          <li>Экономический цикл</li>
+          <li>Фискальная политика</li>
+          <li>Основы банковской системы и денежного обращения</li>
+          <li>Монетарная политика</li>
+          <li>Открытая экономика</li>
+          <li>Международная торговля</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:8px">
+  <div class="wrap">
+    <div class="section-head"><div><h2>Результат курса</h2><p>Ты научишься:</p></div></div>
+    <div class="outcomes">
+      <div class="card outcome"><div class="o-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><p>применять основы экономической теории, формализовывать её на языке математики, а также оценивать, подходит ли она для конкретной ситуации, и аргументировать это</p></div>
+      <div class="card outcome"><div class="o-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 18c4-10 7-12 9-12s5 2 9 12"/><circle cx="12" cy="6" r="1.6" fill="currentColor"/></svg></div><p>решать оптимизационные задачи</p></div>
+      <div class="card outcome"><div class="o-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6 3 12l5 6M16 6l5 6-5 6"/></svg></div><p>использовать Excel и Python для решения и моделирования математических задач</p></div>
+      <div class="card outcome"><div class="o-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 14h5l2-6 4 12 2-6h7"/></svg></div><p>оценивать последствия экономических решений и внешних шоков в реальной жизни</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="grading" style="padding-top:8px">
+  <div class="wrap">
+    <div class="section-head"><div><h2>Система оценивания</h2><p>Форма оценки — экзамен. Чтобы сдать курс, нужно набрать не менее 3,5 балла по формуле и сдать экзамен на оценку 3,5 и выше. Экзамен — всегда блокер.</p></div></div>
+    <div class="weight-bar" aria-hidden="true">
+      <span style="width:15%;background:#c9b8fb"></span>
+      <span style="width:15%;background:#a68ef0"></span>
+      <span style="width:20%;background:#7d8ee8"></span>
+      <span style="width:20%;background:#4fb7c9"></span>
+      <span style="width:30%;background:#19a99a"></span>
+    </div>
+    <div class="legend-row" style="margin-bottom:18px">
+      <span><i style="background:#c9b8fb"></i>Мини-проект 15%</span>
+      <span><i style="background:#a68ef0"></i>Квиз 15%</span>
+      <span><i style="background:#7d8ee8"></i>Контрольная 1 — 20%</span>
+      <span><i style="background:#4fb7c9"></i>Контрольная 2 — 20%</span>
+      <span><i style="background:#19a99a"></i>Экзамен 30%</span>
+      <span>+ бонусы до 10%</span>
+    </div>
+    <div class="table-wrap">
+      <table class="grading">
+        <thead><tr><th>Активность</th><th>Вес</th><th>Кол-во</th><th>Описание</th><th>LD</th></tr></thead>
+        <tbody>
+          <tr><td>Домашнее задание</td><td class="w">0%</td><td>15</td><td class="muted">Набор практических задач без оценивания</td><td class="no">✕</td></tr>
+          <tr><td>Мини-проект</td><td class="w">15%</td><td>6</td><td>Набор прикладных задач по различным аспектам экономики (банковский сектор, экономический рост и другие). Сдаётся в асинхронном формате в LMS, однако преподаватели могут назначить устную защиту</td><td class="yes">✓</td></tr>
+          <tr><td>Квиз</td><td class="w">15%</td><td>4</td><td>Набор задач, которые нужно решить за ограниченное время. Для самостоятельной подготовки к квизам предусмотрены домашние задания без оценивания</td><td class="no">✕</td></tr>
+          <tr><td>Контрольная работа 1</td><td class="w">20%</td><td>1</td><td>Письменная работа с набором задач, которые нужно решить за ограниченное время</td><td class="no">✕</td></tr>
+          <tr><td>Контрольная работа 2</td><td class="w">20%</td><td>1</td><td>Письменная работа с набором задач, которые нужно решить за ограниченное время</td><td class="no">✕</td></tr>
+          <tr><td>Экзамен</td><td class="w">30%</td><td>1</td><td>Письменная работа с открытыми вопросами</td><td class="no">✕</td></tr>
+          <tr><td>Стратегический контест <span class="muted">(бонус)</span></td><td class="w bonus">5%</td><td>6</td><td>Стратегический контест по экономическим кейсам</td><td class="no">✕</td></tr>
+          <tr><td>Аудиторная активность <span class="muted">(бонус)</span></td><td class="w bonus">5%</td><td>13</td><td>Активное участие в семинарах: ответы на вопросы преподавателя, участие в обсуждении, выполнение заданий</td><td class="no">✕</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="info" style="padding-top:8px">
+  <div class="wrap">
+    <div class="info-grid">
+      <div class="card">
+        <h3>Академическая нагрузка</h3>
+        <ul>
+          <li>1 лекция в неделю</li>
+          <li>1 дополнительная лекция на неделях 2, 6, 11, 13</li>
+          <li>1 семинар в неделю</li>
+          <li>1 дополнительный семинар на неделях 1, 3, 4, 5, 7, 8, 9, 10, 12, 14, 15</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Условия поступления</h3>
+        <p>Конкурсный отбор по диагностической работе. Пререквизитов нет, кореквизит — математический анализ (любой уровень).</p>
+        <p style="margin:0">Если результат ниже проходного балла, вместо курса доступны «Введение в экономику. Основной уровень» и «Введение в экономику. Продвинутый уровень».</p>
+      </div>
+      <div class="card">
+        <h3>Отбор: даты</h3>
+        <ul class="timeline">
+          <li><b>Август</b><span>вводная лекция в ЛМС</span></li>
+          <li><b>24 авг — 3 сен</b><span>диагностическая работа</span></li>
+          <li><b>7 — 11 сен</b><span>пробные занятия курсов</span></li>
+          <li><b>11 сен</b><span>результаты; сменить выбор можно до 20 сентября</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Дорешки, Late Days, пересдачи</h3>
+        <p style="margin:0">Дорешки позволяют улучшить оценку до конца 15-й недели; формат публикуется в канале курса в TiMe. Late Days можно использовать только для мини-проектов. На пересдачу курса — не более двух попыток.</p>
+      </div>
+      <div class="card">
+        <h3>Политика ИИ</h3>
+        <p style="margin:0">ИИ можно использовать только для написания кода. Использование нейросетей в контрольной работе, мини-проекте или на экзамене может привести к аннулированию работы без права пересдачи.</p>
+      </div>
+      <div class="card">
+        <h3>Академическая честность</h3>
+        <p style="margin:0">Обман и плагиат недопустимы. Домашние задания можно обсуждать с сокурсниками, но индивидуальные задачи выполняются самостоятельно. Если станет сложно — обратись к наставнику: очный есть в обоих кампусах.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>Курс «Экономическое моделирование» · Центральный университет · направление «Количественная экономика»</span>
+    <a href="models.html">Симулятор моделей →</a>
+  </div>
+</footer>
 </body>
 </html>

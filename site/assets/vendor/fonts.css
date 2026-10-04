@@ -1,0 +1,128 @@
+/* manrope-cyrillic-400-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(fonts/manrope-cyrillic-400-normal.woff2) format('woff2');
+}
+/* manrope-latin-400-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(fonts/manrope-latin-400-normal.woff2) format('woff2');
+}
+/* manrope-cyrillic-500-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/manrope-cyrillic-500-normal.woff2) format('woff2');
+}
+/* manrope-latin-500-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/manrope-latin-500-normal.woff2) format('woff2');
+}
+/* manrope-cyrillic-600-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(fonts/manrope-cyrillic-600-normal.woff2) format('woff2');
+}
+/* manrope-latin-600-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(fonts/manrope-latin-600-normal.woff2) format('woff2');
+}
+/* manrope-cyrillic-700-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(fonts/manrope-cyrillic-700-normal.woff2) format('woff2');
+}
+/* manrope-latin-700-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(fonts/manrope-latin-700-normal.woff2) format('woff2');
+}
+/* manrope-cyrillic-800-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url(fonts/manrope-cyrillic-800-normal.woff2) format('woff2');
+}
+/* manrope-latin-800-normal */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 800;
+  src: url(fonts/manrope-latin-800-normal.woff2) format('woff2');
+}
+/* unbounded-cyrillic-500-normal */
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/unbounded-cyrillic-500-normal.woff2) format('woff2');
+}
+/* unbounded-latin-500-normal */
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/unbounded-latin-500-normal.woff2) format('woff2');
+}
+/* unbounded-cyrillic-600-normal */
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(fonts/unbounded-cyrillic-600-normal.woff2) format('woff2');
+}
+/* unbounded-latin-600-normal */
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(fonts/unbounded-latin-600-normal.woff2) format('woff2');
+}
+/* unbounded-cyrillic-700-normal */
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(fonts/unbounded-cyrillic-700-normal.woff2) format('woff2');
+}
+/* unbounded-latin-700-normal */
+@font-face {
+  font-family: 'Unbounded';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(fonts/unbounded-latin-700-normal.woff2) format('woff2');
+}
