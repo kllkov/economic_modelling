@@ -65,7 +65,7 @@ function renderTiles() {
     const ready = !!m.load;
     box.append(el('article', { class: `tile${ready ? ' featured' : ''}` },
       el('div', { class: 'tile-top' }, glyph(m.glyph),
-        el('span', { class: `status ${ready ? 'ready' : 'soon'}` }, ready ? 'Симуляция доступна' : 'Симуляция скоро')),
+        el('span', { class: `status ${ready ? 'ready' : 'soon'}` }, ready ? 'Доступно' : 'Скоро')),
       el('h3', {}, m.title),
       el('div', { class: 'sub' }, m.subtitle),
       el('p', {}, m.blurb),
