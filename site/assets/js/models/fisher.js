@@ -79,7 +79,7 @@ export const controls = [
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
     options: [{ v: 'unexpected', l: 'Неожиданный (MIT)' }, { v: 'expected', l: 'Ожидаемый' }],
     show: (s) => !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
-  { id: 'tHat', label: (s) => (s.time === 'discrete' ? 'Период шока $\\hat t$' : 'Момент шока $\\hat t$'),
+  { id: 'tHat', label: (s) => 'Момент шока $\\hat t$',
     type: 'number', min: 0, max: 100, step: 1 },
   { id: 't0', label: 'Объявление $t_0$', type: 'number', min: 0, max: 100, step: 1,
     show: (s) => s.shockTiming === 'expected', hint: 'Должно быть меньше $\\hat t$' },
