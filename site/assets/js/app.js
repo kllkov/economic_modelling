@@ -227,6 +227,25 @@ function control(c) {
     wrap.append(rich(label, 'div', { class: 'lbl' }));
     wrap.append(el('div', { class: 'seg', role: 'group' }, val(c.options, state).map((o) =>
       el('button', { type: 'button', class: state[c.id] === o.v ? 'on' : '', onclick: () => set(c.id, o.v) }, rich(o.l)))));
+  } else if (c.type === 'select' && c.rich) {
+    // выпадающий список с формулами в пунктах (нативный select их не рендерит)
+    wrap.append(rich(label, 'div', { class: 'lbl' }));
+    const opts = val(c.options, state);
+    const cur = opts.find((o) => o.v === state[c.id]) || opts[0];
+    const menu = el('div', { class: 'dd-menu', role: 'listbox' });
+    let lastGroup = null;
+    for (const o of opts) {
+      const g = c.groupLabel ? c.groupLabel(o.v) : null;
+      if (g && g !== lastGroup) { menu.append(el('div', { class: 'dd-group' }, g)); lastGroup = g; }
+      menu.append(el('button', { type: 'button', role: 'option', class: `dd-item${o.v === state[c.id] ? ' on' : ''}`,
+        onclick: (e) => { e.stopPropagation(); set(c.id, o.v); } }, rich(o.l)));
+    }
+    const dd = el('div', { class: 'dd' },
+      el('button', { type: 'button', class: 'dd-btn', id, 'aria-haspopup': 'listbox',
+        onclick: (e) => { e.stopPropagation(); const open = dd.classList.contains('open'); closeDropdowns(); if (!open) dd.classList.add('open'); } },
+        rich(cur?.l ?? ''), el('span', { class: 'dd-chev', 'aria-hidden': 'true' }, '▾')),
+      menu);
+    wrap.append(dd);
   } else if (c.type === 'select') {
     wrap.append(rich(label, 'label', { for: id }));
     const sel = el('select', { id, onchange: (e) => set(c.id, e.target.value) });
@@ -269,6 +288,10 @@ function control(c) {
   return wrap;
 }
 
+function closeDropdowns() { document.querySelectorAll('.dd.open').forEach((d) => d.classList.remove('open')); }
+document.addEventListener('click', closeDropdowns);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDropdowns(); });
+
 function set(key, v) {
   current.state[key] = v;
   current.mod.normalize(current.state, key);
@@ -310,9 +333,11 @@ function run() {
   // 1. оптимизационная задача
   const groups = cen ? F.cen : F.dec;
   const cls = (a) => (a.startsWith('Домох') ? 'hh' : a.startsWith('Фирм') ? 'firm' : a.startsWith('Рынк') ? 'mkt' : 'plan wide');
-  out.append(block(1, 'Оптимизационная задача', el('span', { class: 'note' }, cen ? 'Централизованная версия' : 'Децентрализованная версия'),
+  out.append(block(1, 'Оптимизационная задача', null,
     el('div', { class: 'agents' }, groups.map((g) =>
-      el('div', { class: `agent ${cls(g.agent)}` }, el('h3', {}, g.agent), g.items.map((t) => tex(t)))))));
+      el('div', { class: `agent ${cls(g.agent)}` }, el('h3', {}, g.agent),
+        g.system ? tex(`\\left\\{\\begin{aligned}&${g.items.join('\\\\[6pt]&')}\\end{aligned}\\right.`) : g.items.map((t) => tex(t)),
+        (g.notes || []).map((t) => tex(t)))))));
 
   // 2. равновесие и шок
   const sys = el('div', { class: 'sys' },
@@ -357,7 +382,7 @@ function run() {
 
   const flat = specs.every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
   const irfGrid = el('div', { class: 'charts' });
-  out.append(block(4, `Импульсные отклики (IRF), ${discrete ? 'дискретное' : 'непрерывное'} время`,
+  out.append(block(4, 'Импульсные отклики (IRF)',
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadCSV(res, specs) }, 'Скачать CSV'),
     legendItems(false),
     flat ? rich('Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
@@ -382,7 +407,7 @@ function run() {
     irfGrid.append(el('div', { class: 'chart-card' },
       el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sp.sym)), el('span', { class: 'u' }, sp.irfUnit)),
       el('div', { class: 'chart-box' }, c1)));
-    current.charts.push(drawChart(c1, [{ label: sp.irfUnit === 'п.п.' ? 'откл., п.п.' : 'откл., %', data: pairs(res.irf[sp.id]) }],
+    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.startsWith('п.п.') ? 'откл., п.п.' : 'откл., %', data: pairs(res.irf[sp.id]) }],
       { discrete, zero: true, lines, xmax }));
 
     const useEff = view.levelUnits === 'eff' && sp.effAvailable;

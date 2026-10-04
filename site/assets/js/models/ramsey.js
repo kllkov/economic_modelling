@@ -9,19 +9,19 @@ import { newtonTridiagonal } from '../solver.js';
 // ───────────────────────────── Настройки ─────────────────────────────
 
 const SHOCK_TARGETS = {
-  tfp:   { label: 'Уровень технологии E', kind: 'param', unit: '%', def: 10, step: 1, variant: 'tp',
+  tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', unit: '%', def: 10, step: 1, variant: 'tp',
            note: '$\\varphi$ — скачок уровня $E_t$, %' },
-  k:     { label: 'Капитал k', kind: 'state', unit: '%', def: -20, step: 1,
+  k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -20, step: 1,
            note: 'Разовое изменение запаса капитала, %' },
-  beta:  { label: 'Дисконт-фактор β', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete',
+  beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete',
            note: 'Абсолютное изменение $\\Delta\\beta$' },
-  rho:   { label: 'Ставка дисконтирования ρ', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous',
+  rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous',
            note: 'Абсолютное изменение $\\Delta\\rho$' },
-  sigma: { label: 'Неприятие риска σ', kind: 'param', unit: 'Δ', def: 1, step: 0.25, utility: 'crra',
+  sigma: { label: 'Неприятие риска $\\sigma$', kind: 'param', unit: 'Δ', def: 1, step: 0.25, utility: 'crra',
            note: 'Абсолютное изменение $\\Delta\\sigma$; $1/\\sigma$ — эластичность межвременного замещения' },
-  theta: { label: 'Неприятие риска θ', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara',
+  theta: { label: 'Неприятие риска $\\theta$', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara',
            note: 'Абсолютное изменение $\\Delta\\theta$' },
-  delta: { label: 'Норма амортизации δ', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005,
+  delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005,
            note: 'Абсолютное изменение $\\Delta\\delta$' },
 };
 
@@ -45,6 +45,7 @@ function shockTargetsFor(s) {
   return Object.entries(SHOCK_TARGETS)
     .filter(([, d]) => (!d.time || d.time === s.time) && (!d.utility || d.utility === s.utility)
       && (!d.variant || d.variant === s.variant))
+    .sort(([, a], [, b]) => (a.kind === 'state' ? 0 : 1) - (b.kind === 'state' ? 0 : 1))
     .map(([v, d]) => ({ v, l: d.label }));
 }
 
@@ -58,7 +59,7 @@ export const controls = [
   { id: 'variant', label: 'Вариация', type: 'select',
     options: [
       { v: 'base', l: 'Без технологического прогресса' },
-      { v: 'tp', l: 'С трудоувеличивающим ТП' },
+      { v: 'tp', l: 'С трудосберегающим ТП' },
     ] },
 
   { section: 'Функции' },
@@ -87,7 +88,7 @@ export const controls = [
     show: (s) => s.variant === 'tp' },
 
   { section: 'Шок' },
-  { id: 'shockTarget', label: 'На что шок', type: 'select', options: shockTargetsFor,
+  { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'state' ? 'state-переменная' : 'параметр') },
   { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, %' : 'Величина, $\\Delta$'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
@@ -344,15 +345,15 @@ export function chartSpecs(s) {
   const x = (v) => (D ? `${v}_t` : `${v}(t)`);
   const k = tp ? '\\tilde k' : 'k';
   return [
-    { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '% откл.' },
-    { id: 'k', title: 'Капитал', sym: x('k'), irfUnit: '% откл.' },
-    { id: 'y', title: 'Выпуск', sym: x('y'), irfUnit: '% откл.' },
-    { id: 'i', title: 'Инвестиции', sym: x('i'), irfUnit: '% откл.' },
-    cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: 'п.п.', lvlUnit: '%', noEff: true }
-        : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: 'п.п.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '% откл.' }
-        : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '% откл.' },
-    { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: 'п.п.', lvlUnit: '%', noEff: true },
+    { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '% откл. от s.s.' },
+    { id: 'k', title: 'Капитал', sym: x('k'), irfUnit: '% откл. от s.s.' },
+    { id: 'y', title: 'Выпуск', sym: x('y'), irfUnit: '% откл. от s.s.' },
+    { id: 'i', title: 'Инвестиции', sym: x('i'), irfUnit: '% откл. от s.s.' },
+    cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: 'п.п. от s.s.', lvlUnit: '%', noEff: true }
+        : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: 'п.п. от s.s.', lvlUnit: '%', noEff: true },
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '% откл. от s.s.' }
+        : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '% откл. от s.s.' },
+    { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: 'п.п. от s.s.', lvlUnit: '%', noEff: true },
   ].map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }
 
@@ -390,7 +391,7 @@ export function formulas(s) {
 
   // ── децентрализованная
   if (D) {
-    fs.dec.push({ agent: 'Домохозяйства', items: [
+    fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}`,
       '\\text{s.t.}\\quad b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
       ...(tp ? ['\\Leftrightarrow\\quad (1+g)\\,\\tilde b_{t+1}=(1+r_t)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t'] : []),
@@ -407,7 +408,7 @@ export function formulas(s) {
       ...(tp ? [tpLaw] : []),
     ] });
   } else {
-    fs.dec.push({ agent: 'Домохозяйства', items: [
+    fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       `\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
       '\\text{s.t.}\\quad \\dot b=r(t)\\,b+w(t)-c(t),\\qquad b(0)\\ \\text{задано}',
       ...(tp ? ['\\Leftrightarrow\\quad \\dot{\\tilde b}=(r-g)\\,\\tilde b+\\tilde w-\\tilde c'] : []),
@@ -427,22 +428,20 @@ export function formulas(s) {
 
   // ── централизованная
   if (D) {
-    fs.cen.push({ agent: 'Центральный планировщик', items: [
+    fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
       tp ? `\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; \\sum_{t=0}^{\\infty}\\beta^t\\,${U('(\\tilde c_tE_t)')}`
          : `\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}`,
       tp ? '\\text{s.t.}\\quad (1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\,\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
          : '\\text{s.t.}\\quad k_{t+1}=(1-\\delta)\\,k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
       `\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\beta^t\\,${Up(cT)}\\,k_{t+1}=0`,
-      ...(tp ? [tpLaw] : []),
-    ] });
+    ], notes: tp ? [tpLaw] : [] });
   } else {
-    fs.cen.push({ agent: 'Центральный планировщик', items: [
+    fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
       `\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
       tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}=\\tilde k^{\\alpha}-\\tilde c-(\\delta+g)\\,\\tilde k,\\qquad \\tilde k(0)\\ \\text{задано}'
          : '\\text{s.t.}\\quad \\dot k=k^{\\alpha}-c-\\delta k,\\qquad k(0)>0\\ \\text{задано}',
       `\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-\\rho t}\\,${Up(cT)}\\,k(t)=0`,
-      ...(tp ? [tpLaw] : []),
-    ] });
+    ], notes: tp ? [tpLaw] : [] });
   }
 
   // ── итоговая система (с подставленными функциями) и та же система в числах
