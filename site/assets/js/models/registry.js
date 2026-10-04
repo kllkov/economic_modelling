@@ -57,7 +57,7 @@ export const MODELS = [
       sections: [
         { title: 'Задача домохозяйства (дискретное время)', eqs: [
           { label: 'Полезность', tex: '\\max_{\\{c_t\\}}\\ V_0=\\sum_{t=0}^{\\infty}\\beta^t u(c_t),\\qquad \\beta=\\dfrac{1}{1+\\rho}' },
-          { label: 'Бюджетное ограничение', tex: 'b_{t+1}=(1+r)\\,b_t+w_t-c_t,\\qquad \\lim_{T\\to\\infty}\\dfrac{b_T}{(1+r)^T}\\ge 0' },
+          { label: 'Бюджетное ограничение', tex: 'b_{t+1}=(1+r)\\,b_t+w_t-c_t,\\qquad \\lim_{T\\to\\infty}\\dfrac{b_T}{(1+r)^T}=0\\ \\text{(TVC)}' },
           { label: 'Пожизненное ограничение', tex: '\\sum_{t=0}^{\\infty}\\dfrac{c_t}{(1+r)^t}=(1+r)\\,b_0+\\sum_{t=0}^{\\infty}\\dfrac{w_t}{(1+r)^t}\\equiv W_0' },
           { label: 'Лагранжиан', tex: '\\mathcal L=\\sum_{t=0}^{\\infty}\\beta^t u(c_t)+\\lambda\\Big(W_0-\\sum_{t=0}^{\\infty}\\dfrac{c_t}{(1+r)^t}\\Big)' },
         ] },

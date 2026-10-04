@@ -53,11 +53,13 @@ const run = (o) => solve({ ...defaults, ...o });
     near(Math.pow(x.levels.c[t + 1] / x.levels.c[t], 2), 0.96 * (1 + r1), 1e-10, `Euler t=${t}`);
   }
 }
-// 6. Бюджет: b_t не уходит в схему Понци (дисконтированные активы стремятся к нулю при росте c)
+// 6. TVC: дисконтированные активы b_T/(1+r)^T стремятся к нулю
 {
   const x = run({ horizon: 200, shockSize: 0 });
   const T = 200, disc = Math.pow(1.05, -T);
-  assert.ok(Math.abs(x.levels.b[T] * disc) < 1e-2, `no-Ponzi: ${x.levels.b[T] * disc}`);
+  assert.ok(Math.abs(x.levels.b[T] * disc) < 1e-2, `TVC: ${x.levels.b[T] * disc}`);
+  const y = run({ horizon: 400, shockSize: 0 });
+  assert.ok(Math.abs(y.levels.b[400] * Math.pow(1.05, -400)) < Math.abs(x.levels.b[T] * disc), 'TVC: дисконтированные активы убывают');
 }
 // 7. Все комбинации решаются
 {

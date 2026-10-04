@@ -348,11 +348,11 @@ export function formulas(s) {
   fs.problem.push({ agent: 'Домохозяйство', system: true, items: D ? [
     `\\max_{\\{c_t\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}`,
     '\\text{s.t.}\\quad b_{t+1}=(1+r)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-    '\\text{No-Ponzi:}\\quad \\lim_{T\\to\\infty}\\dfrac{b_T}{(1+r)^T}\\ge 0',
+    '\\text{TVC:}\\quad \\lim_{T\\to\\infty}\\dfrac{b_T}{(1+r)^T}=0',
   ] : [
     `\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
     '\\text{s.t.}\\quad \\dot b=r\\,b+w(t)-c(t),\\qquad b(0)\\ \\text{задано}',
-    '\\text{No-Ponzi:}\\quad \\lim_{t\\to\\infty}e^{-rt}\\,b(t)\\ge 0',
+    '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-rt}\\,b(t)=0',
   ], notes: [`${wLaw},\\qquad r\\ \\text{— экзогенна}`] });
 
   // уравнение Эйлера
