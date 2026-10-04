@@ -94,7 +94,7 @@ export const controls = [
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
-    options: [{ v: 'unexpected', l: 'Неожиданный' }, { v: 'expected', l: 'Ожидаемый' }],
+    options: [{ v: 'unexpected', l: 'Неожиданный (MIT)' }, { v: 'expected', l: 'Ожидаемый' }],
     show: (s) => !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
   { id: 'tHat', label: (s) => (s.time === 'discrete' ? 'Период шока $\\hat t$' : 'Момент шока $\\hat t$'),
     type: 'number', min: 0, max: 100, step: 1 },
@@ -533,7 +533,7 @@ export function formulas(s) {
   fs.shock.push({ tex: shockTex, num: shockNum });
   fs.shockInfo = s.shockTiming === 'expected' && s.t0 < s.tHat
     ? `Ожидаемый шок: объявлен в $t_0 = ${s.t0}$, происходит в $\\hat t = ${s.tHat}$. С момента $t_0$ агенты знают весь будущий путь и сразу пересчитывают план.`
-    : `Неожиданный шок: до $\\hat t = ${s.tHat}$ экономика в стационаре; в $\\hat t$ агенты узнают о шоке и пересчитывают план.`;
+    : `Неожиданный (MIT) шок: до $\\hat t = ${s.tHat}$ экономика в стационаре; в $\\hat t$ агенты узнают о шоке и пересчитывают план.`;
 
   // ── стационар (с подстановкой и в числах)
   let rss, rssN, rv;
