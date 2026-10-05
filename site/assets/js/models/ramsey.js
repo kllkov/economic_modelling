@@ -435,7 +435,7 @@ export function formulas(s) {
   const growthD = tp ? '(1+n)(1+g)' : '(1+n)';
   const growthC = tp ? '(n+g+\\delta)' : '(n+\\delta)';
   const popLaw = D ? 'L_{t+1}=(1+n)\\,L_t' : '\\dot L/L=n';
-  const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t,\\qquad \\tilde x_t\\equiv x_t/E_t' : '\\dot E/E=g,\\qquad \\tilde x\\equiv x/E';
+  const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t' : '\\dot E/E=g';
   const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
 
   // целевая функция и дисконтирование в TVC
@@ -458,10 +458,9 @@ export function formulas(s) {
          : 'r_t=\\alpha\\,k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,k_t^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)},\\qquad L_t\\ \\text{— всё население занято}'
-         : 'b_t=k_t\\quad\\text{(рынок капитала)},\\qquad L_t\\ \\text{— всё население занято}',
-      lawLine,
+      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
     ] });
+    fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       `\\max_{c(t)}\\; V_0=${objC}`,
@@ -476,9 +475,9 @@ export function formulas(s) {
          : 'r=\\alpha\\,k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,k^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      tp ? '\\tilde b(t)=\\tilde k(t),\\qquad L(t)\\ \\text{— всё население занято}' : 'b(t)=k(t),\\qquad L(t)\\ \\text{— всё население занято}',
-      lawLine,
+      tp ? '\\tilde b(t)=\\tilde k(t)\\quad\\text{(рынок капитала)}' : 'b(t)=k(t)\\quad\\text{(рынок капитала)}',
     ] });
+    fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
 
   // ── централизованная
@@ -489,14 +488,16 @@ export function formulas(s) {
       tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\,\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
          : '\\text{s.t.}\\quad (1+n)\\,k_{t+1}=(1-\\delta)\\,k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
       `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k_{t+1}=0`,
-    ], notes: [lawLine] });
+    ] });
+    fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
     fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
       `\\max_{c(t)}\\; V_0=${objC}`,
       tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}=\\tilde k^{\\alpha}-\\tilde c-(n+g+\\delta)\\,\\tilde k,\\qquad \\tilde k(0)\\ \\text{задано}'
          : '\\text{s.t.}\\quad \\dot k=k^{\\alpha}-c-(n+\\delta)\\,k,\\qquad k(0)>0\\ \\text{задано}',
       `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k(t)=0`,
-    ], notes: [lawLine] });
+    ] });
+    fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
 
   // ── итоговая система (с подставленными функциями) и та же система в числах
