@@ -133,8 +133,10 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
     near(0.2 * Math.pow(ks[0], 0.3), r.ss0.dep * ks[0], 1e-12, 'k̃* — пересечение s·f и линии выбытия');
     near(pathS.data.at(-1)[0], r.ssF.k, 1e-2 * r.ssF.k, 'путь приходит в новый стационар');
     for (const ch of cv.charts.slice(0, 3)) for (const sr of ch.series) near(sr.data.at(-1)[1], ch.opts.hlines[0].y, 0.01 * ch.opts.hlines[0].y, `сходимость ${ch.title}`);
-    const g = cv.charts[3].series; // темп роста: беднее — быстрее
-    assert.ok(g[0].data[2][1] > g[1].data[2][1] && g[1].data[2][1] > g[2].data[2][1], 'условная конвергенция: темп роста убывает с k̃0');
+    assert.equal(cv.charts[0].series.length, 1, 'одна траектория — из введённого k̃0');
+    near(cv.charts[0].series[0].data[0][1], st.k0, 1e-12, 'старт из k̃0');
+    const gy = cv.charts[3].series[0].data; // k̃0 < k̃*: темп роста выше g и убывает
+    assert.ok(gy[1][1] > 2 && gy[1][1] > gy[20][1], 'условная конвергенция: рост выше g и замедляется');
   }
 }
 console.log('Модель Солоу: все проверки пройдены');
