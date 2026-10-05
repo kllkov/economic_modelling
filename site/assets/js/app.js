@@ -372,7 +372,7 @@ function run() {
   const specs = mod.chartSpecs(state);
   const discrete = state.time === 'discrete';
   const lines = [];
-  const DASH_INFO = [5, 4], DASH_SHOCK = [9, 3, 2, 3];   // объявление — пунктир, шок — штрихпунктир
+  const DASH_INFO = [9, 3, 2, 3], DASH_SHOCK = [5, 4];   // объявление — штрихпунктир, шок — пунктир
   if (res.marks.t0 != null) lines.push({ x: res.marks.t0, color: COLORS.announce, dash: DASH_INFO });
   lines.push({ x: res.marks.tHat, color: COLORS.shock, dash: DASH_SHOCK });
   const vMark = (color, dash) => {
