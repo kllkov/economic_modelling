@@ -272,7 +272,7 @@ select, input[type=number] {
 }
 select:focus, input:focus { outline: 2px solid var(--lilac-200); border-color: var(--lilac-400); }
 select:disabled, input:disabled { background: var(--surface-2); color: var(--muted); }
-.num-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.num-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .num-row .ctl { margin-bottom: 0; }
 .panel-actions { display: flex; gap: 8px; margin-top: 16px; }
 .panel-actions .btn { flex: 1; justify-content: center; }
