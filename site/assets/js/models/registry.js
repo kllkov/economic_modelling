@@ -73,8 +73,8 @@ export const MODELS = [
         ] },
         { title: 'Децентрализованная версия', eqs: [
           { label: 'Фирмы', tex: '\\max_{K,L}\\ \\pi=F(K,EL)-wL-(r+\\delta)K\\ \\Rightarrow\\ f^{\\prime}(\\tilde k)=r+\\delta,\\quad w=E\\big(f(\\tilde k)-f^{\\prime}(\\tilde k)\\,\\tilde k\\big),\\quad \\pi=0' },
-          { label: 'Домохозяйства', tex: 'c=(1-s)\\,y,\\qquad \\dot b=(r-n)\\,b+w-c' },
-          { label: 'Рынок капитала', tex: 'b=k\\ \\Rightarrow\\ \\dot{\\tilde k}=s\\,f(\\tilde k)-(n+g+\\delta)\\,\\tilde k' },
+          { label: 'Домохозяйства', tex: '\\tilde c=(1-s)\\,\\tilde y,\\qquad \\dot{\\tilde b}=(r-n-g)\\,\\tilde b+\\tilde w-\\tilde c' },
+          { label: 'Рынок капитала', tex: '\\tilde b=\\tilde k\\ \\Rightarrow\\ \\dot{\\tilde k}=s\\,f(\\tilde k)-(n+g+\\delta)\\,\\tilde k' },
         ] },
         { title: 'Траектория сбалансированного роста', eqs: [
           { label: 'Стационар', tex: 's\\,f(\\tilde k^*)=(n+g+\\delta)\\,\\tilde k^*' },

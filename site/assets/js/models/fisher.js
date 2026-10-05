@@ -221,7 +221,7 @@ export function solve(s) {
   const errors = validate(s);
   if (errors.length) return { ok: false, errors };
   const D = s.time === 'discrete';
-  const h = D ? 1 : (s.dt || 0.02);
+  const h = D ? 1 : (s.dt || 0.005);
   const Tsolve = Math.max(600, s.horizon + 400, s.tHat + 400);
   const N = Math.round(Tsolve / h);
   const jHat = Math.round(s.tHat / h);

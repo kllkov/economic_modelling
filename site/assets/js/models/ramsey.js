@@ -395,7 +395,7 @@ export function chartSpecs(s) {
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta$(%) от s.s.' },
     cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: tp ? `(1-\\alpha)E${k}^{\\alpha}` : `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
         : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
   ];
@@ -442,13 +442,24 @@ export function formulas(s) {
   const objD = mill ? `\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}` : `\\sum_{t=0}^{\\infty}\\beta^t L_t\\,${U(cT)}`;
   const objC = mill ? `\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt` : `\\int_0^{\\infty}e^{-\\rho t}L(t)\\,${U(cT)}\\,dt`;
   const tvcW = D ? (mill ? '\\beta^t' : '\\beta^t L_t') : (mill ? 'e^{-\\rho t}' : 'e^{-(\\rho-n)t}');
+  // с ТП задачи записываются в единицах на эффективного работника: c = c̃·E
+  const cE = D ? '(\\tilde c_tE_t)' : '\\big(\\tilde c(t)E(t)\\big)';
+  const objDe = tp ? objD.replace(cT, cE) : objD;
+  const objCe = tp ? objC.replace(cT, cE) : objC;
+  const UpE = tp ? Up(cE) : Up(cT);
 
   // ── децентрализованная
   if (D) {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
-      '\\text{s.t.}\\quad (1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b_t=0`,
+      ...(tp ? [
+        `\\max_{\\{\\tilde c_t,\\,\\tilde b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`,
+        '\\text{s.t.}\\quad (1+n)(1+g)\\,\\tilde b_{t+1}=(1+r_t)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E_t\\,\\tilde b_t=0`,
+      ] : [
+        `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
+        '\\text{s.t.}\\quad (1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b_t=0`,
+      ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
       tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
@@ -457,14 +468,20 @@ export function formulas(s) {
          : 'r_t=\\alpha\\,k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,k_t^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      'b_t=k_t\\quad\\text{(рынок капитала)}',
+      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
     ] });
     fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      `\\max_{c(t)}\\; V_0=${objC}`,
-      '\\text{s.t.}\\quad \\dot b=(r-n)\\,b+w-c,\\qquad b(0)\\ \\text{задано}',
-      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b(t)=0`,
+      ...(tp ? [
+        `\\max_{\\tilde c(t)}\\; V_0=${objCe}`,
+        '\\text{s.t.}\\quad \\dot{\\tilde b}=(r-n-g)\\,\\tilde b+\\tilde w-\\tilde c,\\qquad \\tilde b(0)\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E(t)\\,\\tilde b(t)=0`,
+      ] : [
+        `\\max_{c(t)}\\; V_0=${objC}`,
+        '\\text{s.t.}\\quad \\dot b=(r-n)\\,b+w-c,\\qquad b(0)\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b(t)=0`,
+      ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
       tp ? '\\max_{K,L}\\; \\pi=K^{\\alpha}\\big(E(t)L\\big)^{1-\\alpha}-w(t)L-\\big(r(t)+\\delta\\big)K'
@@ -473,7 +490,7 @@ export function formulas(s) {
          : 'r=\\alpha\\,k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,k^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      'b(t)=k(t)\\quad\\text{(рынок капитала)}',
+      tp ? '\\tilde b(t)=\\tilde k(t)\\quad\\text{(рынок капитала)}' : 'b(t)=k(t)\\quad\\text{(рынок капитала)}',
     ] });
     fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
@@ -481,19 +498,21 @@ export function formulas(s) {
   // ── централизованная
   if (D) {
     fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
-      tp ? `\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD.replace(cT, '(\\tilde c_tE_t)')}`
+      tp ? `\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`
          : `\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
       tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\,\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
          : '\\text{s.t.}\\quad (1+n)\\,k_{t+1}=(1-\\delta)\\,k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
-      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k_{t+1}=0`,
+      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E_{t+1}\\,\\tilde k_{t+1}=0`
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k_{t+1}=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
     fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
-      `\\max_{c(t)}\\; V_0=${objC}`,
+      tp ? `\\max_{\\tilde c(t)}\\; V_0=${objCe}` : `\\max_{c(t)}\\; V_0=${objC}`,
       tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}=\\tilde k^{\\alpha}-\\tilde c-(n+g+\\delta)\\,\\tilde k,\\qquad \\tilde k(0)\\ \\text{задано}'
          : '\\text{s.t.}\\quad \\dot k=k^{\\alpha}-c-(n+\\delta)\\,k,\\qquad k(0)>0\\ \\text{задано}',
-      `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k(t)=0`,
+      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E(t)\\,\\tilde k(t)=0`
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k(t)=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
