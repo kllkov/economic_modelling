@@ -398,7 +398,7 @@ function run() {
     el('div', { class: 'seg' },
       el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
       el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
-  out.append(block(5, 'Динамика переменных во времени', toggles, legendItems(true), lvlGrid));
+  out.append(block(5, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
 
   const xmax = state.horizon;
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);

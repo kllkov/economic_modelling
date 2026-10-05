@@ -1,6 +1,6 @@
 // Модель межвременного выбора Фишера с бесконечным горизонтом планирования.
 // Обозначения следуют материалам курса: b_t — активы, r — экзогенная ставка процента,
-// w_t — трудовой доход, c_t — потребление; b_{t+1} = (1+r_t) b_t + w_t − c_t.
+// w_t — заработная плата, c_t — потребление; b_{t+1} = (1+r_t) b_t + w_t − c_t.
 // Задача домохозяйства решается точно: путь потребления задаёт уравнение Эйлера,
 // уровень — пожизненное бюджетное ограничение (хвост после горизонта суммируется аналитически).
 // В подписях интерфейса фрагменты между $…$ рендерятся KaTeX.
@@ -8,19 +8,15 @@
 const MIT_NOTE = 'Только неожиданный перманентный: при смене функции полезности во времени сравнение $u\'(c_t)$ и $u\'(c_{t+1})$ зависело бы от единиц измерения $c$';
 
 const SHOCK_TARGETS = {
-  b:     { label: 'Активы $b_t$', kind: 'state', unit: 'abs', def: 2, step: 0.5,
-           note: 'Разовое изменение активов $\\Delta b$ (наследство, потеря сбережений)' },
-  w:     { label: 'Трудовой доход $w_t$', kind: 'param', group: 'state', unit: '%', def: -10, step: 1 },
-  r:     { label: 'Ставка процента $r$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005,
-           note: 'Абсолютное изменение $\\Delta r$' },
-  beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete',
-           note: 'Абсолютное изменение $\\Delta\\beta$' },
-  rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous',
-           note: 'Абсолютное изменение $\\Delta\\rho$' },
+  b:     { label: 'Активы $b_t$', kind: 'state', unit: 'abs', def: 2, step: 0.5 },
+  w:     { label: 'Заработная плата $w_t$', kind: 'param', group: 'state', unit: '%', def: -10, step: 1 },
+  r:     { label: 'Ставка процента $r$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
+  beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete' },
+  rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous' },
   sigma: { label: 'Неприятие риска $\\sigma$', kind: 'param', unit: 'Δ', def: 1, step: 0.25, utility: 'crra', onlyMIT: true,
-           note: `Абсолютное изменение $\\Delta\\sigma$. ${MIT_NOTE}` },
+           note: MIT_NOTE },
   theta: { label: 'Неприятие риска $\\theta$', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara', onlyMIT: true,
-           note: `Абсолютное изменение $\\Delta\\theta$. ${MIT_NOTE}` },
+           note: MIT_NOTE },
 };
 
 export const meta = { id: 'fisher', title: 'Модель Фишера', subtitle: 'Fisher intertemporal choice model', ready: true };
@@ -46,8 +42,8 @@ export const controls = [
     options: [{ v: 'discrete', l: 'Дискретное' }, { v: 'continuous', l: 'Непрерывное' }] },
   { id: 'variant', label: 'Вариация', type: 'select',
     options: [
-      { v: 'const', l: 'Постоянный трудовой доход' },
-      { v: 'growing', l: 'Растущий трудовой доход' },
+      { v: 'const', l: 'Постоянная заработная плата' },
+      { v: 'growing', l: 'Растущая заработная плата' },
     ] },
 
   { section: 'Функции' },
@@ -64,15 +60,15 @@ export const controls = [
     show: (s) => s.utility === 'crra' },
   { id: 'theta', label: '$\\theta$ — неприятие риска', type: 'number', min: 0.05, max: 10, step: 0.05,
     show: (s) => s.utility === 'cara' },
-  { id: 'w', label: (s) => (s.variant === 'growing' ? '$w_0$ — начальный доход' : '$w$ — трудовой доход'), type: 'number', min: 0, max: 100, step: 0.1 },
-  { id: 'gw', label: '$g_w$ — темп роста дохода', type: 'number', min: -0.05, max: 0.2, step: 0.005,
+  { id: 'w', label: (s) => (s.variant === 'growing' ? '$w_0$ — начальная заработная плата' : '$w$ — заработная плата'), type: 'number', min: 0, max: 100, step: 0.1 },
+  { id: 'gw', label: '$g_w$ — темп роста заработной платы', type: 'number', min: -0.05, max: 0.2, step: 0.005,
     show: (s) => s.variant === 'growing' },
   { id: 'b0', label: '$b_0$ — начальные активы', type: 'number', min: -100, max: 100, step: 0.5 },
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: (v) => ((SHOCK_TARGETS[v]?.group ?? SHOCK_TARGETS[v]?.kind) === 'state' ? 'state-переменные' : 'параметры') },
-  { id: 'shockSize', label: (s) => ({ '%': 'Величина, %', abs: 'Величина, $\\Delta b$' }[SHOCK_TARGETS[s.shockTarget]?.unit] || 'Величина, $\\Delta$'),
+  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta$(%)' : 'Величина, $\\Delta$(уровни)'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
@@ -160,12 +156,12 @@ function validate(s) {
   if (s.time === 'continuous' && !(s.rho > 0)) errors.push('$\\rho$ должна быть положительной.');
   if (s.utility === 'crra' && !(s.sigma > 0)) errors.push('$\\sigma$ должна быть положительной.');
   if (s.utility === 'cara' && !(s.theta > 0)) errors.push('$\\theta$ должна быть положительной.');
-  if (!(s.w >= 0)) errors.push('Трудовой доход не может быть отрицательным.');
+  if (!(s.w >= 0)) errors.push('Заработная плата не может быть отрицательной.');
   if (SHOCK_TARGETS[s.shockTarget]?.onlyMIT && (s.shockTiming === 'expected' || s.shockPersistence === 'temporary'))
     errors.push('Шок параметра неприятия риска допускается только неожиданным и перманентным.');
   if (s.shockTiming === 'expected' && !(s.t0 < s.tHat))
     errors.push('Для ожидаемого шока момент объявления $t_0$ должен быть раньше $\\hat t$.');
-  if (s.shockTarget === 'w' && s.shockSize <= -100) errors.push('Доход не может упасть больше чем на 100%.');
+  if (s.shockTarget === 'w' && s.shockSize <= -100) errors.push('Заработная плата не может упасть больше чем на 100%.');
   const sig = s.utility === 'log' ? 1 : s.sigma;
   errors.push(...checkConstants(s, s.r, s.beta, s.rho, sig, s.theta, ''));
   // после перманентного шока параметры должны удовлетворять тем же условиям
@@ -197,7 +193,7 @@ function plan(s, P, js, bjs, h, N) {
     if (util === 'cara') Sm += disc[j] * h * m[j]; else Sm += disc[j] * h * m[j];
     if (j > js) ST += disc[j - 1] * P.T[j];
   }
-  // хвост после N: параметры постоянны, доход растёт с постоянным темпом
+  // хвост после N: параметры постоянны, заработная плата растёт с постоянным темпом
   const RF = R(N), x = 1 / RF;
   const Gw = P.w[N + 1] / P.w[N];
   const qw = Gw * x;
@@ -238,7 +234,7 @@ export function solve(s) {
 
   // базовый план из t = 0
   const base = plan(s, Pb, 0, s.b0, h, N);
-  if (s.utility !== 'cara' && !(base.W > 0)) return { ok: false, errors: ['Пожизненное богатство неположительно: домохозяйству нечего потреблять. Увеличьте доход или начальные активы.'] };
+  if (s.utility !== 'cara' && !(base.W > 0)) return { ok: false, errors: ['Пожизненное богатство неположительно: домохозяйству нечего потреблять. Увеличьте заработную плату или начальные активы.'] };
   const bb = new Float64Array(N + 2); bb[0] = s.b0;
   for (let j = 0; j <= N; j++) bb[j + 1] = (1 + h * Pb.r[j]) * bb[j] + h * (Pb.w[j] - base.c[j]);
 
@@ -312,7 +308,7 @@ export function chartSpecs(s) {
     { id: 'b', title: 'Активы', sym: x('b'), irfUnit: '$\\Delta$ от базового пути' },
     { id: 'y', title: 'Доход', sym: D ? `y_t = w_t + ${rb}` : `y = w + ${rb}`, irfUnit: '$\\Delta$(%) от базового пути' },
     { id: 's', title: 'Сбережения', sym: D ? 's_t = y_t - c_t' : 's = y - c', irfUnit: '$\\Delta$ от базового пути' },
-    { id: 'w', title: 'Трудовой доход', sym: x('w'), irfUnit: '$\\Delta$(%) от базового пути' },
+    { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от базового пути' },
     { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от базового пути', lvlUnit: '%' },
   ];
 }
@@ -448,7 +444,7 @@ export function steadyTable(s, res) {
   const sub = D ? `_{${ts}}` : `(${ts})`;
   const rows = [
     { sym: `W${sub}`, name: 'пожизненное богатство', key: 'W' },
-    { sym: `H${sub}`, name: 'человеческое богатство (приведённый доход)', key: 'H' },
+    { sym: `H${sub}`, name: 'человеческое богатство (приведённая стоимость заработных плат)', key: 'H' },
     { sym: `c${sub}`, name: 'потребление в момент пересчёта плана', key: 'c' },
     { sym: `c${sub}/W${sub}`, name: 'склонность к потреблению из богатства', key: 'mpc' },
     s.utility === 'cara'

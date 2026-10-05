@@ -12,22 +12,16 @@ import { newtonTridiagonal } from '../solver.js';
 const MIT_NOTE = 'Только неожиданный перманентный: при смене функции полезности во времени сравнение $u\'(c_t)$ и $u\'(c_{t+1})$ зависело бы от единиц измерения $c$';
 
 const SHOCK_TARGETS = {
-  tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp',
-           note: '$\\varphi$ — скачок уровня $E_t$, %' },
-  k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -20, step: 1,
-           note: 'Разовое изменение запаса капитала на работника, %' },
-  n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005,
-           note: 'Абсолютное изменение $\\Delta n$' },
-  beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete',
-           note: 'Абсолютное изменение $\\Delta\\beta$' },
-  rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous',
-           note: 'Абсолютное изменение $\\Delta\\rho$' },
+  tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
+  k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -20, step: 1 },
+  n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
+  beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete' },
+  rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous' },
   sigma: { label: 'Неприятие риска $\\sigma$', kind: 'param', unit: 'Δ', def: 1, step: 0.25, utility: 'crra', onlyMIT: true,
-           note: `Абсолютное изменение $\\Delta\\sigma$. ${MIT_NOTE}` },
+           note: MIT_NOTE },
   theta: { label: 'Неприятие риска $\\theta$', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara', onlyMIT: true,
-           note: `Абсолютное изменение $\\Delta\\theta$. ${MIT_NOTE}` },
-  delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005,
-           note: 'Абсолютное изменение $\\Delta\\delta$' },
+           note: MIT_NOTE },
+  delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
 };
 
 export const meta = {
@@ -102,7 +96,7 @@ export const controls = [
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: (v) => ((SHOCK_TARGETS[v]?.group ?? SHOCK_TARGETS[v]?.kind) === 'state' ? 'state-переменные' : 'параметры') },
-  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, %' : 'Величина, $\\Delta$'),
+  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta$(%)' : 'Величина, $\\Delta$(уровни)'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
