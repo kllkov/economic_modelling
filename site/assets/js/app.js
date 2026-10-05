@@ -333,7 +333,7 @@ function run() {
   // 1. оптимизационная задача
   const groups = F.problem || (cen ? F.cen : F.dec);
   const cls = (a) => (a.startsWith('Домох') ? 'hh' : a.startsWith('Фирм') ? 'firm' : a.startsWith('Рынк') ? 'mkt' : 'plan wide');
-  out.append(block(1, 'Оптимизационная задача', null,
+  out.append(block(1, F.problemTitle || 'Оптимизационная задача', null,
     el('div', { class: 'agents' }, groups.map((g) =>
       el('div', { class: `agent ${cls(g.agent)}` }, el('h3', {}, g.agent),
         g.system ? tex(`\\left\\{\\begin{aligned}&${g.items.join('\\\\[6pt]&')}\\end{aligned}\\right.`) : g.items.map((t) => tex(t)),
