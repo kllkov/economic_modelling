@@ -327,6 +327,11 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .chart-card .ct { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
 .chart-card .ct .u { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .chart-box { position: relative; height: 190px; }
+.chart-card.wide { grid-column: 1 / -1; }
+.chart-card.wide .chart-box { height: 460px; }
+.charts.diagram { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+.charts.diagram .chart-box { height: 380px; }
+.chart-legend i.pt { width: 7px; height: 7px; border: none; border-radius: 50%; }
 .toggles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .toggles .seg { min-width: 0; flex: 0 0 auto; }
 .toggles .seg button { flex: 0 0 auto; min-width: auto; padding: 6px 14px; white-space: nowrap; }

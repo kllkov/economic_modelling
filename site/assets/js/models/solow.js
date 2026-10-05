@@ -23,7 +23,7 @@ export const defaults = {
   alpha: 0.3, s: 0.2, delta: 0.05, n: 0.01, g: 0.02,
   shockTarget: 's', shockSize: 0.05, tHat: 10,
   shockPersistence: 'permanent', rhoS: 0.8,
-  horizon: 100,
+  horizon: 100, k0: 1.5,
 };
 
 function shockTargetsFor(st) {
@@ -69,6 +69,10 @@ export const controls = [
   { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
     show: (st) => SHOCK_TARGETS[st.shockTarget]?.kind !== 'state' && st.shockPersistence === 'temporary',
     hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
+
+  { section: 'Начальные условия' },
+  { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальный капитал`, type: 'number', min: 0.01, max: 100, step: 0.1,
+    hint: 'Для блока «Сходимость к стационару»' },
 
   { section: 'Отображение' },
   { id: 'horizon', label: 'Горизонт графиков', type: 'number', min: 20, max: 200, step: 5 },
@@ -153,7 +157,7 @@ function validate(st) {
 
 // Траектория x_j = K/(L·(1+g₀)^t) на сетке с шагом h, j = 0..N.
 // scale = 0 даёт базовый путь (экономика всё время на ТСР).
-function simulate(st, h, N, scale) {
+function simulate(st, h, N, scale, x0 = null) {
   const a = st.alpha;
   const g0 = st.variant === 'tp' ? st.g : 0;
   const ss0 = steady(st, params(st, 0, 0));
@@ -179,7 +183,7 @@ function simulate(st, h, N, scale) {
   };
 
   L[0] = 1;
-  x[0] = ss0.k * (jHat === 0 ? D : 1);
+  x[0] = x0 ?? ss0.k * (jHat === 0 ? D : 1);
   for (let j = 0; j < N; j++) {
     const t = j * h;
     if (disc) {
@@ -486,4 +490,145 @@ export function steadyTable(st, res) {
   const verdict = (ss) => (Math.abs(ss.r - ss.growth) <= 1e-12 ? 'золотое правило' : ss.r > ss.growth ? 'эффективна' : 'неэффективна');
   out.push({ sym: 's\\ \\text{vs}\\ s_{GR}', name: 'динамическая эффективность', before: verdict(res.ss0), after: verdict(res.ssF) });
   return out;
+}
+
+// ───────────── Дополнительные блоки: основная диаграмма и сходимость ─────────────
+
+const DC = {
+  f: '#463687', sf0: '#3d8acb', sf1: '#86c2f0', dep0: '#7c62d8', dep1: '#c2b2f7',
+  ss0: '#7d7ca5', ss1: '#3d8acb', path: '#23214a',
+};
+const fmt3 = (x) => fmt(x, 3);
+
+export function extraBlocks(st, res) {
+  return [diagramBlock(st, res), convergenceBlock(st)];
+}
+
+function diagramBlock(st, res) {
+  const a = st.alpha, tp = st.variant === 'tp', D = st.time === 'discrete';
+  const tg = st.shockTarget;
+  const permanent = st.shockPersistence === 'permanent' && !isState(st);
+  const P0 = params(st, 0, 0);
+  const P1 = isState(st) ? P0 : permanent ? params(st, Infinity, 1) : params(st, st.tHat, 1);
+  const ss0 = steady(st, P0), ss1 = steady(st, P1);
+  const kS = tp ? 'k̃' : 'k';
+  const f = (k) => Math.pow(k, a);
+
+  // путь экономики после шока: точки (k̃_t, s_t·f(k̃_t)) раз в период
+  const h = res.hGrid, stepJ = Math.max(1, Math.round(1 / h));
+  const jHat = Math.round(st.tHat / h);
+  const jEnd = Math.min(res.x.length - 1, Math.round(st.horizon / h));
+  const path = [];
+  let kMax = Math.max(ss0.k, ss1.k);
+  for (let j = jHat; j <= jEnd; j += stepJ) {
+    const k = res.x[j] / res.Ar[j], sj = params(st, j * h, 1).s;
+    path.push([k, sj * f(k)]); kMax = Math.max(kMax, k);
+  }
+  const xmax = 1.35 * kMax;
+  const grid = (fn) => { const pts = []; for (let i = 1; i <= 240; i++) { const k = (xmax * i) / 240; pts.push([k, fn(k)]); } return pts; };
+
+  const depLabel = (P, prime) => {
+    const p = (sym, key) => sym + (prime === key ? '′' : '');
+    if (D) return tp ? `[(1+${p('n', 'n')})(1+${p('g', 'g')})−1+${p('δ', 'delta')}]·${kS}` : `(${p('n', 'n')}+${p('δ', 'delta')})·${kS}`;
+    return tp ? `(${p('n', 'n')}+${p('g', 'g')}+${p('δ', 'delta')})·${kS}` : `(${p('n', 'n')}+${p('δ', 'delta')})·${kS}`;
+  };
+  const sChanged = Math.abs(P1.s - P0.s) > 1e-12;
+  const depChanged = Math.abs(ss1.dep - ss0.dep) > 1e-12;
+  const series = [
+    { label: `f(${kS})`, data: grid(f), color: DC.f, width: 2, curveLabel: `f(${kS})` },
+    { label: `s·f(${kS})`, data: grid((k) => P0.s * f(k)), color: DC.sf0, width: 2.4, curveLabel: `s·f(${kS})` },
+    ...(sChanged ? [{ label: `s′·f(${kS})`, data: grid((k) => P1.s * f(k)), color: DC.sf1, width: 2.4, dash: [7, 4], curveLabel: `s′·f(${kS})` }] : []),
+    { label: 'восстановительные инвестиции', data: grid((k) => ss0.dep * k), color: DC.dep0, width: 2.2, curveLabel: depLabel(P0, null) },
+    ...(depChanged ? [{ label: 'восстановительные инвестиции (после шока)', data: grid((k) => ss1.dep * k), color: DC.dep1, width: 2.2, dash: [7, 4], curveLabel: depLabel(P1, tg) }] : []),
+    { label: `путь экономики (${kS}ₜ, s·f(${kS}ₜ))`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
+  ];
+  const moved = Math.abs(ss1.k - ss0.k) / ss0.k > 1e-9;
+  const vlines = [{ x: ss0.k, color: DC.ss0, label: `${kS}*`, yTo: P0.s * f(ss0.k) }];
+  if (moved) vlines.push({ x: ss1.k, color: DC.ss1, label: permanent ? `${kS}*′` : `${kS}*′ (в момент шока)`, yTo: P1.s * f(ss1.k) });
+
+  // крупный план окрестности стационара: без f(k), только сбережения, восстановительные инвестиции и путь
+  function zoomChart() {
+    const ks = [ss0.k, ss1.k, ...path.map((p) => p[0])];
+    let lo = Math.min(...ks), hi = Math.max(...ks);
+    const pad = Math.max(0.15 * (hi - lo), 0.04 * hi);
+    lo = Math.max(1e-6, lo - pad); hi += pad;
+    const zgrid = (fn) => { const pts = []; for (let i = 0; i <= 200; i++) { const k = lo + ((hi - lo) * i) / 200; pts.push([k, fn(k)]); } return pts; };
+    const zs = series.filter((x) => x.label !== `f(${kS})`).map((x) => (x.points ? x : { ...x, data: zgrid((k) => x.data === undefined ? 0 : 0) }));
+    const fnFor = [(k) => P0.s * f(k), ...(sChanged ? [(k) => P1.s * f(k)] : []), (k) => ss0.dep * k, ...(depChanged ? [(k) => ss1.dep * k] : [])];
+    let fi = 0;
+    for (const x of zs) if (!x.points) x.data = zgrid(fnFor[fi++]);
+    const ys = zs.flatMap((x) => x.data.map((p) => p[1]));
+    const yl = Math.min(...ys), yh = Math.max(...ys), yp = 0.06 * (yh - yl || yh);
+    return { title: 'Крупно: окрестность стационара', series: zs, opts: { xLabel: kS, xmin: lo, xmax: hi, ymin: yl - yp, ymax: yh + yp, vlines: vlines.map((v) => ({ ...v, yTo: null })) } };
+  }
+
+  // пояснение
+  const kTex = tp ? '\\tilde k' : 'k';
+  const sstr = `$${kTex}^*$`;
+  let text;
+  const back = permanent ? 'и сходится к новому стационару' : `и, по мере затухания шока ($\\rho_s = ${st.rhoS}$), возвращается к исходному стационару`;
+  if (tg === 's') {
+    text = `${st.shockSize > 0 ? 'Рост' : 'Снижение'} нормы сбережения ${st.shockSize > 0 ? 'поднимает' : 'опускает'} кривую фактических сбережений $s\\,f(${kTex})$. Пересечение с линией восстановительных инвестиций ${permanent ? 'сдвигается' : 'временно сдвигается'}: ${sstr} ${st.shockSize > 0 ? 'растёт' : 'падает'} с ${fmt3(ss0.k)} до ${fmt3(ss1.k)}. Пока ${st.shockSize > 0 ? 'сбережения выше' : 'сбережения ниже'} восстановительных инвестиций, $${kTex}$ ${st.shockSize > 0 ? 'растёт' : 'снижается'} ${back}.`;
+  } else if (tg === 'n' || tg === 'delta' || tg === 'g') {
+    const nm = { n: 'темпа роста населения', delta: 'нормы амортизации', g: 'темпа технологического прогресса' }[tg];
+    const up = st.shockSize > 0;
+    text = `${up ? 'Рост' : 'Снижение'} ${nm} делает линию восстановительных инвестиций ${up ? 'круче' : 'положе'}: для поддержания капиталовооружённости нужно больше инвестиций. ${sstr} ${up ? 'падает' : 'растёт'} с ${fmt3(ss0.k)} до ${fmt3(ss1.k)}; экономика ${up ? 'сокращает' : 'наращивает'} $${kTex}$ ${back}.`;
+    if (tg === 'g' && permanent) text += ' Выпуск на работника при этом растёт быстрее (эффект роста) — это видно в блоке траекторий.';
+  } else if (tg === 'tfp') {
+    text = `Скачок уровня технологии не меняет кривые в единицах на эффективного работника, но мгновенно уменьшает $\\tilde k = K/(EL)$: эффективных работников стало больше при том же капитале. Экономика оказывается левее ${sstr}, сбережения превышают восстановительные инвестиции, и $\\tilde k$ ${permanent ? 'возвращается к прежнему стационару, а выпуск на работника — к траектории, сдвинутой вверх (эффект уровня)' : 'возвращается к стационару'}.`;
+  } else {
+    text = `Шок капитала не сдвигает кривые: экономика просто оказывается ${st.shockSize < 0 ? 'левее' : 'правее'} ${sstr}. ${st.shockSize < 0 ? 'Сбережения превышают восстановительные инвестиции, капитал растёт' : 'Восстановительные инвестиции превышают сбережения, капитал снижается'} и сходится к тому же стационару.`;
+  }
+  text += ' Точки — положение экономики раз в период после шока: чем ближе к стационару, тем гуще точки, потому что сходимость замедляется.';
+
+  return {
+    title: 'Основная диаграмма модели', diagram: true,
+    legend: series.map((s) => ({ label: s.label, color: s.color, dash: s.dash, point: s.points })),
+    charts: [
+      { title: 'Вся диаграмма', series, opts: { xLabel: kS, xmin: 0, xmax, ymin: 0, vlines } },
+      zoomChart(),
+    ],
+    text,
+  };
+}
+
+function convergenceBlock(st) {
+  const a = st.alpha, tp = st.variant === 'tp', disc = st.time === 'discrete';
+  const h = disc ? 1 : 0.02;
+  const N = Math.round(st.horizon / h) + 1;
+  const P = params(st, 0, 0);
+  const ss = steady(st, P);
+  const g0 = tp ? st.g : 0;
+  const kS = tp ? 'k̃' : 'k';
+  const user = st.k0 > 0 ? st.k0 : ss.k;
+  const refs = [0.2, 0.6, 1.4, 2].map((m) => ({ k0: m * ss.k, label: `${kS}₀ = ${m}·${kS}*`, color: { 0.2: '#d5cdfb', 0.6: '#b09cf5', 1.4: '#9bc4ef', 2: '#c4dcf5' }[m], width: 1.8 }));
+  const lines = [...refs, { k0: user, label: `${kS}₀ = ${fmt3(user)}`, color: '#463687', width: 3 }];
+  const stride = Math.max(1, Math.round(0.1 / h));
+  const out = { k: [], y: [], c: [], gy: [] };
+  for (const L of lines) {
+    const sim = simulate({ ...st, shockSize: 0 }, h, N, 0, L.k0);
+    const k = [], y = [], c = [], gy = [];
+    for (let j = 0; j <= N - 1; j += stride) {
+      const t = +(j * h).toFixed(6), kj = sim.x[j], yj = Math.pow(kj, a);
+      k.push([t, kj]); y.push([t, yj]); c.push([t, (1 - P.s) * yj]);
+      if (disc) { if (j >= 1) gy.push([t, 100 * ((yj / Math.pow(sim.x[j - 1], a)) * (1 + g0) - 1)]); }
+      else gy.push([t, 100 * (a * (P.s * Math.pow(kj, a - 1) - (P.n + g0 + P.delta)) + g0)]);
+    }
+    out.k.push({ ...L, data: k }); out.y.push({ ...L, data: y }); out.c.push({ ...L, data: c }); out.gy.push({ ...L, data: gy });
+  }
+  const e = tp ? 'на эфф. работника' : 'на работника';
+  const ser = (arr) => arr.map((L) => ({ label: L.label, data: L.data, color: L.color, width: L.width }));
+  const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: ser(out[key]), opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }] } });
+  const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => (disc ? `${v}_t` : `${v}(t)`);
+  return {
+    title: 'Сходимость к стационару',
+    legend: lines.map((L) => ({ label: L.label, color: L.color, bold: L.width > 2 })),
+    charts: [
+      mk(`Капитал ${e}`, x(kt), 'k', ss.k, ''),
+      mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),
+      mk(`Потребление ${e}`, x(ct), 'c', ss.c, ''),
+      mk('Темп роста выпуска на работника', disc ? 'g_{y,t}' : 'g_y(t)', 'gy', 100 * g0, '%'),
+    ],
+    text: `Траектории из разных начальных $${kt}_0$ при текущих параметрах (без шока); пунктир — стационарные значения ($${kt}^* = ${fmt3(ss.k)}$). Чем дальше экономика от стационара снизу, тем быстрее растёт выпуск на работника — условная конвергенция; при $${kt}_0 > ${kt}^*$ темп роста ниже ${tp ? '$g$' : 'нуля'}. С любой начальной точки экономика возвращается на ТСР — «эффекта колеи» нет.`,
+  };
 }

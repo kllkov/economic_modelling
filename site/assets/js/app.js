@@ -1,5 +1,5 @@
 import { MODELS, GLYPHS } from './models/registry.js';
-import { drawChart, COLORS } from './charts.js';
+import { drawChart, drawDiagram, COLORS } from './charts.js';
 /* global katex */
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -394,6 +394,26 @@ function run() {
     flat ? rich(F.flatNote || 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
     irfGrid));
 
+  // дополнительные блоки модели (например, основная диаграмма и сходимость у Солоу)
+  let num = 5;
+  const extraDraws = [];
+  for (const X of mod.extraBlocks ? mod.extraBlocks(state, res) : []) {
+    const grid = el('div', { class: `charts${X.diagram ? ' diagram' : ''}` });
+    const legend = el('div', { class: 'chart-legend' }, X.legend.map((L) => el('span', {},
+      L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
+        : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color};${L.bold ? 'border-top-width:3.5px' : ''}` }),
+      L.label)));
+    out.append(block(num++, X.title, null, legend, grid, X.text ? rich(X.text, 'div', { class: 'callout', style: 'margin-top:12px' }) : null));
+    for (const C of X.charts) {
+      const cv = el('canvas');
+      grid.append(el('div', { class: `chart-card${C.wide ? ' wide' : ''}` },
+        C.title ? el('div', { class: 'ct' }, el('span', {}, C.sym ? `${C.title}, ` : C.title, C.sym ? texInline(C.sym) : null), el('span', { class: 'u' }, C.unit || '')) : null,
+        el('div', { class: 'chart-box' }, cv)));
+      extraDraws.push(() => current.charts.push(drawDiagram(cv, C.series, C.opts)));
+    }
+  }
+  extraDraws.forEach((f) => f());
+
   const lvlGrid = el('div', { class: 'charts' });
   const effPossible = specs.some((s) => s.effAvailable);
   const aggPossible = specs.some((s) => s.aggSym);
@@ -404,7 +424,7 @@ function run() {
     el('div', { class: 'seg' },
       el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
       el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
-  out.append(block(5, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
+  out.append(block(num, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
 
   const xmax = state.horizon;
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);

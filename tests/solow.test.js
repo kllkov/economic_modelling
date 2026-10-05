@@ -117,4 +117,24 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
     }
   console.log(`комбинаций: ${cnt}`);
 }
+
+// 11. Основная диаграмма и сходимость: точки пути лежат на s·f(k̃), пересечения — стационары; траектории из любых k̃0 сходятся
+{
+  const { extraBlocks } = await import('../site/assets/js/models/solow.js');
+  for (const time of ['discrete', 'continuous']) {
+    const st = { ...defaults, time, shockTarget: 's', shockSize: 0.05, tHat: 10, horizon: 150 };
+    const r = solve(st);
+    const [dg, cv] = extraBlocks(st, r);
+    const full = dg.charts[0];
+    const pathS = full.series.find((x) => x.points);
+    for (const [k, v] of pathS.data) near(v, 0.25 * Math.pow(k, 0.3), 1e-12, 'точка пути на s′·f(k̃)');
+    const ks = full.opts.vlines.map((v) => v.x);
+    near(ks[0], r.ss0.k, 1e-12, 'вертикаль k̃*'); near(ks[1], r.ssF.k, 1e-12, 'вертикаль k̃*′');
+    near(0.2 * Math.pow(ks[0], 0.3), r.ss0.dep * ks[0], 1e-12, 'k̃* — пересечение s·f и линии выбытия');
+    near(pathS.data.at(-1)[0], r.ssF.k, 1e-2 * r.ssF.k, 'путь приходит в новый стационар');
+    for (const ch of cv.charts.slice(0, 3)) for (const sr of ch.series) near(sr.data.at(-1)[1], ch.opts.hlines[0].y, 0.01 * ch.opts.hlines[0].y, `сходимость ${ch.title}`);
+    const g = cv.charts[3].series; // темп роста: беднее — быстрее
+    assert.ok(g[0].data[2][1] > g[1].data[2][1] && g[1].data[2][1] > g[2].data[2][1], 'условная конвергенция: темп роста убывает с k̃0');
+  }
+}
 console.log('Модель Солоу: все проверки пройдены');
