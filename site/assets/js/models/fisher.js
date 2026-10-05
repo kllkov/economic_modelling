@@ -360,21 +360,21 @@ export function formulas(s) {
   if (D) {
     const gB = s.beta * (1 + r);
     if (ut === 'cara') {
-      euler = '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta(1+r)\\ \\Rightarrow\\ c_{t+1}-c_t=\\dfrac{\\ln\\big[\\beta(1+r)\\big]}{\\theta}';
-      eulerN = `c_{t+1}-c_t=\\dfrac{\\ln(${n4(s.beta)}\\cdot ${n4(1 + r)})}{${n4(s.theta)}}=${n4(Math.log(gB) / s.theta)}`;
+      euler = 'c_{t+1}-c_t=\\dfrac{\\ln\\big[\\beta(1+r)\\big]}{\\theta}';
+      eulerN = `c_{t+1}-c_t=${n4(Math.log(gB) / s.theta)}`;
     } else if (ut === 'log') {
-      euler = '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta(1+r)\\ \\Rightarrow\\ \\dfrac{c_{t+1}}{c_t}=\\beta(1+r)';
-      eulerN = `\\dfrac{c_{t+1}}{c_t}=${n4(s.beta)}\\cdot ${n4(1 + r)}=${n4(gB)}`;
+      euler = '\\dfrac{c_{t+1}}{c_t}=\\beta(1+r)';
+      eulerN = `\\dfrac{c_{t+1}}{c_t}=${n4(gB)}`;
     } else {
-      euler = '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta(1+r)\\ \\Rightarrow\\ \\dfrac{c_{t+1}}{c_t}=\\big[\\beta(1+r)\\big]^{1/\\sigma}';
-      eulerN = `\\dfrac{c_{t+1}}{c_t}=(${n4(s.beta)}\\cdot ${n4(1 + r)})^{1/${n4(sig)}}=${n4(Math.pow(gB, 1 / sig))}`;
+      euler = '\\dfrac{c_{t+1}}{c_t}=\\big[\\beta(1+r)\\big]^{1/\\sigma}';
+      eulerN = `\\dfrac{c_{t+1}}{c_t}=${n4(Math.pow(gB, 1 / sig))}`;
     }
   } else if (ut === 'cara') {
-    euler = '\\dot c=\\dfrac{r-\\rho}{\\theta}'; eulerN = `\\dot c=\\dfrac{${n4(r)}-${n4(s.rho)}}{${n4(s.theta)}}=${n4((r - s.rho) / s.theta)}`;
+    euler = '\\dot c=\\dfrac{r-\\rho}{\\theta}'; eulerN = `\\dot c=${n4((r - s.rho) / s.theta)}`;
   } else if (ut === 'log') {
-    euler = '\\dfrac{\\dot c}{c}=r-\\rho'; eulerN = `\\dfrac{\\dot c}{c}=${n4(r)}-${n4(s.rho)}=${n4(r - s.rho)}`;
+    euler = '\\dfrac{\\dot c}{c}=r-\\rho'; eulerN = `\\dfrac{\\dot c}{c}=${n4(r - s.rho)}`;
   } else {
-    euler = '\\dfrac{\\dot c}{c}=\\dfrac{r-\\rho}{\\sigma}'; eulerN = `\\dfrac{\\dot c}{c}=\\dfrac{${n4(r)}-${n4(s.rho)}}{${n4(sig)}}=${n4((r - s.rho) / sig)}`;
+    euler = '\\dfrac{\\dot c}{c}=\\dfrac{r-\\rho}{\\sigma}'; eulerN = `\\dfrac{\\dot c}{c}=${n4((r - s.rho) / sig)}`;
   }
   fs.system.push({ label: 'Уравнение Эйлера', tex: euler, num: eulerN });
 
@@ -390,7 +390,7 @@ export function formulas(s) {
     Wtex = grow ? 'W_0=b_0+\\dfrac{w_0}{r-g_w}' : 'W_0=b_0+\\dfrac{w}{r}';
   }
   const W = (D ? (1 + r) * s.b0 : s.b0) + H;
-  fs.system.push({ label: 'Пожизненное бюджетное ограничение', tex: budget, num: `W_0=${n4(D ? (1 + r) * s.b0 : s.b0)}+${n4(H)}=${n4(W)}` });
+  fs.system.push({ label: 'Пожизненное бюджетное ограничение', tex: budget, num: `W_0=${n4(W)}` });
 
   // шок
   const tg = s.shockTarget;
@@ -421,22 +421,22 @@ export function formulas(s) {
       const dl = Math.log(s.beta * (1 + r)) / s.theta;
       fs.ss = [
         { tex: '\\Delta=\\dfrac{\\ln\\big[\\beta(1+r)\\big]}{\\theta}', num: `\\Delta=${n4(dl)}` },
-        { tex: 'c_0=\\dfrac{r}{1+r}\\,W_0-\\dfrac{\\Delta}{r}', num: `c_0=${n4(r / (1 + r))}\\cdot ${n4(W)}-\\dfrac{${n4(dl)}}{${n4(r)}}=${n4((r / (1 + r)) * W - dl / r)}` },
+        { tex: 'c_0=\\dfrac{r}{1+r}\\,W_0-\\dfrac{\\Delta}{r}', num: `c_0=${n4((r / (1 + r)) * W - dl / r)}` },
       ];
     } else {
       const gm = Math.pow(s.beta * (1 + r), 1 / sig);
       fs.ss = [
         ...(ut === 'log' ? [] : [{ tex: '\\gamma=\\big[\\beta(1+r)\\big]^{1/\\sigma}', num: `\\gamma=${n4(gm)}` }]),
         { tex: ut === 'log' ? 'c_0=(1-\\beta)\\,W_0' : 'c_0=\\Big(1-\\dfrac{\\gamma}{1+r}\\Big)W_0',
-          num: `c_0=${n4(1 - gm / (1 + r))}\\cdot ${n4(W)}=${n4((1 - gm / (1 + r)) * W)}` },
+          num: `c_0=${n4((1 - gm / (1 + r)) * W)}` },
       ];
     }
   } else if (ut === 'cara') {
     const dl = (r - s.rho) / s.theta;
-    fs.ss = [{ tex: 'c_0=r\\,W_0-\\dfrac{\\Delta}{r},\\qquad \\Delta=\\dfrac{r-\\rho}{\\theta}', num: `c_0=${n4(r)}\\cdot ${n4(W)}-\\dfrac{${n4(dl)}}{${n4(r)}}=${n4(r * W - dl / r)}` }];
+    fs.ss = [{ tex: 'c_0=r\\,W_0-\\dfrac{\\Delta}{r},\\qquad \\Delta=\\dfrac{r-\\rho}{\\theta}', num: `c_0=${n4(r * W - dl / r)}` }];
   } else {
     const mpc = (s.rho - (1 - sig) * r) / sig;
-    fs.ss = [{ tex: ut === 'log' ? 'c_0=\\rho\\,W_0' : 'c_0=\\dfrac{\\rho-(1-\\sigma)\\,r}{\\sigma}\\,W_0', num: `c_0=${n4(mpc)}\\cdot ${n4(W)}=${n4(mpc * W)}` }];
+    fs.ss = [{ tex: ut === 'log' ? 'c_0=\\rho\\,W_0' : 'c_0=\\dfrac{\\rho-(1-\\sigma)\\,r}{\\sigma}\\,W_0', num: `c_0=${n4(mpc * W)}` }];
   }
   fs.ss.unshift({ tex: Wtex, num: `W_0=${n4(W)}` });
   return fs;

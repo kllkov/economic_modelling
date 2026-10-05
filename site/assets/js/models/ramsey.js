@@ -612,7 +612,7 @@ export function formulas(s) {
   fs.ss = [
     { tex: rss, num: `r^*=${n4(rv)}` },
     { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{r^*+\\delta}\\right)^{\\frac{1}{1-\\alpha}}`,
-      num: `${tl('k')}^*=\\left(\\dfrac{${n4(a)}}{${n4(rv)}+${n4(d)}}\\right)^{${n4(1 / (1 - a))}}=${n4(kv)}` },
+      num: `${tl('k')}^*=${n4(kv)}` },
     { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}\\,${tl('k')}^*`,
       num: `${tl('c')}^*=${n4(cv)}` },
   ];
