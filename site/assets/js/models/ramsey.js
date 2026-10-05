@@ -598,9 +598,6 @@ export function formulas(s) {
   shockNum += `,\\qquad \\hat t=${s.tHat}`;
   if (persistent) shockNum += `,\\qquad \\rho_s=${n4(s.rhoS)}`;
   fs.shock.push({ tex: shockTex, num: shockNum });
-  fs.shockInfo = s.shockTiming === 'expected' && s.t0 < s.tHat
-    ? `Ожидаемый шок: объявлен в $t_0 = ${s.t0}$, происходит в $\\hat t = ${s.tHat}$. С момента $t_0$ агенты знают весь будущий путь и сразу пересчитывают план.`
-    : `Неожиданный (MIT) шок: до $\\hat t = ${s.tHat}$ экономика в стационаре; в $\\hat t$ агенты узнают о шоке и пересчитывают план.`;
 
   // ── стационар (с подстановкой и в числах)
   const sigT = ut === 'cara' ? '' : (ut === 'log' ? '' : '^{\\sigma}');

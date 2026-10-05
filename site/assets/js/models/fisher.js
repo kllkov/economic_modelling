@@ -407,9 +407,6 @@ export function formulas(s) {
   shockNum += `,\\qquad \\hat t=${s.tHat}`;
   if (persistent) shockNum += `,\\qquad \\rho_s=${n4(s.rhoS)}`;
   fs.shock.push({ tex: shockTex, num: shockNum });
-  fs.shockInfo = s.shockTiming === 'expected' && s.t0 < s.tHat
-    ? `Ожидаемый шок: объявлен в $t_0 = ${s.t0}$, происходит в $\\hat t = ${s.tHat}$. С момента $t_0$ домохозяйство знает весь будущий путь и сразу пересчитывает план.`
-    : `Неожиданный (MIT) шок: до $\\hat t = ${s.tHat}$ домохозяйство следует исходному плану; в $\\hat t$ узнаёт о шоке и пересчитывает план.`;
 
   // функция потребления
   if (D) {
