@@ -23,6 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Cache-busting (версия файлов = коммит)
+        run: |
+          V="${GITHUB_SHA::8}"
+          find site -name '*.html' -exec sed -i -E "s#(href|src)=\"(assets/(css|js)/[^\"?]+\.(css|js))\"#\1=\"\2?v=$V\"#g" {} +
+          find site/assets/js -name '*.js' -not -path '*/vendor/*' -exec sed -i -E "s#(from |import\()'(\.{1,2}/[^'?]+\.js)'#\1'\2?v=$V'#g" {} +
+          grep -rn "?v=" site --include=*.html --include=*.js | grep -v vendor
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
