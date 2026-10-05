@@ -366,8 +366,7 @@ function run() {
   const sys = el('div', { class: 'sys' },
     F.system.map((r) => el('div', { class: 'sys-row' }, el('div', { class: 'lab' }, r.label), eqWithNum(r.tex, r.num))),
     el('div', { class: 'sys-row shock' }, el('div', { class: 'lab' }, 'Шок'), eqWithNum(F.shock[0].tex, F.shock[0].num)));
-  out.append(block(2, F.systemTitle || 'Условия равновесия', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys,
-    rich(F.shockInfo + (cen && !F.problem ? ' Уравнения динамики совпадают с децентрализованной версией — траектории идентичны.' : ''), 'div', { class: 'callout' })));
+  out.append(block(2, F.systemTitle || 'Условия равновесия', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys));
 
   const res = mod.solve(state);
   if (!res.ok) {
@@ -438,7 +437,7 @@ function run() {
       L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
         : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color};${L.bold ? 'border-top-width:3.5px' : ''}` }),
       L.label)));
-    out.append(block(num++, X.title, null, legend, grid, X.text ? rich(X.text, 'div', { class: 'callout', style: 'margin-top:12px' }) : null));
+    out.append(block(num++, X.title, null, legend, grid));
     for (const C of X.charts) {
       const cv = el('canvas');
       grid.append(el('div', { class: `chart-card${C.wide ? ' wide' : ''}` },
