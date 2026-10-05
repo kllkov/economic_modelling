@@ -372,13 +372,19 @@ function run() {
   const specs = mod.chartSpecs(state);
   const discrete = state.time === 'discrete';
   const lines = [];
-  if (res.marks.t0 != null) lines.push({ x: res.marks.t0, color: COLORS.announce });
-  lines.push({ x: res.marks.tHat, color: COLORS.shock });
+  const DASH_INFO = [5, 4], DASH_SHOCK = [9, 3, 2, 3];   // объявление — пунктир, шок — штрихпунктир
+  if (res.marks.t0 != null) lines.push({ x: res.marks.t0, color: COLORS.announce, dash: DASH_INFO });
+  lines.push({ x: res.marks.tHat, color: COLORS.shock, dash: DASH_SHOCK });
+  const vMark = (color, dash) => {
+    const sp = document.createElement('span'); sp.className = 'vmark';
+    sp.innerHTML = `<svg width="4" height="16" viewBox="0 0 4 16" aria-hidden="true"><line x1="2" x2="2" y1="0" y2="16" stroke="${color}" stroke-width="2" stroke-dasharray="${dash.map((d) => d * 0.75).join(' ')}"/></svg>`;
+    return sp;
+  };
   const legendItems = (withBase) => el('div', { class: 'chart-legend' },
     el('span', {}, el('i', { style: `border-color:${COLORS.path}` }), withBase ? 'траектория после шока' : 'отклик'),
     withBase ? el('span', {}, el('i', { class: 'dot', style: `border-color:${COLORS.base}` }), 'базовый путь без шока') : null,
-    res.marks.t0 != null ? el('span', {}, el('i', { class: 'v', style: `border-color:${COLORS.announce}` }), rich(`объявление $t_0 = ${res.marks.t0}$`)) : null,
-    el('span', {}, el('i', { class: 'v', style: `border-color:${COLORS.shock}` }), rich(`шок $\\hat t = ${res.marks.tHat}$`)));
+    res.marks.t0 != null ? el('span', {}, vMark(COLORS.announce, DASH_INFO), rich(`объявление $t_0 = ${res.marks.t0}$`)) : null,
+    el('span', {}, vMark(COLORS.shock, DASH_SHOCK), rich(`шок $\\hat t = ${res.marks.tHat}$`)));
 
   const flat = specs.every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
   const irfGrid = el('div', { class: 'charts' });

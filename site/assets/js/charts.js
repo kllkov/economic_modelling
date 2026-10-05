@@ -27,7 +27,7 @@ const markers = {
     for (const m of opts.lines || []) {
       if (m.x == null || m.x < scales.x.min || m.x > scales.x.max) continue;
       const x = scales.x.getPixelForValue(m.x);
-      ctx.strokeStyle = m.color; ctx.lineWidth = 1.3; ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = m.color; ctx.lineWidth = 1.3; ctx.setLineDash(m.dash || [5, 4]);
       ctx.beginPath(); ctx.moveTo(x, a.top); ctx.lineTo(x, a.bottom); ctx.stroke();
     }
     ctx.restore();

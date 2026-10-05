@@ -316,6 +316,8 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .chart-legend i { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid; }
 .chart-legend i.dash { border-top-style: dashed; }
 .chart-legend i.dot { border-top-style: dotted; }
+.chart-legend .vmark { display: inline-flex; align-items: center; }
+.chart-legend .vmark svg { display: block; }
 .chart-legend i.v { width: 0; height: 14px; border-top: none; border-left: 2px dashed; }
 .charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
 .chart-card { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 12px 6px; background: var(--surface); min-width: 0; }
