@@ -417,8 +417,20 @@ function run() {
     flat ? rich(F.flatNote || 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
     irfGrid));
 
+  const lvlGrid = el('div', { class: 'charts' });
+  const effPossible = specs.some((s) => s.effAvailable);
+  const aggPossible = specs.some((s) => s.aggSym);
+  if (!effPossible && view.levelUnits === 'eff') view.levelUnits = 'worker';
+  const unitBtn = (v, label) => el('button', { type: 'button', class: view.levelUnits === v ? 'on' : '', onclick: () => { view.levelUnits = v; run(); } }, label);
+  const toggles = el('div', { class: 'toggles' },
+    aggPossible ? el('div', { class: 'seg' }, unitBtn('agg', 'в уровнях'), unitBtn('worker', 'на работника'), effPossible ? unitBtn('eff', 'на эфф. работника') : null) : null,
+    el('div', { class: 'seg' },
+      el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
+      el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
+  out.append(block(5, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
+
   // дополнительные блоки модели (например, основная диаграмма и сходимость у Солоу)
-  let num = 5;
+  let num = 6;
   const extraDraws = [];
   for (const X of mod.extraBlocks ? mod.extraBlocks(state, res) : []) {
     const grid = el('div', { class: `charts${X.diagram ? ' diagram' : ''}` });
@@ -437,17 +449,6 @@ function run() {
   }
   extraDraws.forEach((f) => f());
 
-  const lvlGrid = el('div', { class: 'charts' });
-  const effPossible = specs.some((s) => s.effAvailable);
-  const aggPossible = specs.some((s) => s.aggSym);
-  if (!effPossible && view.levelUnits === 'eff') view.levelUnits = 'worker';
-  const unitBtn = (v, label) => el('button', { type: 'button', class: view.levelUnits === v ? 'on' : '', onclick: () => { view.levelUnits = v; run(); } }, label);
-  const toggles = el('div', { class: 'toggles' },
-    aggPossible ? el('div', { class: 'seg' }, unitBtn('agg', 'в уровнях'), unitBtn('worker', 'на работника'), effPossible ? unitBtn('eff', 'на эфф. работника') : null) : null,
-    el('div', { class: 'seg' },
-      el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
-      el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
-  out.append(block(num, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
 
   const xmax = state.horizon;
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);
