@@ -57,6 +57,9 @@ export const controls = [
   { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 0.1, step: 0.005,
     show: (st) => st.variant === 'tp' },
 
+  { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальный капитал`, type: 'number', min: 0.01, max: 100, step: 0.1,
+    hint: 'Начальное значение для блока «Сходимость к стационару»' },
+
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: (v) => ((SHOCK_TARGETS[v]?.group ?? SHOCK_TARGETS[v]?.kind) === 'state' ? 'state-переменные' : 'параметры') },
@@ -69,10 +72,6 @@ export const controls = [
   { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
     show: (st) => SHOCK_TARGETS[st.shockTarget]?.kind !== 'state' && st.shockPersistence === 'temporary',
     hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
-
-  { section: 'Начальные условия' },
-  { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальный капитал`, type: 'number', min: 0.01, max: 100, step: 0.1,
-    hint: 'Для блока «Сходимость к стационару»' },
 
   { section: 'Отображение' },
   { id: 'horizon', label: 'Горизонт графиков', type: 'number', min: 20, max: 200, step: 5 },
