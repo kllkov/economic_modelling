@@ -347,10 +347,12 @@ export function formulas(s) {
 
   fs.problem.push({ agent: 'Домохозяйство', system: true, items: D ? [
     `\\max_{\\{c_t\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}`,
-    '\\text{s.t.}\\quad \\sum_{t=0}^{\\infty}\\dfrac{c_t}{(1+r)^t}=(1+r)\\,b_0+\\sum_{t=0}^{\\infty}\\dfrac{w_t}{(1+r)^t},\\qquad b_0\\ \\text{задано}',
+    '\\text{s.t.}\\quad b_{t+1}=(1+r)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+    '\\text{TVC:}\\quad \\lim_{T\\to\\infty}\\dfrac{b_T}{(1+r)^T}=0',
   ] : [
     `\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
-    '\\text{s.t.}\\quad \\int_0^{\\infty}e^{-rt}c(t)\\,dt=b_0+\\int_0^{\\infty}e^{-rt}w(t)\\,dt,\\qquad b_0\\ \\text{задано}',
+    '\\text{s.t.}\\quad \\dot b=r\\,b+w(t)-c(t),\\qquad b(0)\\ \\text{задано}',
+    '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-rt}\\,b(t)=0',
   ], notes: [`${wLaw},\\qquad r\\ \\text{— экзогенна}`] });
 
   // уравнение Эйлера
@@ -358,13 +360,13 @@ export function formulas(s) {
   if (D) {
     const gB = s.beta * (1 + r);
     if (ut === 'cara') {
-      euler = 'e^{\\theta\\,(c_{t+1}-c_t)}=\\beta(1+r)\\ \\Rightarrow\\ c_{t+1}-c_t=\\dfrac{\\ln\\big[\\beta(1+r)\\big]}{\\theta}';
+      euler = '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta(1+r)\\ \\Rightarrow\\ c_{t+1}-c_t=\\dfrac{\\ln\\big[\\beta(1+r)\\big]}{\\theta}';
       eulerN = `c_{t+1}-c_t=\\dfrac{\\ln(${n4(s.beta)}\\cdot ${n4(1 + r)})}{${n4(s.theta)}}=${n4(Math.log(gB) / s.theta)}`;
     } else if (ut === 'log') {
-      euler = '\\dfrac{c_{t+1}}{c_t}=\\beta(1+r)';
+      euler = '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta(1+r)\\ \\Rightarrow\\ \\dfrac{c_{t+1}}{c_t}=\\beta(1+r)';
       eulerN = `\\dfrac{c_{t+1}}{c_t}=${n4(s.beta)}\\cdot ${n4(1 + r)}=${n4(gB)}`;
     } else {
-      euler = '\\left(\\dfrac{c_{t+1}}{c_t}\\right)^{\\sigma}=\\beta(1+r)\\ \\Rightarrow\\ \\dfrac{c_{t+1}}{c_t}=\\big[\\beta(1+r)\\big]^{1/\\sigma}';
+      euler = '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta(1+r)\\ \\Rightarrow\\ \\dfrac{c_{t+1}}{c_t}=\\big[\\beta(1+r)\\big]^{1/\\sigma}';
       eulerN = `\\dfrac{c_{t+1}}{c_t}=(${n4(s.beta)}\\cdot ${n4(1 + r)})^{1/${n4(sig)}}=${n4(Math.pow(gB, 1 / sig))}`;
     }
   } else if (ut === 'cara') {
@@ -388,7 +390,7 @@ export function formulas(s) {
     Wtex = grow ? 'W_0=b_0+\\dfrac{w_0}{r-g_w}' : 'W_0=b_0+\\dfrac{w}{r}';
   }
   const W = (D ? (1 + r) * s.b0 : s.b0) + H;
-  fs.system.push({ label: 'Пожизненное богатство', tex: Wtex, num: `W_0=${n4(D ? (1 + r) * s.b0 : s.b0)}+${n4(H)}=${n4(W)}` });
+  fs.system.push({ label: 'Пожизненное бюджетное ограничение', tex: budget, num: `W_0=${n4(D ? (1 + r) * s.b0 : s.b0)}+${n4(H)}=${n4(W)}` });
 
   // шок
   const tg = s.shockTarget;
@@ -436,6 +438,7 @@ export function formulas(s) {
     const mpc = (s.rho - (1 - sig) * r) / sig;
     fs.ss = [{ tex: ut === 'log' ? 'c_0=\\rho\\,W_0' : 'c_0=\\dfrac{\\rho-(1-\\sigma)\\,r}{\\sigma}\\,W_0', num: `c_0=${n4(mpc)}\\cdot ${n4(W)}=${n4(mpc * W)}` }];
   }
+  fs.ss.unshift({ tex: Wtex, num: `W_0=${n4(W)}` });
   return fs;
 }
 
