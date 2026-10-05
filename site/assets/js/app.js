@@ -50,8 +50,8 @@ function glyph(name, w = 100, h = 64) {
   svg.setAttribute('width', w); svg.setAttribute('height', h);
   svg.setAttribute('aria-hidden', 'true');
   const id = `g${Math.random().toString(36).slice(2, 8)}`;
-  svg.innerHTML = `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#8a6fe0"/><stop offset="1" stop-color="#19a99a"/></linearGradient></defs>
-    <path d="M6 58 H96" stroke="#e4def6" stroke-width="1.5"/><path d="M6 4 V58" stroke="#e4def6" stroke-width="1.5"/>
+  svg.innerHTML = `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#b09cf5"/><stop offset="1" stop-color="#5aa9e6"/></linearGradient></defs>
+    <path d="M6 58 H96" stroke="#e4e6f7" stroke-width="1.5"/><path d="M6 4 V58" stroke="#e4e6f7" stroke-width="1.5"/>
     <path d="${GLYPHS[name]}" fill="none" stroke="url(#${id})" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`;
   return svg;
 }

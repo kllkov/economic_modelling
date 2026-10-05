@@ -2,14 +2,14 @@
 /* global Chart */
 
 export const COLORS = {
-  path: '#11887d',
-  pathFill: 'rgba(25, 169, 154, .08)',
-  base: '#9b8fd0',
-  shock: '#3f2f80',
-  announce: '#a68ef0',
-  zero: '#cfc5ef',
-  grid: '#efebfa',
-  tick: '#7a7398',
+  path: '#3d8acb',
+  pathFill: 'rgba(90, 169, 230, .09)',
+  base: '#aaa3dd',
+  shock: '#7c62d8',
+  announce: '#b09cf5',
+  zero: '#cdd1f0',
+  grid: '#eef0fa',
+  tick: '#7d7ca5',
 };
 
 // Вертикальные отметки (t₀, t̂) и нулевая линия — без подписей на холсте,
@@ -109,7 +109,7 @@ export function drawChart(canvas, series, opts) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#1f1b38', padding: 8, displayColors: false,
+          backgroundColor: '#23214a', padding: 8, displayColors: false,
           callbacks: {
             title: (items) => `t = ${(+items[0].parsed.x).toFixed(opts.discrete ? 0 : 1)}`,
             label: (it) => `${it.dataset.label}: ${fmtNum(it.parsed.y)}`,
