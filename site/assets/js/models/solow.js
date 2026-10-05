@@ -340,8 +340,6 @@ export function formulas(st) {
     fs.dec.push({ agent: 'Фирмы', items: [
       tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
          : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
-      tp ? 'r_t=\\alpha\\,\\tilde k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,E_t\\,\\tilde k_t^{\\alpha}'
-         : 'r_t=\\alpha\\,k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,k_t^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       ...(tp ? [
@@ -359,8 +357,6 @@ export function formulas(st) {
     fs.dec.push({ agent: 'Фирмы', items: [
       tp ? '\\max_{K,L}\\; \\pi=K^{\\alpha}(EL)^{1-\\alpha}-wL-(r+\\delta)K'
          : '\\max_{K,L}\\; \\pi=K^{\\alpha}L^{1-\\alpha}-wL-(r+\\delta)K',
-      tp ? 'r=\\alpha\\,\\tilde k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,E\\,\\tilde k^{\\alpha}'
-         : 'r=\\alpha\\,k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,k^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       ...(tp ? [

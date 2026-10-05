@@ -72,7 +72,8 @@ export const MODELS = [
           { label: 'Устойчивость', tex: '\\dfrac{\\partial\\dot{\\tilde k}}{\\partial\\tilde k}\\Big|_{\\tilde k^*}<0' },
         ] },
         { title: 'Децентрализованная версия', eqs: [
-          { label: 'Фирмы', tex: '\\max_{K,L}\\ \\pi=F(K,EL)-wL-(r+\\delta)K\\ \\Rightarrow\\ f^{\\prime}(\\tilde k)=r+\\delta,\\quad w=E\\big(f(\\tilde k)-f^{\\prime}(\\tilde k)\\,\\tilde k\\big),\\quad \\pi=0' },
+          { label: 'Фирмы', tex: '\\max_{K,L}\\ \\pi=F(K,EL)-wL-(r+\\delta)K' },
+          { label: 'Цены факторов', tex: 'f^{\\prime}(\\tilde k)=r+\\delta,\\qquad w=E\\big(f(\\tilde k)-f^{\\prime}(\\tilde k)\\,\\tilde k\\big),\\qquad \\pi=0' },
           { label: 'Домохозяйства', tex: '\\tilde c=(1-s)\\,\\tilde y,\\qquad \\dot{\\tilde b}=(r-n-g)\\,\\tilde b+\\tilde w-\\tilde c' },
           { label: 'Рынок капитала', tex: '\\tilde b=\\tilde k\\ \\Rightarrow\\ \\dot{\\tilde k}=s\\,f(\\tilde k)-(n+g+\\delta)\\,\\tilde k' },
         ] },
@@ -153,7 +154,8 @@ export const MODELS = [
         { title: 'Децентрализованная экономика (дискретное время)', eqs: [
           { label: 'Домохозяйства (Милль)', tex: '\\max_{\\{c_t,\\,b_{t+1}\\}}\\ \\sum_{t=0}^{\\infty}\\beta^t u(c_t)\\quad\\text{s.t.}\\quad (1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t' },
           { label: 'Домохозяйства (Бентам)', tex: '\\max_{\\{c_t,\\,b_{t+1}\\}}\\ \\sum_{t=0}^{\\infty}\\beta^t L_t\\,u(c_t),\\qquad L_{t+1}=(1+n)L_t' },
-          { label: 'Фирмы', tex: '\\max_{K_t,L_t}\\ \\pi_t=F(K_t,L_t)-w_tL_t-(r_t+\\delta)K_t\\ \\Rightarrow\\ r_t=f\'(k_t)-\\delta,\\quad w_t=f(k_t)-f\'(k_t)\\,k_t' },
+          { label: 'Фирмы', tex: '\\max_{K_t,L_t}\\ \\pi_t=F(K_t,L_t)-w_tL_t-(r_t+\\delta)K_t' },
+          { label: 'Цены факторов', tex: 'r_t=f\'(k_t)-\\delta,\\qquad w_t=f(k_t)-f\'(k_t)\\,k_t' },
           { label: 'Рынок капитала', tex: 'b_t=k_t' },
         ] },
         { title: 'Централизованная экономика', eqs: [
