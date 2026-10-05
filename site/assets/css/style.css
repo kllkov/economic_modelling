@@ -323,8 +323,8 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .chart-card .ct .u { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .chart-box { position: relative; height: 190px; }
 .toggles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.toggles .seg { min-width: 0; }
-.toggles .seg button { padding: 6px 12px; white-space: nowrap; }
+.toggles .seg { min-width: 0; flex: 0 0 auto; }
+.toggles .seg button { flex: 0 0 auto; min-width: auto; padding: 6px 14px; white-space: nowrap; }
 
 .stub { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .stub-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
