@@ -57,8 +57,7 @@ export const controls = [
   { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 0.1, step: 0.005,
     show: (st) => st.variant === 'tp' },
 
-  { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальный капитал`, type: 'number', min: 0.01, max: 100, step: 0.1,
-    hint: 'Начальное значение для блока «Сходимость к стационару»' },
+  { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальный капитал`, type: 'number', min: 0.01, max: 100, step: 0.1 },
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
