@@ -448,7 +448,6 @@ export function formulas(s) {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
       '\\text{s.t.}\\quad (1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-      ...(tp ? ['\\Leftrightarrow\\quad (1+n)(1+g)\\,\\tilde b_{t+1}=(1+r_t)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t'] : []),
       `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b_t=0`,
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -458,14 +457,13 @@ export function formulas(s) {
          : 'r_t=\\alpha\\,k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,k_t^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
+      'b_t=k_t\\quad\\text{(рынок капитала)}',
     ] });
     fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       `\\max_{c(t)}\\; V_0=${objC}`,
       '\\text{s.t.}\\quad \\dot b=(r-n)\\,b+w-c,\\qquad b(0)\\ \\text{задано}',
-      ...(tp ? ['\\Leftrightarrow\\quad \\dot{\\tilde b}=(r-n-g)\\,\\tilde b+\\tilde w-\\tilde c'] : []),
       `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b(t)=0`,
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -475,7 +473,7 @@ export function formulas(s) {
          : 'r=\\alpha\\,k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,k^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      tp ? '\\tilde b(t)=\\tilde k(t)\\quad\\text{(рынок капитала)}' : 'b(t)=k(t)\\quad\\text{(рынок капитала)}',
+      'b(t)=k(t)\\quad\\text{(рынок капитала)}',
     ] });
     fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }

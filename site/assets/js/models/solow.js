@@ -342,13 +342,11 @@ export function formulas(st) {
          : 'r_t=\\alpha\\,k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,k_t^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      'C_t=(1-s)\\,Y_t,\\qquad 0<s<1\\ \\text{задана экзогенно}',
-      'B_{t+1}=(1+r_t)\\,B_t+w_tL_t-C_t',
-      tp ? '\\Leftrightarrow\\quad (1+n)(1+g)\\,\\tilde b_{t+1}=(1+r_t)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t'
-         : '\\Leftrightarrow\\quad (1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t',
+      'c_t=(1-s)\\,y_t,\\qquad 0<s<1\\ \\text{задана экзогенно}',
+      '(1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
+      'b_t=k_t\\quad\\text{(рынок капитала)}',
     ] });
   } else {
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -358,13 +356,11 @@ export function formulas(st) {
          : 'r=\\alpha\\,k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,k^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      'C=(1-s)\\,Y,\\qquad 0<s<1\\ \\text{задана экзогенно}',
-      '\\dot B=r\\,B+wL-C',
-      tp ? '\\Leftrightarrow\\quad \\dot{\\tilde b}=(r-n-g)\\,\\tilde b+\\tilde w-\\tilde c'
-         : '\\Leftrightarrow\\quad \\dot b=(r-n)\\,b+w-c',
+      'c=(1-s)\\,y,\\qquad 0<s<1\\ \\text{задана экзогенно}',
+      '\\dot b=(r-n)\\,b+w-c,\\qquad b(0)\\ \\text{задано}',
     ] });
     fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
-      tp ? '\\tilde b=\\tilde k\\quad\\text{(рынок капитала)}' : 'b=k\\quad\\text{(рынок капитала)}',
+      'b=k\\quad\\text{(рынок капитала)}',
     ] });
   }
   fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
