@@ -1,14 +1,14 @@
 // Модель Солоу (Solow–Swan): экзогенная норма сбережения s, производство Кобба–Дугласа
 // Y = K^α (A L)^{1−α}, трудосберегающий ТП (A растёт темпом g), население растёт темпом n.
-// Обозначения — как в конспекте лекции: A — технология, k̃ = K/(AL), y = f(k).
+// Обозначения: E — уровень технологии (как в модели Рамсея на сайте), k̃ = K/(EL), y = f(k).
 //
 // Динамика — прямое (вперёд) решение: оптимизации во времени нет, поэтому ожидания не влияют
 // на траекторию. Дискретное время — точная рекурсия, непрерывное — RK4 с шагом 0.02.
 // Внутри счёт ведётся в x = K/(L·(1+g)^t) — капитал на работника, очищенный от базового тренда;
-// фактический уровень технологии относительно базового тренда — Ar(t) = A(t)/(1+g)^t.
+// фактический уровень технологии относительно базового тренда — Ar(t) = E(t)/(1+g)^t.
 
 const SHOCK_TARGETS = {
-  tfp:   { label: 'Уровень технологии $A_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
+  tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
   k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -30, step: 1 },
   s:     { label: 'Норма сбережения $s$', kind: 'param', unit: 'Δ', def: 0.05, step: 0.01 },
   n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
@@ -54,7 +54,7 @@ export const controls = [
   { id: 's', label: '$s$ — норма сбережения', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
   { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.5, step: 0.01 },
   { id: 'n', label: '$n$ — темп роста населения', type: 'number', min: -0.05, max: 0.1, step: 0.005 },
-  { id: 'g', label: '$g$ — темп роста $A_t$', type: 'number', min: 0, max: 0.1, step: 0.005,
+  { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 0.1, step: 0.005,
     show: (st) => st.variant === 'tp' },
 
   { section: 'Шок' },
@@ -113,7 +113,7 @@ function params(st, t, scale = 1) {
   };
 }
 
-// Стационар в эффективных единицах (k̃ = K/(AL)) при постоянных параметрах P
+// Стационар в эффективных единицах (k̃ = K/(EL)) при постоянных параметрах P
 function steady(st, P) {
   const a = st.alpha;
   const dep = st.time === 'discrete' ? (1 + P.n) * (1 + P.g) - 1 + P.delta : P.n + P.g + P.delta;
@@ -147,7 +147,7 @@ function validate(st) {
   if (tg === 'tfp' && st.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
   if (tg === 'g' && st.variant !== 'tp') errors.push('Шок темпа роста технологии доступен только в вариации с технологическим прогрессом.');
   if (tg === 'k' && d <= -100) errors.push('Капитал не может упасть больше чем на 100%.');
-  if (tg === 'tfp' && d <= -100) errors.push('Уровень $A_t$ не может упасть больше чем на 100%.');
+  if (tg === 'tfp' && d <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
   return errors;
 }
 
@@ -288,7 +288,7 @@ export function chartSpecs(st) {
   const k = tp ? '\\tilde k' : 'k';
   const showL = Math.abs(st.n) > 0 || st.shockTarget === 'n';
   const specs = [
-    ...(tp ? [{ id: 'A', title: 'Технология', sym: x('A'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
+    ...(tp ? [{ id: 'A', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
     ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
     { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta$(%) от s.s.' },
@@ -297,7 +297,7 @@ export function chartSpecs(st) {
     { id: 'gy', title: 'Темп роста выпуска на работника', sym: D ? 'g_{y,t}' : 'g_y(t)', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: tp ? `(1-\\alpha)A${k}^{\\alpha}` : `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: tp ? `(1-\\alpha)E${k}^{\\alpha}` : `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
         : { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
   ];
   return specs.map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
@@ -328,17 +328,17 @@ export function formulas(st) {
   fs.ssTitle = 'Траектория сбалансированного роста';
 
   const popLaw = D ? 'L_{t+1}=(1+n)\\,L_t' : '\\dot L/L=n';
-  const tpLaw = D ? 'A_{t+1}=(1+g)\\,A_t' : '\\dot A/A=g';
+  const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t' : '\\dot E/E=g';
   const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
-  const prodT = tp ? (D ? 'Y_t=K_t^{\\alpha}(A_tL_t)^{1-\\alpha}' : 'Y=K^{\\alpha}(AL)^{1-\\alpha}')
+  const prodT = tp ? (D ? 'Y_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}' : 'Y=K^{\\alpha}(EL)^{1-\\alpha}')
     : (D ? 'Y_t=K_t^{\\alpha}L_t^{1-\\alpha}' : 'Y=K^{\\alpha}L^{1-\\alpha}');
 
   // ── децентрализованная
   if (D) {
     fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(A_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
+      tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
          : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
-      tp ? 'r_t=\\alpha\\,\\tilde k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,A_t\\,\\tilde k_t^{\\alpha}'
+      tp ? 'r_t=\\alpha\\,\\tilde k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,E_t\\,\\tilde k_t^{\\alpha}'
          : 'r_t=\\alpha\\,k_t^{\\alpha-1}-\\delta,\\qquad w_t=(1-\\alpha)\\,k_t^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
@@ -352,9 +352,9 @@ export function formulas(st) {
     ] });
   } else {
     fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K,L}\\; \\pi=K^{\\alpha}(AL)^{1-\\alpha}-wL-(r+\\delta)K'
+      tp ? '\\max_{K,L}\\; \\pi=K^{\\alpha}(EL)^{1-\\alpha}-wL-(r+\\delta)K'
          : '\\max_{K,L}\\; \\pi=K^{\\alpha}L^{1-\\alpha}-wL-(r+\\delta)K',
-      tp ? 'r=\\alpha\\,\\tilde k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,A\\,\\tilde k^{\\alpha}'
+      tp ? 'r=\\alpha\\,\\tilde k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,E\\,\\tilde k^{\\alpha}'
          : 'r=\\alpha\\,k^{\\alpha-1}-\\delta,\\qquad w=(1-\\alpha)\\,k^{\\alpha}',
     ] });
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
@@ -368,6 +368,9 @@ export function formulas(st) {
     ] });
   }
   fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
+  // порядок блоков: домохозяйства, фирмы, рынки, экзогенные процессы
+  const order = ['Домохозяйства', 'Фирмы', 'Рынки (балансовые условия)', 'Экзогенные процессы'];
+  fs.dec.sort((p, q) => order.indexOf(p.agent) - order.indexOf(q.agent));
 
   // ── централизованная: ресурсное ограничение экономики
   fs.cen.push({ agent: 'Экономика в целом', system: true, items: D ? [
@@ -395,7 +398,7 @@ export function formulas(st) {
   }
   if (!cen) {
     const kk = D ? `${k}_t` : k;
-    const r = D ? 'r_t' : 'r', w = D ? 'w_t' : 'w', A = tp ? (D ? 'A_t\\,' : 'A\\,') : '';
+    const r = D ? 'r_t' : 'r', w = D ? 'w_t' : 'w', A = tp ? (D ? 'E_t\\,' : 'E\\,') : '';
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
       tex: `${r}=\\alpha\\,${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)\\,${A}${kk}^{\\alpha}`,
       num: `${r}=${n4(a)}\\,${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}\\,${A}${kk}^{${n4(a)}}` });
@@ -413,7 +416,7 @@ export function formulas(st) {
   const prf = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'tfp') {
-    shockTex = `${D ? 'A_t=(1+g)^t' : 'A(t)=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
+    shockTex = `${D ? 'E_t=(1+g)^t' : 'E(t)=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
     shockNum = `\\varphi=${n4(st.shockSize / 100)}`;
   } else if (tg === 'k') {
     shockTex = `${D ? 'K_{\\hat t}' : 'K(\\hat t)'}=(1+\\varphi_k)\\,${D ? 'K_{\\hat t}^{-}' : 'K(\\hat t^{-})'}`;
