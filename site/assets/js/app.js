@@ -263,7 +263,30 @@ function control(c) {
     wrap.append(sel);
   } else if (c.type === 'number') {
     wrap.append(rich(label, 'label', { for: id }));
-    const inp = el('input', { id, type: 'number', value: state[c.id], step: val(c.step, state), min: c.min, max: c.max });
+    // текстовое поле вместо type=number: браузер с русской локалью показывал бы десятичную запятую
+    const step = +val(c.step, state) || 0.01;
+    const dec = Math.max(0, (String(step).split('.')[1] || '').length);
+    const show = (v) => String(+(+v).toFixed(Math.max(dec, 6)));
+    const inp = el('input', { id, type: 'text', inputmode: 'decimal', autocomplete: 'off', spellcheck: 'false', value: show(state[c.id]) });
+    const parse = (t) => parseFloat(String(t).replace(',', '.').replace(/\s/g, ''));
+    inp.addEventListener('input', () => {
+      if (inp.value.includes(',')) { const pos = inp.selectionStart; inp.value = inp.value.replace(',', '.'); inp.setSelectionRange(pos, pos); }
+    });
+    const bump = (dir) => {
+      let v = parse(inp.value); if (!Number.isFinite(v)) v = +state[c.id] || 0;
+      v = +(v + dir * step).toFixed(Math.max(dec, 0));
+      if (c.min != null) v = Math.max(c.min, v);
+      if (c.max != null) v = Math.min(c.max, v);
+      inp.value = show(v);
+      inp.dispatchEvent(new Event('input')); inp.dispatchEvent(new Event('change'));
+    };
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); bump(e.key === 'ArrowUp' ? 1 : -1); }
+    });
+    const numBox = el('div', { class: 'num-box' }, inp,
+      el('div', { class: 'num-spin' },
+        el('button', { type: 'button', tabindex: '-1', 'aria-label': 'больше', onclick: () => bump(1) }, '▴'),
+        el('button', { type: 'button', tabindex: '-1', 'aria-label': 'меньше', onclick: () => bump(-1) }, '▾')));
     if (c.slider) {
       const range = el('input', { type: 'range', class: 'range', value: state[c.id], step: val(c.step, state), min: c.min, max: c.max,
         'aria-label': c.id });
@@ -272,16 +295,16 @@ function control(c) {
         range.style.setProperty('--p', `${Math.max(0, Math.min(100, p))}%`);
       };
       paint();
-      range.addEventListener('input', () => { inp.value = range.value; state[c.id] = +range.value; paint(); schedule(); });
+      range.addEventListener('input', () => { inp.value = show(range.value); state[c.id] = +range.value; paint(); schedule(); });
       inp.addEventListener('input', () => {
-        const v = parseFloat(inp.value);
+        const v = parse(inp.value);
         if (Number.isFinite(v)) { state[c.id] = v; range.value = v; paint(); schedule(); }
       });
-      wrap.append(el('div', { class: 'slider-row' }, range, inp));
+      wrap.append(el('div', { class: 'slider-row' }, range, numBox));
     } else {
-      inp.addEventListener('input', (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) { state[c.id] = v; schedule(); } });
-      inp.addEventListener('change', (e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) set(c.id, v); });
-      wrap.append(inp);
+      inp.addEventListener('input', () => { const v = parse(inp.value); if (Number.isFinite(v)) { state[c.id] = v; schedule(); } });
+      inp.addEventListener('change', () => { const v = parse(inp.value); if (Number.isFinite(v)) set(c.id, v); });
+      wrap.append(numBox);
     }
   }
   if (hint) wrap.append(rich(hint, 'div', { class: 'hint' }));
