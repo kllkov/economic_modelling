@@ -272,8 +272,11 @@ select, input[type=number] {
 }
 select:focus, input:focus { outline: 2px solid var(--lilac-200); border-color: var(--lilac-400); }
 select:disabled, input:disabled { background: var(--surface-2); color: var(--muted); }
-.num-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.num-row .ctl { margin-bottom: 0; }
+/* пары числовых полей: подпись / поле / подсказка выровнены по строкам сетки (subgrid),
+   поэтому поля стоят на одной линии, даже если подпись соседа переносится или у него есть подсказка */
+.num-row { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; row-gap: 0; }
+.num-row .ctl { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; margin-bottom: 12px; }
+.num-row .ctl > label { align-self: end; }
 .panel-actions { display: flex; gap: 8px; margin-top: 16px; }
 .panel-actions .btn { flex: 1; justify-content: center; }
 
