@@ -32,7 +32,7 @@ export const meta = {
 };
 
 export const defaults = {
-  time: 'discrete', version: 'decentralized', variant: 'base', objective: 'mill',
+  time: 'discrete', version: 'centralized', variant: 'base', objective: 'mill',
   utility: 'crra', production: 'cd',
   alpha: 0.3, beta: 0.96, rho: 0.04, delta: 0.1, sigma: 2, theta: 1, g: 0.02, n: 0.01,
   shockTarget: 'k', shockSize: -20, shockTiming: 'unexpected', tHat: 15, t0: 5,
@@ -54,7 +54,7 @@ export const controls = [
   { id: 'time', label: 'Время', type: 'segmented',
     options: [{ v: 'discrete', l: 'Дискретное' }, { v: 'continuous', l: 'Непрерывное' }] },
   { id: 'version', label: 'Вид модели', type: 'segmented',
-    options: [{ v: 'decentralized', l: 'Децентрализованная' }, { v: 'centralized', l: 'Централизованная' }] },
+    options: [{ v: 'centralized', l: 'Централизованная' }, { v: 'decentralized', l: 'Децентрализованная' }] },
   { id: 'variant', label: 'Вариация', type: 'select',
     options: [
       { v: 'base', l: 'Без технологического прогресса' },
@@ -76,7 +76,7 @@ export const controls = [
       { v: 'cara', l: 'CARA' },
     ] },
   { id: 'production', label: 'Производственная функция', type: 'select',
-    options: [{ v: 'cd', l: 'Кобба–Дугласа' }] },
+    options: [{ v: 'cd', l: 'Кобб-Дуглас' }] },
 
   { section: 'Параметры' },
   { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.05, max: 0.95, step: 0.01 },

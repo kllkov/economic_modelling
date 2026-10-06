@@ -19,7 +19,7 @@ const SHOCK_TARGETS = {
 export const meta = { id: 'solow', title: 'Модель Солоу', subtitle: 'Solow–Swan model', ready: true };
 
 export const defaults = {
-  time: 'discrete', version: 'decentralized', variant: 'tp', production: 'cd',
+  time: 'discrete', version: 'centralized', variant: 'tp', production: 'cd',
   alpha: 0.3, s: 0.2, delta: 0.05, n: 0.01, g: 0.02,
   shockTarget: 's', shockSize: 0.05, tHat: 10,
   shockPersistence: 'permanent', rhoS: 0.8,
@@ -38,7 +38,7 @@ export const controls = [
   { id: 'time', label: 'Время', type: 'segmented',
     options: [{ v: 'discrete', l: 'Дискретное' }, { v: 'continuous', l: 'Непрерывное' }] },
   { id: 'version', label: 'Вид модели', type: 'segmented',
-    options: [{ v: 'decentralized', l: 'Децентрализованная' }, { v: 'centralized', l: 'Централизованная' }] },
+    options: [{ v: 'centralized', l: 'Централизованная' }, { v: 'decentralized', l: 'Децентрализованная' }] },
   { id: 'variant', label: 'Вариация', type: 'select',
     options: [
       { v: 'base', l: 'Без технологического прогресса' },
@@ -47,7 +47,7 @@ export const controls = [
 
   { section: 'Функции' },
   { id: 'production', label: 'Производственная функция', type: 'select',
-    options: [{ v: 'cd', l: 'Кобба–Дугласа' }] },
+    options: [{ v: 'cd', l: 'Кобб-Дуглас' }] },
 
   { section: 'Параметры' },
   { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.05, max: 0.95, step: 0.01 },
