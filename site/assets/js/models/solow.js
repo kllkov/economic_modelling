@@ -350,7 +350,7 @@ export function formulas(st) {
         '(1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
       ]),
     ] });
-    fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
+    fs.dec.push({ agent: 'Рынки', items: [
       tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
     ] });
   } else {
@@ -367,17 +367,17 @@ export function formulas(st) {
         '\\dot b=(r-n)\\,b+w-c,\\qquad b(0)\\ \\text{задано}',
       ]),
     ] });
-    fs.dec.push({ agent: 'Рынки (балансовые условия)', items: [
+    fs.dec.push({ agent: 'Рынки', items: [
       tp ? '\\tilde b=\\tilde k\\quad\\text{(рынок капитала)}' : 'b=k\\quad\\text{(рынок капитала)}',
     ] });
   }
   fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   // порядок блоков: домохозяйства, фирмы, рынки, экзогенные процессы
-  const order = ['Домохозяйства', 'Фирмы', 'Рынки (балансовые условия)', 'Экзогенные процессы'];
+  const order = ['Домохозяйства', 'Фирмы', 'Рынки', 'Экзогенные процессы'];
   fs.dec.sort((p, q) => order.indexOf(p.agent) - order.indexOf(q.agent));
 
   // ── централизованная: ресурсное ограничение экономики
-  fs.cen.push({ agent: 'Экономика в целом', system: true, items: D ? [
+  fs.cen.push({ agent: 'Балансовые условия', system: true, items: D ? [
     prodT,
     'Y_t=C_t+I_t,\\qquad I_t=s\\,Y_t',
     'K_{t+1}=(1-\\delta)\\,K_t+I_t,\\qquad K_0\\ \\text{задано}',
