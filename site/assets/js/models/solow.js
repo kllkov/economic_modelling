@@ -377,7 +377,7 @@ export function formulas(st) {
   fs.dec.sort((p, q) => order.indexOf(p.agent) - order.indexOf(q.agent));
 
   // ── централизованная: ресурсное ограничение экономики
-  fs.cen.push({ agent: 'Балансовые условия', system: true, items: D ? [
+  fs.cen.push({ agent: 'Балансовые условия', items: D ? [
     prodT,
     'Y_t=C_t+I_t,\\qquad I_t=s\\,Y_t',
     'K_{t+1}=(1-\\delta)\\,K_t+I_t,\\qquad K_0\\ \\text{задано}',
