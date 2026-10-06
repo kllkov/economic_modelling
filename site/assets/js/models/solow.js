@@ -297,9 +297,9 @@ export function chartSpecs(st) {
     { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'gy', title: 'Темп роста выпуска на работника', sym: D ? 'g_{y,t}' : 'g_y(t)', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'r', title: 'Отдача от капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
+    cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: tp ? `(1-\\alpha)E${k}^{\\alpha}` : `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta$(%) от s.s.' }
         : { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
   ];
   return specs.map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
@@ -445,12 +445,13 @@ export function formulas(st) {
   const growthTex = D ? (tp ? '(1+n)(1+g)-1' : 'n') : (tp ? 'n+g' : 'n');
   const growthV = D ? (1 + nn) * (1 + g) - 1 : nn + g;
   const eff = rv > growthV + 1e-12, gr = Math.abs(rv - growthV) <= 1e-12;
+  const WS = cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : `${tl('w')}^*`;
   fs.ss = [
     { tex: `${k}^*=\\left(\\dfrac{s}{${depTex}}\\right)^{\\frac{1}{1-\\alpha}}`, num: `${k}^*=${n4(kv)}` },
     { tex: `${tl('y')}^*=\\left(${k}^*\\right)^{\\alpha},\\qquad ${c}^*=(1-s)\\left(${k}^*\\right)^{\\alpha}`,
       num: `${tl('y')}^*=${n4(yv)},\\qquad ${c}^*=${n4((1 - sv) * yv)}` },
-    { tex: `r^*=\\alpha\\left(${k}^*\\right)^{\\alpha-1}-\\delta`, num: `r^*=${n4(rv)}` },
-    { tex: `${tl('w')}^*=(1-\\alpha)\\left(${k}^*\\right)^{\\alpha}`, num: `${tl('w')}^*=${n4((1 - a) * yv)}` },
+    { tex: `${cen ? 'F^{\\prime}_K-\\delta' : 'r^*'}=\\alpha\\left(${k}^*\\right)^{\\alpha-1}-\\delta`, num: `${cen ? 'F^{\\prime}_K-\\delta' : 'r^*'}=${n4(rv)}` },
+    { tex: `${WS}=(1-\\alpha)\\left(${k}^*\\right)^{\\alpha}`, num: `${WS}=${n4((1 - a) * yv)}` },
     { tex: `${k}_{GR}=\\left(\\dfrac{\\alpha}{${depTex}}\\right)^{\\frac{1}{1-\\alpha}}`,
       num: `${k}_{GR}=${n4(kGR)}` },
     { tex: 's_{GR}=\\alpha', num: `s_{GR}=${n4(a)}` },
@@ -474,8 +475,8 @@ export function steadyTable(st, res) {
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
     { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: 'инвестиции', key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: tp ? '\\tilde w^*' : 'w^*', name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
-    { sym: 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
+    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
+    { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
     { sym: `${k}_{GR}`, name: 'капитал по золотому правилу', key: 'kGR' },
     { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: 'потребление по золотому правилу', key: 'cGR' },
   ];

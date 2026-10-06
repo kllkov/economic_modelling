@@ -393,9 +393,9 @@ export function chartSpecs(s) {
     { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta$(%) от s.s.' },
-    cen ? { id: 'r', title: 'Отдача от капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
+    cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: tp ? `(1-\\alpha)E${k}^{\\alpha}` : `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta$(%) от s.s.' }
         : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 's', title: 'Норма сбережения', sym: D ? 's_t = i_t/y_t' : 's(t) = i/y', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
   ];
@@ -602,12 +602,15 @@ export function formulas(s) {
   // ── стационар (с подстановкой и в числах)
   const sigT = ut === 'cara' ? '' : (ut === 'log' ? '' : '^{\\sigma}');
   let rss, rv;
+  const RS = cen ? 'F^{\\prime}_K-\\delta' : 'r^*';
+  const FKs = cen ? 'F^{\\prime}_K' : 'r^*+\\delta';
+  const WS = cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : tl('w') + '^*';
   if (D) {
     const numer = [mill ? '(1+n)' : '', tp && ut !== 'cara' ? `(1+g)${sigT}` : ''].filter(Boolean).join('');
-    rss = `1+r^*=\\dfrac{${numer || '1'}}{\\beta}`;
+    rss = `1+${RS}=\\dfrac{${numer || '1'}}{\\beta}`;
     rv = ((mill ? 1 + nn : 1) * Math.pow(1 + g, ut === 'cara' ? 0 : sig)) / s.beta - 1;
   } else {
-    rss = `r^*=\\rho${mill ? '+n' : ''}${tp && ut !== 'cara' ? (ut === 'log' ? '+g' : '+\\sigma g') : ''}`;
+    rss = `${RS}=\\rho${mill ? '+n' : ''}${tp && ut !== 'cara' ? (ut === 'log' ? '+g' : '+\\sigma g') : ''}`;
     rv = s.rho + (mill ? nn : 0) + (ut === 'cara' ? 0 : sig * g);
   }
   const dep = D ? (1 + nn) * (1 + g) - 1 + d : nn + g + d;
@@ -615,10 +618,10 @@ export function formulas(s) {
   const kv = Math.pow(a / (rv + d), 1 / (1 - a));
   const cv = Math.pow(kv, a) - dep * kv;
   fs.ss = [
-    { tex: rss, num: `r^*=${n4(rv)}` },
-    { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{r^*+\\delta}\\right)^{\\frac{1}{1-\\alpha}}`,
+    { tex: rss, num: `${RS}=${n4(rv)}` },
+    { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{${FKs}}\\right)^{\\frac{1}{1-\\alpha}}`,
       num: `${tl('k')}^*=${n4(kv)}` },
-    { tex: `${tl('w')}^*=(1-\\alpha)\\left(${tl('k')}^*\\right)^{\\alpha}`, num: `${tl('w')}^*=${n4((1 - a) * Math.pow(kv, a))}` },
+    { tex: `${WS}=(1-\\alpha)\\left(${tl('k')}^*\\right)^{\\alpha}`, num: `${WS}=${n4((1 - a) * Math.pow(kv, a))}` },
     { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}\\,${tl('k')}^*`,
       num: `${tl('c')}^*=${n4(cv)}` },
   ];
@@ -638,8 +641,8 @@ export function steadyTable(s, res) {
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
     { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: invName, key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: tp ? '\\tilde w^*' : 'w^*', name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
-    { sym: 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
+    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
+    { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
     { sym: 's^*', name: 'норма сбережения $i^*/y^*$', key: 's', pct: true },
   ];
   const v = (ss, r, Z) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key] / Z, 3));
