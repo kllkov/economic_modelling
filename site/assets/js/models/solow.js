@@ -450,6 +450,7 @@ export function formulas(st) {
     { tex: `${tl('y')}^*=\\left(${k}^*\\right)^{\\alpha},\\qquad ${c}^*=(1-s)\\left(${k}^*\\right)^{\\alpha}`,
       num: `${tl('y')}^*=${n4(yv)},\\qquad ${c}^*=${n4((1 - sv) * yv)}` },
     { tex: `r^*=\\alpha\\left(${k}^*\\right)^{\\alpha-1}-\\delta`, num: `r^*=${n4(rv)}` },
+    { tex: `${tl('w')}^*=(1-\\alpha)\\left(${k}^*\\right)^{\\alpha}`, num: `${tl('w')}^*=${n4((1 - a) * yv)}` },
     { tex: `${k}_{GR}=\\left(\\dfrac{\\alpha}{${depTex}}\\right)^{\\frac{1}{1-\\alpha}}`,
       num: `${k}_{GR}=${n4(kGR)}` },
     { tex: 's_{GR}=\\alpha', num: `s_{GR}=${n4(a)}` },
@@ -473,8 +474,8 @@ export function steadyTable(st, res) {
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
     { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: 'инвестиции', key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: cen ? (tp ? '(1-\\alpha)\\tilde k^{*\\alpha}' : '(1-\\alpha)k^{*\\alpha}') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
-    { sym: cen ? (tp ? '\\alpha\\tilde k^{*\\alpha-1}-\\delta' : '\\alpha k^{*\\alpha-1}-\\delta') : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
+    { sym: tp ? '\\tilde w^*' : 'w^*', name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
+    { sym: 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
     { sym: `${k}_{GR}`, name: 'капитал по золотому правилу', key: 'kGR' },
     { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: 'потребление по золотому правилу', key: 'cGR' },
   ];

@@ -618,6 +618,7 @@ export function formulas(s) {
     { tex: rss, num: `r^*=${n4(rv)}` },
     { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{r^*+\\delta}\\right)^{\\frac{1}{1-\\alpha}}`,
       num: `${tl('k')}^*=${n4(kv)}` },
+    { tex: `${tl('w')}^*=(1-\\alpha)\\left(${tl('k')}^*\\right)^{\\alpha}`, num: `${tl('w')}^*=${n4((1 - a) * Math.pow(kv, a))}` },
     { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}\\,${tl('k')}^*`,
       num: `${tl('c')}^*=${n4(cv)}` },
   ];
@@ -637,8 +638,8 @@ export function steadyTable(s, res) {
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
     { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: invName, key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: cen ? (tp ? '(1-\\alpha)\\tilde k^{*\\alpha}' : '(1-\\alpha)k^{*\\alpha}') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
-    { sym: cen ? (tp ? '\\alpha\\tilde k^{*\\alpha-1}-\\delta' : '\\alpha k^{*\\alpha-1}-\\delta') : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
+    { sym: tp ? '\\tilde w^*' : 'w^*', name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
+    { sym: 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
     { sym: 's^*', name: 'норма сбережения $i^*/y^*$', key: 's', pct: true },
   ];
   const v = (ss, r, Z) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key] / Z, 3));
