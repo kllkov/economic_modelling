@@ -386,7 +386,27 @@ function run() {
       el('td', {}, texInline(r.sym)), rich(r.name, 'td', { class: 'name' }),
       el('td', { class: 'v' }, r.before),
       showAfter ? el('td', { class: `v${r.after !== r.before ? ' chg' : ''}` }, r.after) : null))));
-  out.append(block(3, F.ssTitle || 'Стационарное состояние', el('span', { class: 'note' }, F.ssNote ? F.ssNote(showAfter) : showAfter ? 'Перманентный шок сдвигает стационар'
+  let num = 3;
+  const extraDraws = [];
+  const addExtra = (X) => {
+    const grid = el('div', { class: `charts${X.diagram ? ' diagram' : ''}` });
+    const legend = el('div', { class: 'chart-legend' }, X.legend.map((L) => el('span', {},
+      L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
+        : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color};${L.bold ? 'border-top-width:3.5px' : ''}` }),
+      L.label)));
+    out.append(block(num++, X.title, null, legend, grid));
+    for (const C of X.charts) {
+      const cv = el('canvas');
+      grid.append(el('div', { class: `chart-card${C.wide ? ' wide' : ''}` },
+        C.title ? el('div', { class: 'ct' }, el('span', {}, C.sym ? `${C.title}, ` : C.title, C.sym ? texInline(C.sym) : null), el('span', { class: 'u' }, C.unit || '')) : null,
+        el('div', { class: 'chart-box' }, cv)));
+      extraDraws.push(() => current.charts.push(drawDiagram(cv, C.series, C.opts)));
+    }
+  };
+  const extras = mod.extraBlocks ? mod.extraBlocks(state, res) : [];
+  extras.filter((X) => X.beforeSS).forEach(addExtra);
+
+  out.append(block(num++, F.ssTitle || 'Стационарное состояние', el('span', { class: 'note' }, F.ssNote ? F.ssNote(showAfter) : showAfter ? 'Перманентный шок сдвигает стационар'
       : res.permanentChange ? 'В единицах на эффективного работника стационар не меняется' : 'Шок не меняет стационар'),
     el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table))));
 
@@ -410,7 +430,7 @@ function run() {
 
   const flat = specs.every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
   const irfGrid = el('div', { class: 'charts' });
-  out.append(block(4, 'Импульсные отклики (IRF)',
+  out.append(block(num++, 'Импульсные отклики (IRF)',
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadCSV(res, specs) }, 'Скачать CSV'),
     legendItems(false),
     flat ? rich(F.flatNote || 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
@@ -426,26 +446,10 @@ function run() {
     el('div', { class: 'seg' },
       el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
       el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
-  out.append(block(5, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
+  out.append(block(num++, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
 
   // дополнительные блоки модели (например, основная диаграмма и сходимость у Солоу)
-  let num = 6;
-  const extraDraws = [];
-  for (const X of mod.extraBlocks ? mod.extraBlocks(state, res) : []) {
-    const grid = el('div', { class: `charts${X.diagram ? ' diagram' : ''}` });
-    const legend = el('div', { class: 'chart-legend' }, X.legend.map((L) => el('span', {},
-      L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
-        : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color};${L.bold ? 'border-top-width:3.5px' : ''}` }),
-      L.label)));
-    out.append(block(num++, X.title, null, legend, grid));
-    for (const C of X.charts) {
-      const cv = el('canvas');
-      grid.append(el('div', { class: `chart-card${C.wide ? ' wide' : ''}` },
-        C.title ? el('div', { class: 'ct' }, el('span', {}, C.sym ? `${C.title}, ` : C.title, C.sym ? texInline(C.sym) : null), el('span', { class: 'u' }, C.unit || '')) : null,
-        el('div', { class: 'chart-box' }, cv)));
-      extraDraws.push(() => current.charts.push(drawDiagram(cv, C.series, C.opts)));
-    }
-  }
+  extras.filter((X) => !X.beforeSS).forEach(addExtra);
   extraDraws.forEach((f) => f());
 
 

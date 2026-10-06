@@ -494,7 +494,7 @@ const DC = {
 const fmt3 = (x) => fmt(x, 3);
 
 export function extraBlocks(st, res) {
-  return [diagramBlock(st, res), convergenceBlock(st)];
+  return [{ ...convergenceBlock(st), beforeSS: true }, diagramBlock(st, res)];
 }
 
 function diagramBlock(st, res) {

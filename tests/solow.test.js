@@ -124,7 +124,7 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
   for (const time of ['discrete', 'continuous']) {
     const st = { ...defaults, time, shockTarget: 's', shockSize: 0.05, tHat: 10, horizon: 150 };
     const r = solve(st);
-    const [dg, cv] = extraBlocks(st, r);
+    const [cv, dg] = extraBlocks(st, r);
     const full = dg.charts[0];
     const pathS = full.series.find((x) => x.points);
     for (const [k, v] of pathS.data) near(v, 0.25 * Math.pow(k, 0.3), 1e-12, 'точка пути на s′·f(k̃)');
