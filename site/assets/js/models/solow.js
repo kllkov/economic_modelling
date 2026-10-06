@@ -297,7 +297,7 @@ export function chartSpecs(st) {
     { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'gy', title: 'Темп роста выпуска на работника', sym: D ? 'g_{y,t}' : 'g_y(t)', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'r', title: 'Доходность капитала', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
+    cen ? { id: 'r', title: 'Предельный продукт капитала за вычетом амортизации', sym: `\\alpha ${k}^{\\alpha-1}-\\delta`, irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'w', title: 'Предельный продукт труда', sym: tp ? `(1-\\alpha)E${k}^{\\alpha}` : `(1-\\alpha)${k}^{\\alpha}`, irfUnit: '$\\Delta$(%) от s.s.' }
         : { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
@@ -473,8 +473,8 @@ export function steadyTable(st, res) {
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
     { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: 'инвестиции', key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: tp ? '\\tilde w^*' : 'w^*', name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
-    { sym: 'r^*', name: cen ? 'доходность капитала' : 'ставка процента', key: 'r', pct: true },
+    { sym: cen ? (tp ? '(1-\\alpha)\\tilde k^{*\\alpha}' : '(1-\\alpha)k^{*\\alpha}') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
+    { sym: cen ? (tp ? '\\alpha\\tilde k^{*\\alpha-1}-\\delta' : '\\alpha k^{*\\alpha-1}-\\delta') : 'r^*', name: cen ? 'предельный продукт капитала за вычетом амортизации' : 'ставка процента', key: 'r', pct: true },
     { sym: `${k}_{GR}`, name: 'капитал по золотому правилу', key: 'kGR' },
     { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: 'потребление по золотому правилу', key: 'cGR' },
   ];
