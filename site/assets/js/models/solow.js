@@ -48,11 +48,11 @@ export const controls = [
     options: [{ v: 'cd', l: 'Кобб-Дуглас' }] },
 
   { section: 'Параметры' },
-  { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.05, max: 0.95, step: 0.01 },
+  { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
   { id: 's', label: '$s$ — норма сбережения', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
-  { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.5, step: 0.01 },
-  { id: 'n', label: '$n$ — темп роста населения', type: 'number', min: -0.05, max: 0.1, step: 0.005 },
-  { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 0.1, step: 0.005,
+  { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.99, step: 0.01 },
+  { id: 'n', label: '$n$ — темп роста населения', type: 'number', min: -0.05, max: 1, step: 0.005 },
+  { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 1, step: 0.005,
     show: (st) => st.variant === 'tp' },
 
   { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальный капитал`, type: 'number', min: 0.01, max: 100, step: 0.1 },
@@ -146,6 +146,7 @@ function validate(st) {
     errors.push('После перманентного шока стационар не существует: нужно, чтобы эффективная норма выбытия оставалась положительной.');
   if (tg === 'tfp' && st.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
   if (tg === 'g' && st.variant !== 'tp') errors.push('Шок темпа роста технологии доступен только в вариации с технологическим прогрессом.');
+  if (!(st.k0 > 0)) errors.push('Начальный капитал должен быть положительным.');
   if (tg === 'k' && d <= -100) errors.push('Капиталовооружённость не может упасть больше чем на 100%.');
   if (tg === 'tfp' && d <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
   return errors;
@@ -569,8 +570,7 @@ function convergenceBlock(st) {
   const P = params(st, 0, 0);
   const ss = steady(st, P);
   const g0 = tp ? st.g : 0;
-  const k0 = st.k0 > 0 ? st.k0 : ss.k;
-  const sim = simulate({ ...st, shockSize: 0 }, h, N, 0, k0);
+  const sim = simulate({ ...st, shockSize: 0 }, h, N, 0, st.k0);
   const stride = Math.max(1, Math.round(0.1 / h));
   const out = { k: [], y: [], c: [], gy: [] };
   for (let j = 0; j <= N - 1; j += stride) {
@@ -580,7 +580,7 @@ function convergenceBlock(st) {
     else out.gy.push([t, 100 * (a * (P.s * Math.pow(kj, a - 1) - (P.n + g0 + P.delta)) + g0)]);
   }
   const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => (disc ? `${v}_t` : `${v}(t)`);
-  const label = `$${kt}_0 = ${fmtTex(k0, 3)}$`, color = '#3d8acb';
+  const label = `$${kt}_0 = ${fmtTex(st.k0, 3)}$`, color = '#3d8acb';
   const e = tp ? 'на эфф. работника' : 'на работника';
   const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: [{ label, data: out[key], color, width: 2.6 }],
     opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }] } });

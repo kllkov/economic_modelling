@@ -16,6 +16,8 @@ const el = (tag, attrs = {}, ...kids) => {
   return n;
 };
 const val = (x, s) => (typeof x === 'function' ? x(s) : x);
+// числовое поле: значение обрезается границами поля (min/max из описания настройки)
+const clamp = (c, v) => Math.min(c?.max ?? Infinity, Math.max(c?.min ?? -Infinity, v));
 
 function glyph(name, w = 100, h = 64) {
   const ns = 'http://www.w3.org/2000/svg';
@@ -104,7 +106,9 @@ async function route() {
   const state = { ...mod.defaults };
   for (const [k, v] of Object.entries(params)) {
     if (!(k in state)) continue;
-    state[k] = typeof mod.defaults[k] === 'number' ? Number(v) : v;
+    if (typeof mod.defaults[k] !== 'number') { state[k] = v; continue; }
+    const x = Number(v);
+    if (Number.isFinite(x)) state[k] = clamp(mod.controls.find((c) => c.id === k), x);
   }
   mod.normalize(state);
   current = { model, mod, state, charts: [] };
@@ -249,9 +253,7 @@ function control(c) {
     });
     const bump = (dir) => {
       let v = parse(inp.value); if (!Number.isFinite(v)) v = +state[c.id] || 0;
-      v = +(v + dir * step).toFixed(Math.max(dec, 0));
-      if (c.min != null) v = Math.max(c.min, v);
-      if (c.max != null) v = Math.min(c.max, v);
+      v = clamp(c, +(v + dir * step).toFixed(Math.max(dec, 0)));
       inp.value = show(v);
       inp.dispatchEvent(new Event('input')); inp.dispatchEvent(new Event('change'));
     };
@@ -273,12 +275,14 @@ function control(c) {
       range.addEventListener('input', () => { inp.value = show(range.value); state[c.id] = +range.value; paint(); schedule(); });
       inp.addEventListener('input', () => {
         const v = parse(inp.value);
-        if (Number.isFinite(v)) { state[c.id] = v; range.value = v; paint(); schedule(); }
+        if (Number.isFinite(v)) { state[c.id] = clamp(c, v); range.value = state[c.id]; paint(); schedule(); }
       });
+      inp.addEventListener('change', () => { inp.value = show(state[c.id]); });
       wrap.append(el('div', { class: 'slider-row' }, range, numBox));
     } else {
-      inp.addEventListener('input', () => { const v = parse(inp.value); if (Number.isFinite(v)) { state[c.id] = v; schedule(); } });
-      inp.addEventListener('change', () => { const v = parse(inp.value); if (Number.isFinite(v)) set(c.id, v); });
+      // пока вводят — считаем с обрезанным значением, текст не трогаем; по окончании ввода показываем обрезанное
+      inp.addEventListener('input', () => { const v = parse(inp.value); if (Number.isFinite(v)) { state[c.id] = clamp(c, v); schedule(); } });
+      inp.addEventListener('change', () => { const v = parse(inp.value); set(c.id, Number.isFinite(v) ? clamp(c, v) : state[c.id]); });
       wrap.append(numBox);
     }
   }
