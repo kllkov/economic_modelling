@@ -1,7 +1,7 @@
 // Обёртка над Chart.js: малые графики IRF и уровней переменных, диаграммы моделей.
 // Всё, что является формулой (подписи осей и кривых, отметки, всплывающие подсказки), рисуется
 // не на холсте, а HTML-слоем поверх него через KaTeX.
-/* global Chart */
+/* global Chart, ChartZoom */
 import { texInline, rich } from './tex.js';
 
 export const COLORS = {
@@ -108,6 +108,7 @@ let registered = false;
 function ensure() {
   if (registered || typeof Chart === 'undefined') return;
   Chart.register(markers, texLayer, curveLines);
+  if (typeof ChartZoom !== 'undefined') Chart.register(ChartZoom);
   Chart.defaults.font.family = "'Manrope', system-ui, sans-serif";
   Chart.defaults.font.size = 11;
   Chart.defaults.color = COLORS.tick;
@@ -121,7 +122,9 @@ const fmtNum = (v) => {
 };
 
 function tickFmt(value, _i, ticks) {
-  let step = ticks.length > 1 ? Math.abs(ticks[1].value - ticks[0].value) : Math.abs(value);
+  // шаг — наименьший зазор между соседними метками (крайние интервалы при приближении бывают короче)
+  let step = Math.abs(value);
+  if (ticks.length > 1) step = Math.min(...ticks.slice(1).map((t, i) => Math.abs(t.value - ticks[i].value)).filter((d) => d > 0));
   if (!(step > 0)) step = 1;
   const d = Math.min(6, Math.max(0, -Math.floor(Math.log10(step) + 1e-9)));
   return (+value).toFixed(d).replace('-', '−');
@@ -268,10 +271,27 @@ function curveLabels(chart, vlines) {
   }
 }
 
+// Точки кривой fn на [lo, hi]: у левого края 0 сетка сгущена кубом (кривые вроде k^α там почти вертикальны)
+export function sample(fn, lo, hi, n = 1200) {
+  const p = lo <= 0 ? 3 : 1, pts = [];
+  for (let i = 0; i <= n; i++) { const x = lo + (hi - lo) * (i / n) ** p; pts.push([x, fn(x)]); }
+  return pts;
+}
+
+// при приближении кривые пересчитываются на видимом отрезке, чтобы они оставались гладкими
+function resample(chart) {
+  const { min, max } = chart.scales.x;
+  for (const ds of chart.data.datasets) if (ds.fn) ds.data = sample(ds.fn, min, max).map(([x, y]) => ({ x, y }));
+  chart.update('none');
+}
+export function zoomBy(chart, factor) { chart.zoom(factor); resample(chart); }
+export function zoomReset(chart) { chart.resetZoom(); resample(chart); }
+
 /**
- * series: [{ data: [[x,y]...], label, color, width, dash, points, pointRadius, curveLabel }]
+ * series: [{ data: [[x,y]...], label, color, width, dash, points, pointRadius, curveLabel, fn }]
+ *   fn — функция кривой: при приближении (opts.zoom) кривая пересчитывается на видимом отрезке
  *   label — текст с формулами $…$ (для подсказки), curveLabel — формула TeX у кривой
- * opts: { xLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], discrete }
+ * opts: { xLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], discrete, zoom }
  *   xLabel и label отметок — формулы TeX
  */
 export function drawDiagram(canvas, series, opts) {
@@ -286,19 +306,20 @@ export function drawDiagram(canvas, series, opts) {
     showLine: !s.points,
     pointRadius: s.points ? (s.pointRadius ?? 3) : 0,
     pointHoverRadius: 4,
-    tension: 0, fill: false,
-    curveLabel: s.curveLabel,
+    tension: 0, fill: false, borderJoin: 'round',
+    curveLabel: s.curveLabel, fn: s.fn,
     order: s.points ? 0 : 1,
   }));
   const sc = axes(16);
-  Object.assign(sc.x, { min: opts.xmin ?? 0, max: opts.xmax, ticks: { maxTicksLimit: 8, padding: 6, callback: tickFmt } });
+  Object.assign(sc.x, { min: opts.xmin ?? 0, max: opts.xmax, ticks: { maxTicksLimit: 8, padding: 6, includeBounds: false, callback: tickFmt } });
   Object.assign(sc.y, {
     type: 'linear', min: opts.ymin, max: opts.ymax,
-    ticks: { maxTicksLimit: 7, padding: 6, callback: tickFmt },
+    ticks: { maxTicksLimit: 7, padding: 6, includeBounds: false, callback: tickFmt },
     grace: opts.ymax == null ? '6%' : 0,
   });
   const vlines = opts.vlines || [];
-  return new Chart(canvas, {
+  const onDone = ({ chart }) => resample(chart);
+  const chart = new Chart(canvas, {
     type: 'line',
     data: { datasets },
     options: {
@@ -311,7 +332,14 @@ export function drawDiagram(canvas, series, opts) {
         tooltip: tooltipOpts((items) => `$${xLabel} = ${(+items[0].parsed.x).toFixed(opts.discrete ? 0 : 2)}$`),
         curveLines: { vlines, hlines: opts.hlines || [] },
         texLayer: { xLabel, draw: (chart) => curveLabels(chart, vlines) },
+        zoom: opts.zoom ? {
+          limits: { x: { min: opts.xmin ?? 0, max: opts.xmax, minRange: (opts.xmax - (opts.xmin ?? 0)) * 1e-3 }, y: { min: opts.ymin ?? 'original', max: 'original' } },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy', onZoomComplete: onDone },
+          pan: { enabled: true, mode: 'xy', onPanComplete: onDone },
+        } : undefined,
       },
     },
   });
+  if (opts.zoom) chart.canvas.classList.add('zoomable');
+  return chart;
 }

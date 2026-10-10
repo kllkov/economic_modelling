@@ -1,5 +1,5 @@
 import { MODELS, GLYPHS } from './models/registry.js';
-import { drawChart, drawDiagram, COLORS } from './charts.js';
+import { drawChart, drawDiagram, zoomBy, zoomReset, COLORS } from './charts.js';
 import { tex, texInline, rich } from './tex.js';
 import { xlsxBlob } from './xlsx.js';
 
@@ -374,13 +374,19 @@ function run() {
       L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
         : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color}` }),
       rich(L.label))));
-    out.append(block(num++, X.title, null, legend, grid));
+    // кнопки масштаба — у диаграмм с приближением (колесо, щипок и перетаскивание тоже работают)
+    const ref = {};
+    const zoomable = X.charts.some((C) => C.opts.zoom);
+    const tool = (label, title, fn) => el('button', { class: 'btn btn-ghost btn-sm', type: 'button', title, onclick: () => fn(ref.chart) }, label);
+    out.append(block(num++, X.title,
+      zoomable ? el('div', { class: 'zoom-tools' }, tool('+', 'Приблизить', (c) => zoomBy(c, 1.5)), tool('−', 'Отдалить', (c) => zoomBy(c, 1 / 1.5)), tool('Сбросить вид', 'Показать всю диаграмму', zoomReset)) : null,
+      legend, grid));
     for (const C of X.charts) {
       const cv = el('canvas');
       grid.append(el('div', { class: 'chart-card' },
         C.title ? el('div', { class: 'ct' }, el('span', {}, C.sym ? `${C.title}, ` : C.title, C.sym ? texInline(C.sym) : null), el('span', { class: 'u' }, C.unit || '')) : null,
         el('div', { class: 'chart-box' }, cv)));
-      extraDraws.push(() => current.charts.push(drawDiagram(cv, C.series, C.opts)));
+      extraDraws.push(() => current.charts.push(ref.chart = drawDiagram(cv, C.series, C.opts)));
     }
   };
   const extras = mod.extraBlocks ? mod.extraBlocks(state, res) : [];

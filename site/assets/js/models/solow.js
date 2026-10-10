@@ -7,6 +7,8 @@
 // Внутри счёт ведётся в x = K/(L·(1+g)^t) — капитал на работника, очищенный от базового тренда;
 // фактический уровень технологии относительно базового тренда — Ar(t) = E(t)/(1+g)^t.
 
+import { sample } from '../charts.js';
+
 const SHOCK_TARGETS = {
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
   k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -30, step: 1 },
@@ -512,8 +514,6 @@ function diagramBlock(st, res) {
     path.push([k, sj * f(k)]); kMax = Math.max(kMax, k);
   }
   const xmax = 1.35 * kMax;
-  // сетка от k̃ = 0 (все кривые выходят из начала координат), сгущённая у нуля, где f(k̃) круто растёт
-  const grid = (fn) => { const pts = []; for (let i = 0; i <= 240; i++) { const k = xmax * (i / 240) ** 2; pts.push([k, fn(k)]); } return pts; };
 
   // подпись линии восстановительных инвестиций; штрихом отмечен параметр, изменённый шоком
   const depLabel = (prime) => {
@@ -524,9 +524,9 @@ function diagramBlock(st, res) {
   };
   const sChanged = Math.abs(P1.s - P0.s) > 1e-12;
   const depChanged = Math.abs(ss1.dep - ss0.dep) > 1e-12;
-  // кривая хранит свою функцию fn, чтобы крупный план мог пересчитать её на другой сетке;
+  // кривая хранит свою функцию fn: при приближении диаграмма пересчитывает её на видимом отрезке;
   // curveLabel — формула у кривой, label — подпись в легенде (по умолчанию та же формула)
-  const curve = (fn, props) => ({ label: `$${props.curveLabel}$`, ...props, fn, data: grid(fn) });
+  const curve = (fn, props) => ({ label: `$${props.curveLabel}$`, ...props, fn, data: sample(fn, 0, xmax) });
   const sf = `s\\cdot f(${kS})`, sf1 = `s^{\\prime}\\cdot f(${kS})`;
   const series = [
     curve(f, { curveLabel: `f(${kS})`, color: DC.f, width: 2 }),
@@ -540,25 +540,11 @@ function diagramBlock(st, res) {
   const vlines = [{ x: ss0.k, color: DC.ss0, label: `${kS}^*`, yTo: P0.s * f(ss0.k) }];
   if (moved) vlines.push({ x: ss1.k, color: DC.ss1, label: `${kS}^{*\\prime}${permanent ? '' : '\\ \\text{(в момент шока)}'}`, yTo: P1.s * f(ss1.k) });
 
-  // крупный план окрестности стационара: без f(k), только сбережения, восстановительные инвестиции и путь
-  function zoomChart() {
-    const ks = [ss0.k, ss1.k, ...path.map((p) => p[0])];
-    let lo = Math.min(...ks), hi = Math.max(...ks);
-    const pad = Math.max(0.15 * (hi - lo), 0.04 * hi);
-    lo = Math.max(1e-6, lo - pad); hi += pad;
-    const zgrid = (fn) => { const pts = []; for (let i = 0; i <= 200; i++) { const k = lo + ((hi - lo) * i) / 200; pts.push([k, fn(k)]); } return pts; };
-    const zs = series.filter((x) => x.fn !== f).map((x) => (x.points ? x : { ...x, data: zgrid(x.fn) }));
-    const ys = zs.flatMap((x) => x.data.map((p) => p[1]));
-    const yl = Math.min(...ys), yh = Math.max(...ys), yp = 0.06 * (yh - yl || yh);
-    return { title: 'Крупно: окрестность стационара', series: zs, opts: { xLabel: kS, xmin: lo, xmax: hi, ymin: yl - yp, ymax: yh + yp, vlines: vlines.map((v) => ({ ...v, yTo: null })) } };
-  }
-
   return {
     title: 'Основная диаграмма модели', diagram: true,
     legend: series.map((s) => ({ label: s.label, color: s.color, dash: s.dash, point: s.points })),
     charts: [
-      { title: 'Вся диаграмма', series, opts: { xLabel: kS, xmin: 0, xmax, ymin: 0, vlines } },
-      zoomChart(),
+      { series, opts: { xLabel: kS, xmin: 0, xmax, ymin: 0, vlines, zoom: true } },
     ],
   };
 }
