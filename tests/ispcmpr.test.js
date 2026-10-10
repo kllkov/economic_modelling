@@ -127,9 +127,11 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
     const [p1, p2] = dg.charts;
     const at = (ser, x) => { const d = ser.data; for (let i = 1; i < d.length; i++) if (d[i][0] >= x) { const w = (x - d[i - 1][0]) / (d[i][0] - d[i - 1][0]); return d[i - 1][1] + w * (d[i][1] - d[i - 1][1]); } return NaN; };
     const x4 = r.sim.x[4], pi4 = r.sim.pi[4], r4 = r.sim.r[4];
-    for (const nm of ['PC′', 'AD′']) { const s = p1.series.find((q) => q.curveLabel === nm); if (s) near(at(s, x4), pi4, 1e-9, `${nm} проходит через (x,π) в t̂, ${expectations}`); }
-    for (const nm of ['DIS′', 'MPR′']) { const s = p2.series.find((q) => q.curveLabel === nm); if (s) near(at(s, x4), r4, 1e-9, `${nm} проходит через (x,r) в t̂, ${expectations}`); }
-    const pc0 = p1.series.find((q) => q.curveLabel === 'PC');
+    const nm = (name, prime) => `\\text{${name}}${prime ? '^{\\prime}' : ''}`;
+    assert.ok(p1.series.some((q) => q.curveLabel === nm('PC', 1)), 'шок издержек сдвигает PC');
+    for (const name of ['PC', 'AD']) { const s = p1.series.find((q) => q.curveLabel === nm(name, 1)); if (s) near(at(s, x4), pi4, 1e-9, `${name}′ проходит через (x,π) в t̂, ${expectations}`); }
+    for (const name of ['DIS', 'MPR']) { const s = p2.series.find((q) => q.curveLabel === nm(name, 1)); if (s) near(at(s, x4), r4, 1e-9, `${name}′ проходит через (x,r) в t̂, ${expectations}`); }
+    const pc0 = p1.series.find((q) => q.curveLabel === nm('PC'));
     near(at(pc0, 0), 0, 1e-9, 'PC до шока проходит через (0, 0)');
   }
 }

@@ -1,6 +1,6 @@
 import { MODELS, GLYPHS } from './models/registry.js';
 import { drawChart, drawDiagram, COLORS } from './charts.js';
-/* global katex */
+import { tex, texInline, rich } from './tex.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, attrs = {}, ...kids) => {
@@ -16,31 +16,6 @@ const el = (tag, attrs = {}, ...kids) => {
   return n;
 };
 const val = (x, s) => (typeof x === 'function' ? x(s) : x);
-
-const hasKatex = () => typeof katex !== 'undefined';
-function tex(str, display = true) {
-  const box = el('div', { class: 'tex' });
-  if (hasKatex()) katex.render(str, box, { displayMode: display, throwOnError: false, strict: 'ignore' });
-  else box.textContent = str;
-  return box;
-}
-function texInline(str) {
-  const s = el('span');
-  if (hasKatex()) katex.render(str, s, { displayMode: false, throwOnError: false, strict: 'ignore' });
-  else s.textContent = str;
-  return s;
-}
-// Текст с формулами между $…$ (и HTML-курсивом в ссылках, если html=true)
-function rich(str, tag = 'span', attrs = {}, html = false) {
-  const node = el(tag, attrs);
-  String(str ?? '').split('$').forEach((part, i) => {
-    if (!part) return;
-    if (i % 2 === 1) node.append(texInline(part));
-    else if (html) node.append(el('span', { html: part }));
-    else node.append(document.createTextNode(part));
-  });
-  return node;
-}
 
 function glyph(name, w = 100, h = 64) {
   const ns = 'http://www.w3.org/2000/svg';
@@ -393,7 +368,7 @@ function run() {
     const legend = el('div', { class: 'chart-legend' }, X.legend.map((L) => el('span', {},
       L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
         : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color}` }),
-      L.label)));
+      rich(L.label))));
     out.append(block(num++, X.title, null, legend, grid));
     for (const C of X.charts) {
       const cv = el('canvas');
@@ -460,7 +435,7 @@ function run() {
     irfGrid.append(el('div', { class: 'chart-card' },
       el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sp.sym)), rich(sp.irfUnit, 'span', { class: 'u' })),
       el('div', { class: 'chart-box' }, c1)));
-    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? 'Δ (п.п.)' : 'Δ (%)', data: pairs(res.irf[sp.id]) }],
+    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? '$\\Delta$ (п.п.)' : '$\\Delta$ (%)', data: pairs(res.irf[sp.id]) }],
       { discrete, zero: true, lines, xmax }));
 
     const useEff = view.levelUnits === 'eff' && sp.effAvailable;

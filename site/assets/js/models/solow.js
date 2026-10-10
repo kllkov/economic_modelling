@@ -485,7 +485,6 @@ const DC = {
   f: '#463687', sf0: '#3d8acb', sf1: '#86c2f0', dep0: '#7c62d8', dep1: '#c2b2f7',
   ss0: '#7d7ca5', ss1: '#3d8acb', path: '#23214a',
 };
-const fmt3 = (x) => fmt(x, 3);
 
 export function extraBlocks(st, res) {
   return [{ ...convergenceBlock(st), beforeSS: true }, diagramBlock(st, res)];
@@ -498,7 +497,7 @@ function diagramBlock(st, res) {
   const P0 = params(st, 0, 0);
   const P1 = isState(st) ? P0 : permanent ? params(st, Infinity, 1) : params(st, st.tHat, 1);
   const ss0 = steady(st, P0), ss1 = steady(st, P1);
-  const kS = tp ? 'k̃' : 'k';
+  const kS = tp ? '\\tilde k' : 'k';
   const f = (k) => Math.pow(k, a);
 
   // путь экономики после шока: точки (k̃_t, s_t·f(k̃_t)) раз в период
@@ -514,26 +513,30 @@ function diagramBlock(st, res) {
   const xmax = 1.35 * kMax;
   const grid = (fn) => { const pts = []; for (let i = 1; i <= 240; i++) { const k = (xmax * i) / 240; pts.push([k, fn(k)]); } return pts; };
 
-  const depLabel = (P, prime) => {
-    const p = (sym, key) => sym + (prime === key ? '′' : '');
-    if (D) return tp ? `[(1+${p('n', 'n')})(1+${p('g', 'g')})−1+${p('δ', 'delta')}]·${kS}` : `(${p('n', 'n')}+${p('δ', 'delta')})·${kS}`;
-    return tp ? `(${p('n', 'n')}+${p('g', 'g')}+${p('δ', 'delta')})·${kS}` : `(${p('n', 'n')}+${p('δ', 'delta')})·${kS}`;
+  // подпись линии восстановительных инвестиций; штрихом отмечен параметр, изменённый шоком
+  const depLabel = (prime) => {
+    const p = (sym, key) => sym + (prime === key ? '^{\\prime}' : '');
+    const n = p('n', 'n'), g = p('g', 'g'), d = p('\\delta', 'delta');
+    if (D && tp) return `\\big[(1+${n})(1+${g})-1+${d}\\big]\\,${kS}`;
+    return tp ? `(${n}+${g}+${d})\\,${kS}` : `(${n}+${d})\\,${kS}`;
   };
   const sChanged = Math.abs(P1.s - P0.s) > 1e-12;
   const depChanged = Math.abs(ss1.dep - ss0.dep) > 1e-12;
-  // кривая хранит свою функцию fn, чтобы крупный план мог пересчитать её на другой сетке
-  const curve = (fn, props) => ({ ...props, fn, data: grid(fn) });
+  // кривая хранит свою функцию fn, чтобы крупный план мог пересчитать её на другой сетке;
+  // curveLabel — формула у кривой, label — подпись в легенде (по умолчанию та же формула)
+  const curve = (fn, props) => ({ label: `$${props.curveLabel}$`, ...props, fn, data: grid(fn) });
+  const sf = `s\\cdot f(${kS})`, sf1 = `s^{\\prime}\\cdot f(${kS})`;
   const series = [
-    curve(f, { label: `f(${kS})`, color: DC.f, width: 2, curveLabel: `f(${kS})` }),
-    curve((k) => P0.s * f(k), { label: `s·f(${kS})`, color: DC.sf0, width: 2.4, curveLabel: `s·f(${kS})` }),
-    ...(sChanged ? [curve((k) => P1.s * f(k), { label: `s′·f(${kS})`, color: DC.sf1, width: 2.4, dash: [7, 4], curveLabel: `s′·f(${kS})` })] : []),
-    curve((k) => ss0.dep * k, { label: 'восстановительные инвестиции', color: DC.dep0, width: 2.2, curveLabel: depLabel(P0, null) }),
-    ...(depChanged ? [curve((k) => ss1.dep * k, { label: 'восстановительные инвестиции (после шока)', color: DC.dep1, width: 2.2, dash: [7, 4], curveLabel: depLabel(P1, tg) })] : []),
-    { label: `путь экономики (${kS}ₜ, s·f(${kS}ₜ))`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
+    curve(f, { curveLabel: `f(${kS})`, color: DC.f, width: 2 }),
+    curve((k) => P0.s * f(k), { curveLabel: sf, color: DC.sf0, width: 2.4 }),
+    ...(sChanged ? [curve((k) => P1.s * f(k), { curveLabel: sf1, color: DC.sf1, width: 2.4, dash: [7, 4] })] : []),
+    curve((k) => ss0.dep * k, { label: 'восстановительные инвестиции', curveLabel: depLabel(null), color: DC.dep0, width: 2.2 }),
+    ...(depChanged ? [curve((k) => ss1.dep * k, { label: 'восстановительные инвестиции (после шока)', curveLabel: depLabel(tg), color: DC.dep1, width: 2.2, dash: [7, 4] })] : []),
+    { label: `путь экономики $(${kS}_t,\\ s\\cdot f(${kS}_t))$`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
   ];
   const moved = Math.abs(ss1.k - ss0.k) / ss0.k > 1e-9;
-  const vlines = [{ x: ss0.k, color: DC.ss0, label: `${kS}*`, yTo: P0.s * f(ss0.k) }];
-  if (moved) vlines.push({ x: ss1.k, color: DC.ss1, label: permanent ? `${kS}*′` : `${kS}*′ (в момент шока)`, yTo: P1.s * f(ss1.k) });
+  const vlines = [{ x: ss0.k, color: DC.ss0, label: `${kS}^*`, yTo: P0.s * f(ss0.k) }];
+  if (moved) vlines.push({ x: ss1.k, color: DC.ss1, label: `${kS}^{*\\prime}${permanent ? '' : '\\ \\text{(в момент шока)}'}`, yTo: P1.s * f(ss1.k) });
 
   // крупный план окрестности стационара: без f(k), только сбережения, восстановительные инвестиции и путь
   function zoomChart() {
@@ -565,7 +568,6 @@ function convergenceBlock(st) {
   const P = params(st, 0, 0);
   const ss = steady(st, P);
   const g0 = tp ? st.g : 0;
-  const kS = tp ? 'k̃' : 'k';
   const k0 = st.k0 > 0 ? st.k0 : ss.k;
   const sim = simulate({ ...st, shockSize: 0 }, h, N, 0, k0);
   const stride = Math.max(1, Math.round(0.1 / h));
@@ -576,11 +578,11 @@ function convergenceBlock(st) {
     if (disc) { if (j >= 1) out.gy.push([t, 100 * ((yj / Math.pow(sim.x[j - 1], a)) * (1 + g0) - 1)]); }
     else out.gy.push([t, 100 * (a * (P.s * Math.pow(kj, a - 1) - (P.n + g0 + P.delta)) + g0)]);
   }
-  const label = `${kS}₀ = ${fmt3(k0)}`, color = '#3d8acb';
+  const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => (disc ? `${v}_t` : `${v}(t)`);
+  const label = `$${kt}_0 = ${fmtTex(k0, 3)}$`, color = '#3d8acb';
   const e = tp ? 'на эфф. работника' : 'на работника';
   const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: [{ label, data: out[key], color, width: 2.6 }],
     opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }] } });
-  const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => (disc ? `${v}_t` : `${v}(t)`);
   return {
     title: 'Сходимость к стационару',
     legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }],

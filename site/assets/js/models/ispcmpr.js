@@ -420,25 +420,28 @@ function diagramBlock(st, res) {
   const grid = (fn) => { const p = []; for (let i = 0; i <= 120; i++) { const x = lo + ((hi - lo) * i) / 120; p.push([x, fn(x)]); } return p; };
   const same = (f, g) => [lo, hi].every((x) => Math.abs(f(x) - g(x)) < 1e-9);
 
+  // названия кривых — формулы: \text{PC}, после шока — со штрихом
+  const nm = (name, prime) => `\\text{${name}}${prime ? '^{\\prime}' : ''}`;
   const panel = (title, A, B, nameA, nameB, path, yLabel) => {
     const series = [
-      { label: `${nameA}`, data: grid(L0[A]), color: DC.pc0, width: 2.4, curveLabel: nameA },
-      ...(same(L0[A], L1[A]) ? [] : [{ label: `${nameA}′ (в момент шока)`, data: grid(L1[A]), color: DC.pc1, width: 2.4, dash: [7, 4], curveLabel: `${nameA}′` }]),
-      { label: `${nameB}`, data: grid(L0[B]), color: DC.ad0, width: 2.2, curveLabel: nameB },
-      ...(same(L0[B], L1[B]) ? [] : [{ label: `${nameB}′ (в момент шока)`, data: grid(L1[B]), color: DC.ad1, width: 2.2, dash: [7, 4], curveLabel: `${nameB}′` }]),
+      { label: `$${nm(nameA)}$`, data: grid(L0[A]), color: DC.pc0, width: 2.4, curveLabel: nm(nameA) },
+      ...(same(L0[A], L1[A]) ? [] : [{ label: `$${nm(nameA, 1)}$ (в момент шока)`, data: grid(L1[A]), color: DC.pc1, width: 2.4, dash: [7, 4], curveLabel: nm(nameA, 1) }]),
+      { label: `$${nm(nameB)}$`, data: grid(L0[B]), color: DC.ad0, width: 2.2, curveLabel: nm(nameB) },
+      ...(same(L0[B], L1[B]) ? [] : [{ label: `$${nm(nameB, 1)}$ (в момент шока)`, data: grid(L1[B]), color: DC.ad1, width: 2.2, dash: [7, 4], curveLabel: nm(nameB, 1) }]),
       { label: 'путь экономики', data: path, color: DC.path, points: true, pointRadius: 3 },
     ];
     const pts = path.map((p) => p[1]).concat([L0[A](0)]);
     const ylo = Math.min(...pts), yhi = Math.max(...pts), yp = Math.max(0.35 * (yhi - ylo), 0.5);
     return { title, sym: yLabel, series: series.filter((x) => x.data.every((p) => Number.isFinite(p[1]))),
-      opts: { xLabel: 'ỹ', xmin: lo, xmax: hi, ymin: ylo - yp, ymax: yhi + yp, vlines: [{ x: 0, color: DC.ss, label: 'ỹ = 0' }] } };
+      opts: { xLabel: '\\tilde y', xmin: lo, xmax: hi, ymin: ylo - yp, ymax: yhi + yp, vlines: [{ x: 0, color: DC.ss, label: '\\tilde y = 0' }] } };
   };
   const p1 = panel('Плоскость', 'pc', 'ad', 'PC', 'AD', pathPi, '(\\tilde y,\\ \\pi)');
   const p2 = panel('Плоскость', 'is', 'mpr', 'DIS', 'MPR', pathR, '(\\tilde y,\\ r)');
   const legend = [
-    { label: 'PC, DIS — до шока', color: DC.pc0 }, { label: 'AD (DIS + MPR), MPR (с учётом PC) — до шока', color: DC.ad0 },
-    { label: 'PC′, DIS′ — в момент шока', color: DC.pc1, dash: true },
-    { label: 'AD′, MPR′ — в момент шока', color: DC.ad1, dash: true },
+    { label: `$${nm('PC')}$, $${nm('DIS')}$ — до шока`, color: DC.pc0 },
+    { label: `$${nm('AD')}$ ($${nm('DIS')}$ + $${nm('MPR')}$), $${nm('MPR')}$ (с учётом $${nm('PC')}$) — до шока`, color: DC.ad0 },
+    { label: `$${nm('PC', 1)}$, $${nm('DIS', 1)}$ — в момент шока`, color: DC.pc1, dash: true },
+    { label: `$${nm('AD', 1)}$, $${nm('MPR', 1)}$ — в момент шока`, color: DC.ad1, dash: true },
     { label: 'путь экономики (по периодам)', color: DC.path, point: true },
   ];
   return { title: 'Основная диаграмма модели', diagram: true, legend, charts: [p1, p2] };
@@ -449,7 +452,7 @@ function convergenceBlock(st) {
   const C = coefs(st);
   const ss = steady(st, exo(st, 0, 0), C);
   const sim = simulate({ ...st, shockSize: 0 }, N, 0, st.pie0);
-  const lbl = `E*₀π₁ = ${fmt(st.pie0, 2)}%`;
+  const lbl = `$E^*_0\\pi_1 = ${fmtTex(st.pie0, 2)}\\%$`;
   const mk = (title, sym, key, hl) => ({
     title, sym, unit: '%',
     series: [{ label: lbl, data: sim ? sim[key].map((v, j) => [j, v]) : [], color: '#3d8acb', width: 2.6 }],
