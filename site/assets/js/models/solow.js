@@ -525,15 +525,15 @@ function diagramBlock(st, res) {
   const sChanged = Math.abs(P1.s - P0.s) > 1e-12;
   const depChanged = Math.abs(ss1.dep - ss0.dep) > 1e-12;
   // кривая хранит свою функцию fn: при приближении диаграмма пересчитывает её на видимом отрезке;
-  // curveLabel — формула у кривой, label — подпись в легенде (по умолчанию та же формула)
-  const curve = (fn, props) => ({ label: `$${props.curveLabel}$`, ...props, fn, data: sample(fn, 0, xmax) });
+  // кривые подписаны только в легенде (формулой), на самом графике подписей нет
+  const curve = (fn, tex, props) => ({ label: `$${tex}$`, ...props, fn, data: sample(fn, 0, xmax) });
   const sf = `s\\cdot f(${kS})`, sf1 = `s^{\\prime}\\cdot f(${kS})`;
   const series = [
-    curve(f, { curveLabel: `f(${kS})`, color: DC.f, width: 2 }),
-    curve((k) => P0.s * f(k), { curveLabel: sf, color: DC.sf0, width: 2.4 }),
-    ...(sChanged ? [curve((k) => P1.s * f(k), { curveLabel: sf1, color: DC.sf1, width: 2.4, dash: [7, 4] })] : []),
-    curve((k) => ss0.dep * k, { label: 'восстановительные инвестиции', curveLabel: depLabel(null), color: DC.dep0, width: 2.2 }),
-    ...(depChanged ? [curve((k) => ss1.dep * k, { label: 'восстановительные инвестиции (после шока)', curveLabel: depLabel(tg), color: DC.dep1, width: 2.2, dash: [7, 4] })] : []),
+    curve(f, `f(${kS})`, { color: DC.f, width: 2 }),
+    curve((k) => P0.s * f(k), sf, { color: DC.sf0, width: 2.4 }),
+    ...(sChanged ? [curve((k) => P1.s * f(k), sf1, { color: DC.sf1, width: 2.4, dash: [7, 4] })] : []),
+    curve((k) => ss0.dep * k, depLabel(null), { color: DC.dep0, width: 2.2 }),
+    ...(depChanged ? [curve((k) => ss1.dep * k, depLabel(tg), { color: DC.dep1, width: 2.2, dash: [7, 4] })] : []),
     { label: `путь экономики $(${kS}_t,\\ s\\cdot f(${kS}_t))$`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
   ];
   const moved = Math.abs(ss1.k - ss0.k) / ss0.k > 1e-9;
