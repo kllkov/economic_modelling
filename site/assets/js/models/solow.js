@@ -37,10 +37,10 @@ export const controls = [
     options: [{ v: 'discrete', l: 'Дискретное' }, { v: 'continuous', l: 'Непрерывное' }] },
   { id: 'version', label: 'Вид модели', type: 'segmented',
     options: [{ v: 'centralized', l: 'Централизованная' }, { v: 'decentralized', l: 'Децентрализованная' }] },
-  { id: 'variant', label: 'Вариация', type: 'select',
+  { id: 'variant', label: 'Технологический прогресс', type: 'select',
     options: [
-      { v: 'base', l: 'Без технологического прогресса' },
-      { v: 'tp', l: 'С трудосберегающим ТП' },
+      { v: 'base', l: 'Отсутствует' },
+      { v: 'tp', l: 'Трудосберегающий' },
     ] },
 
   { section: 'Функции' },
