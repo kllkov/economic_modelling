@@ -307,6 +307,9 @@ export function drawDiagram(canvas, series, opts) {
     pointRadius: s.points ? (s.pointRadius ?? 3) : 0,
     pointHoverRadius: 4,
     tension: 0, fill: false, borderJoin: 'round',
+    // у сплошной линии без сглаживания Chart.js сводит точки одного пикселя по x в вертикальный отрезок,
+    // и почти вертикальная кривая у нуля выходит ступенькой; монотонная интерполяция отключает этот режим
+    cubicInterpolationMode: s.fn ? 'monotone' : 'default',
     curveLabel: s.curveLabel, fn: s.fn,
     order: s.points ? 0 : 1,
   }));
