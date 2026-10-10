@@ -378,8 +378,8 @@ export function chartSpecs(s) {
   const x = (v) => (D ? `${v}_t` : `${v}(t)`);
   const showL = Math.abs(s.n) > 0 || s.shockTarget === 'n';
   const specs = [
-    ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
-    ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
+    ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true, levelOnly: true }] : []),
+    ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta$(%) от тренда', noEff: true, levelOnly: true }] : []),
     { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta$(%) от s.s.' },

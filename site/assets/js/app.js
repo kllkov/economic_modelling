@@ -442,15 +442,18 @@ function run() {
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);
   for (const sp of specs) {
     const symOf = (u) => (u === 'eff' ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : u === 'agg' ? sp.aggSym : sp.sym);
-    const uI = unitFor(view.irfUnits, sp);
-    const irfY = seriesOf(res, sp, uI).irf;
-    const c1 = el('canvas');
-    irfGrid.append(el('div', { class: 'chart-card' },
-      el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
-      el('div', { class: 'chart-box' }, c1)));
-    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? '$\\Delta$ (п.п.)' : '$\\Delta$ (%)', data: pairs(irfY) }],
-      { discrete, zero: true, lines, xmax }));
+    if (shownIn(view.irfUnits, sp)) {
+      const uI = unitFor(view.irfUnits, sp);
+      const irfY = seriesOf(res, sp, uI).irf;
+      const c1 = el('canvas');
+      irfGrid.append(el('div', { class: 'chart-card' },
+        el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
+        el('div', { class: 'chart-box' }, c1)));
+      current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? '$\\Delta$ (п.п.)' : '$\\Delta$ (%)', data: pairs(irfY) }],
+        { discrete, zero: true, lines, xmax }));
+    }
 
+    if (!shownIn(view.levelUnits, sp)) continue;
     const uL = unitFor(view.levelUnits, sp);
     const { level: y, base: b } = seriesOf(res, sp, uL);
     const unit = sp.lvlUnit || '';
@@ -470,6 +473,9 @@ function run() {
 // единицы, в которых переменная реально показывается в режиме mode (недоступный режим → на работника)
 const unitFor = (mode, sp) => (mode === 'eff' && sp.effAvailable ? 'eff' : mode === 'agg' && sp.aggSym ? 'agg' : 'worker');
 
+// технология и население существуют только в уровнях: в подушевых режимах их графиков нет
+const shownIn = (mode, sp) => !sp.levelOnly || mode === 'agg';
+
 // ряды переменной в выбранных единицах: отклик в % (или п.п.), уровень и базовый путь
 function seriesOf(res, sp, u) {
   const level = u === 'eff' ? res.eff[sp.id] : u === 'agg' ? res.agg[sp.id] : res.levels[sp.id];
@@ -482,9 +488,7 @@ function seriesOf(res, sp, u) {
 function downloadXLSX(res, specs) {
   const modes = [['agg', 'В уровнях', specs.some((s) => s.aggSym)], ['worker', 'На работника', true], ['eff', 'На эфф. работника', specs.some((s) => s.effAvailable)]];
   const sheets = modes.filter(([, , on]) => on).map(([mode, name]) => {
-    const cols = specs.map((sp) => {
-      return { id: sp.id, ...seriesOf(res, sp, unitFor(mode, sp)) };
-    });
+    const cols = specs.filter((sp) => shownIn(mode, sp)).map((sp) => ({ id: sp.id, ...seriesOf(res, sp, unitFor(mode, sp)) }));
     return {
       name,
       rows: [['t', ...cols.flatMap((c) => [`irf_${c.id}`, `level_${c.id}`, `base_${c.id}`])],
