@@ -311,7 +311,7 @@ export function formulas(st) {
 
   // ── 2. уравнения динамики
   const s = st.sigma, b = st.beta;
-  fs.system.push({ label: 'IS',
+  fs.system.push({ label: 'Dynamic IS',
     tex: `\\tilde y_t=${Ex}\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)`,
     num: `\\tilde y_t=${Ex}\\tilde y_{t+1}-${n4(1 / s)}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)` });
   fs.system.push({ label: 'Кривая Филлипса',
@@ -437,10 +437,10 @@ function diagramBlock(st, res) {
       opts: { xLabel: 'ỹ', xmin: lo, xmax: hi, ymin: ylo - yp, ymax: yhi + yp, vlines: [{ x: 0, color: DC.ss, label: 'ỹ = 0' }] } };
   };
   const p1 = panel('Плоскость', 'pc', 'ad', 'PC', 'AD', pathPi, '(\\tilde y,\\ \\pi)');
-  const p2 = panel('Плоскость', 'is', 'mpr', 'IS', 'MPR', pathR, '(\\tilde y,\\ r)');
+  const p2 = panel('Плоскость', 'is', 'mpr', 'DIS', 'MPR', pathR, '(\\tilde y,\\ r)');
   const legend = [
-    { label: 'PC, IS — до шока', color: DC.pc0 }, { label: 'AD (IS + MPR), MPR (с учётом PC) — до шока', color: DC.ad0 },
-    { label: 'PC′, IS′ — в момент шока', color: DC.pc1, dash: true },
+    { label: 'PC, DIS — до шока', color: DC.pc0 }, { label: 'AD (DIS + MPR), MPR (с учётом PC) — до шока', color: DC.ad0 },
+    { label: 'PC′, DIS′ — в момент шока', color: DC.pc1, dash: true },
     { label: 'AD′, MPR′ — в момент шока', color: DC.ad1, dash: true },
     { label: 'путь экономики (по периодам)', color: DC.path, point: true },
   ];
