@@ -3,7 +3,6 @@
 
 export const COLORS = {
   path: '#3d8acb',
-  pathFill: 'rgba(90, 169, 230, .09)',
   base: '#aaa3dd',
   shock: '#7c62d8',
   announce: '#b09cf5',
@@ -179,7 +178,7 @@ const curveLabels = {
 
 /**
  * series: [{ data: [[x,y]...], label, color, width, dash, points, pointRadius, curveLabel }]
- * opts: { xLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], xFmt, discrete }
+ * opts: { xLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], discrete }
  */
 export function drawDiagram(canvas, series, opts) {
   ensure();

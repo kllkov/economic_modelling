@@ -25,7 +25,7 @@ tests/                     — проверки решателей (числа �
 
 ## Как добавить модель
 
-Модель — это ES-модуль с экспортами `meta`, `defaults`, `controls`, `normalize`, `solve`, `formulas`, `steadyTable`, `chartSpecs` (см. `ramsey.js`). В `registry.js` у модели появляется поле `load: () => import('./имя.js')`, и плитка становится активной.
+Модель — это ES-модуль с экспортами `defaults`, `controls`, `normalize`, `solve`, `formulas`, `steadyTable`, `chartSpecs` и, при необходимости, `extraBlocks` (см. `solow.js`). Название и описание модели задаются в `registry.js`. В `registry.js` у модели появляется поле `load: () => import('./имя.js')`, и плитка становится активной.
 
 ## Тесты
 

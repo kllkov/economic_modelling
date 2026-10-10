@@ -1,6 +1,6 @@
 // Модель Солоу (Solow–Swan): экзогенная норма сбережения s, производство Кобба–Дугласа
-// Y = K^α (A L)^{1−α}, трудосберегающий ТП (A растёт темпом g), население растёт темпом n.
-// Обозначения: E — уровень технологии (как в модели Рамсея на сайте), k̃ = K/(EL), y = f(k).
+// Y = K^α (E L)^{1−α}, трудосберегающий ТП (E растёт темпом g), население растёт темпом n.
+// Обозначения: k̃ = K/(EL), y = f(k).
 //
 // Динамика — прямое (вперёд) решение: оптимизации во времени нет, поэтому ожидания не влияют
 // на траекторию. Дискретное время — точная рекурсия, непрерывное — RK4 с шагом 0.02.
@@ -15,8 +15,6 @@ const SHOCK_TARGETS = {
   g:     { label: 'Темп роста технологии $g$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, variant: 'tp' },
   delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
 };
-
-export const meta = { id: 'solow', title: 'Модель Солоу', subtitle: 'Solow–Swan model', ready: true };
 
 export const defaults = {
   time: 'discrete', version: 'centralized', variant: 'tp', production: 'cd',
@@ -123,10 +121,10 @@ function steady(st, P) {
   const y = Math.pow(k, a);
   const kGR = Math.pow(a / dep, 1 / (1 - a));
   const yGR = Math.pow(kGR, a);
-  const rGrowth = st.time === 'discrete' ? (1 + P.n) * (1 + P.g) - 1 : P.n + P.g; // темп роста экономики
+  const growth = st.time === 'discrete' ? (1 + P.n) * (1 + P.g) - 1 : P.n + P.g; // темп роста экономики
   return {
-    k, y, c: (1 - P.s) * y, i: P.s * y, w: (1 - a) * y, r: a * Math.pow(k, a - 1) - P.delta, s: P.s,
-    dep, kGR, cGR: yGR - dep * kGR, sGR: a, rGR: rGrowth, growth: rGrowth,
+    k, y, c: (1 - P.s) * y, i: P.s * y, w: (1 - a) * y, r: a * Math.pow(k, a - 1) - P.delta,
+    dep, kGR, cGR: yGR - dep * kGR, growth,
   };
 }
 
@@ -164,33 +162,31 @@ function simulate(st, h, N, scale, x0 = null) {
   const x = new Float64Array(N + 1), Ar = new Float64Array(N + 1), L = new Float64Array(N + 1);
   const disc = st.time === 'discrete';
 
-  // уровень технологии относительно базового тренда
+  // уровень технологии относительно базового тренда (в непрерывном времени — в любой момент t)
+  const dg = st.shockTarget === 'g' ? st.shockSize * scale : 0;
+  const ArAt = (t) => Math.exp(dg * profInt(st, t)) * params(st, t, scale).Z;
+  // население в непрерывном времени: ln L = ∫ n
+  const nInt = (t) => st.n * t + (st.shockTarget === 'n' ? st.shockSize * scale * profInt(st, t) : 0);
   if (disc) {
     let G = 1;
     for (let j = 0; j <= N; j++) {
-      Ar[j] = G * params(st, j * h, scale).Z;
-      G *= (1 + params(st, j * h, scale).g * h) / (1 + g0 * h);
+      const P = params(st, j, scale);
+      Ar[j] = G * P.Z;
+      G *= (1 + P.g) / (1 + g0);
     }
-  } else {
-    const dg = st.shockTarget === 'g' ? st.shockSize * scale : 0;
-    for (let j = 0; j <= N; j++) Ar[j] = Math.exp(dg * profInt(st, j * h)) * params(st, j * h, scale).Z;
-  }
-  const ArAt = (t) => {
-    const dg = st.shockTarget === 'g' ? st.shockSize * scale : 0;
-    return Math.exp(dg * profInt(st, t)) * params(st, t, scale).Z;
-  };
+  } else for (let j = 0; j <= N; j++) Ar[j] = ArAt(j * h);
 
   L[0] = 1;
   x[0] = x0 ?? ss0.k * (jHat === 0 ? D : 1);
   for (let j = 0; j < N; j++) {
-    const t = j * h;
     if (disc) {
-      const P = params(st, t, scale);
+      const P = params(st, j, scale);
       const yhat = Math.pow(x[j], a) * Math.pow(Ar[j], 1 - a);
-      x[j + 1] = ((1 - P.delta * h) * x[j] + h * P.s * yhat) / ((1 + P.n * h) * (1 + g0 * h));
-      L[j + 1] = L[j] * (1 + P.n * h);
+      x[j + 1] = ((1 - P.delta) * x[j] + P.s * yhat) / ((1 + P.n) * (1 + g0));
+      L[j + 1] = L[j] * (1 + P.n);
     } else {
       // ẋ = s·x^α·Ar^{1−α} − (n + g₀ + δ)·x ; правый конец шага берём слева от t_{j+1}
+      const t = j * h;
       const f = (tt, xx) => {
         const P = params(st, tt, scale);
         return P.s * Math.pow(xx, a) * Math.pow(ArAt(tt), 1 - a) - (P.n + g0 + P.delta) * xx;
@@ -201,8 +197,6 @@ function simulate(st, h, N, scale, x0 = null) {
       const k3 = f(t + h / 2, x[j] + (h / 2) * k2);
       const k4 = f(tEnd, x[j] + h * k3);
       x[j + 1] = x[j] + (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
-      // население: ln L = ∫ n
-      const nInt = (tt) => st.n * tt + (st.shockTarget === 'n' ? st.shockSize * scale * profInt(st, tt) : 0);
       L[j + 1] = Math.exp(nInt(t + h));
     }
     if (j + 1 === jHat) x[j + 1] *= D;
@@ -226,9 +220,9 @@ export function solve(st) {
   const Np = Math.round(st.horizon / h);
   const stride = Math.max(1, Math.round(0.1 / h));
   const t = [];
-  const irf = { A: [], L: [], c: [], k: [], y: [], i: [], r: [], w: [], gy: [] };
-  const lvl = { A: [], L: [], c: [], k: [], y: [], i: [], r: [], w: [], gy: [] };
-  const baseLvl = { A: [], L: [], c: [], k: [], y: [], i: [], r: [], w: [], gy: [] };
+  const irf = { E: [], L: [], c: [], k: [], y: [], i: [], r: [], w: [], gy: [] };
+  const lvl = { E: [], L: [], c: [], k: [], y: [], i: [], r: [], w: [], gy: [] };
+  const baseLvl = { E: [], L: [], c: [], k: [], y: [], i: [], r: [], w: [], gy: [] };
   const eff = { c: [], k: [], y: [], i: [], w: [] }, baseEff = { c: [], k: [], y: [], i: [], w: [] };
   const agg = { c: [], k: [], y: [], i: [] }, baseAgg = { c: [], k: [], y: [], i: [] };
   const ssGrowth = 100 * g0; // темп роста выпуска на работника на ТСР, %
@@ -264,7 +258,7 @@ export function solve(st) {
     }
     for (const v of ['c', 'k', 'y', 'i']) { agg[v].push(hat[v] * G * L[j]); baseAgg[v].push(ss0[v] * G * Lb); }
     irf.r.push(100 * (r - ss0.r)); lvl.r.push(100 * r); baseLvl.r.push(100 * ss0.r);
-    irf.A.push(100 * (Ar[j] - 1)); lvl.A.push(G * Ar[j]); baseLvl.A.push(G);
+    irf.E.push(100 * (Ar[j] - 1)); lvl.E.push(G * Ar[j]); baseLvl.E.push(G);
     irf.L.push(100 * (L[j] / Lb - 1)); lvl.L.push(L[j]); baseLvl.L.push(Lb);
     const gy = growthAt(j);
     irf.gy.push(gy - ssGrowth); lvl.gy.push(gy); baseLvl.gy.push(ssGrowth);
@@ -273,7 +267,7 @@ export function solve(st) {
   const permanent = st.shockPersistence === 'permanent' && !isState(st);
   const ssF = steady(st, permanent ? params(st, Infinity, 1) : params(st, 0, 0));
   return {
-    ok: true, h: h * stride, t, irf, levels: lvl, baseLevels: baseLvl, eff, baseEff, agg, baseAgg,
+    ok: true, t, irf, levels: lvl, baseLevels: baseLvl, eff, baseEff, agg, baseAgg,
     ss0, ssF, x, Ar, L, hGrid: h,
     permanentChange: Math.abs(ssF.k - ss0.k) / ss0.k > 1e-12 || st.shockTarget === 'tfp' || st.shockTarget === 'g',
     marks: { tHat: st.tHat, t0: null },
@@ -287,10 +281,9 @@ export function chartSpecs(st) {
   const tp = st.variant === 'tp';
   const D = st.time === 'discrete';
   const x = (v) => (D ? `${v}_t` : `${v}(t)`);
-  const k = tp ? '\\tilde k' : 'k';
   const showL = Math.abs(st.n) > 0 || st.shockTarget === 'n';
   const specs = [
-    ...(tp ? [{ id: 'A', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
+    ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
     ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
     { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta$(%) от s.s.' },
@@ -402,10 +395,10 @@ export function formulas(st) {
   }
   if (!cen) {
     const kk = D ? `${k}_t` : k;
-    const r = D ? 'r_t' : 'r', w = D ? 'w_t' : 'w', A = tp ? (D ? 'E_t\\,' : 'E\\,') : '';
+    const r = D ? 'r_t' : 'r', w = D ? 'w_t' : 'w', Et = tp ? (D ? 'E_t\\,' : 'E\\,') : '';
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
-      tex: `${r}=\\alpha\\,${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)\\,${A}${kk}^{\\alpha}`,
-      num: `${r}=${n4(a)}\\,${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}\\,${A}${kk}^{${n4(a)}}` });
+      tex: `${r}=\\alpha\\,${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)\\,${Et}${kk}^{\\alpha}`,
+      num: `${r}=${n4(a)}\\,${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}\\,${Et}${kk}^{${n4(a)}}` });
   }
   {
     const kk = D ? `${k}_t` : k, cc = D ? `${c}_t` : c, iv = D ? `${ii}_t` : ii;
@@ -467,7 +460,6 @@ export function formulas(st) {
 export function steadyTable(st, res) {
   const tp = st.variant === 'tp';
   const cen = st.version === 'centralized';
-  const D = st.time === 'discrete';
   const e = tp ? 'на эфф. работника' : 'на работника';
   const k = tp ? '\\tilde k' : 'k';
   const rows = [
@@ -529,12 +521,14 @@ function diagramBlock(st, res) {
   };
   const sChanged = Math.abs(P1.s - P0.s) > 1e-12;
   const depChanged = Math.abs(ss1.dep - ss0.dep) > 1e-12;
+  // кривая хранит свою функцию fn, чтобы крупный план мог пересчитать её на другой сетке
+  const curve = (fn, props) => ({ ...props, fn, data: grid(fn) });
   const series = [
-    { label: `f(${kS})`, data: grid(f), color: DC.f, width: 2, curveLabel: `f(${kS})` },
-    { label: `s·f(${kS})`, data: grid((k) => P0.s * f(k)), color: DC.sf0, width: 2.4, curveLabel: `s·f(${kS})` },
-    ...(sChanged ? [{ label: `s′·f(${kS})`, data: grid((k) => P1.s * f(k)), color: DC.sf1, width: 2.4, dash: [7, 4], curveLabel: `s′·f(${kS})` }] : []),
-    { label: 'восстановительные инвестиции', data: grid((k) => ss0.dep * k), color: DC.dep0, width: 2.2, curveLabel: depLabel(P0, null) },
-    ...(depChanged ? [{ label: 'восстановительные инвестиции (после шока)', data: grid((k) => ss1.dep * k), color: DC.dep1, width: 2.2, dash: [7, 4], curveLabel: depLabel(P1, tg) }] : []),
+    curve(f, { label: `f(${kS})`, color: DC.f, width: 2, curveLabel: `f(${kS})` }),
+    curve((k) => P0.s * f(k), { label: `s·f(${kS})`, color: DC.sf0, width: 2.4, curveLabel: `s·f(${kS})` }),
+    ...(sChanged ? [curve((k) => P1.s * f(k), { label: `s′·f(${kS})`, color: DC.sf1, width: 2.4, dash: [7, 4], curveLabel: `s′·f(${kS})` })] : []),
+    curve((k) => ss0.dep * k, { label: 'восстановительные инвестиции', color: DC.dep0, width: 2.2, curveLabel: depLabel(P0, null) }),
+    ...(depChanged ? [curve((k) => ss1.dep * k, { label: 'восстановительные инвестиции (после шока)', color: DC.dep1, width: 2.2, dash: [7, 4], curveLabel: depLabel(P1, tg) })] : []),
     { label: `путь экономики (${kS}ₜ, s·f(${kS}ₜ))`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
   ];
   const moved = Math.abs(ss1.k - ss0.k) / ss0.k > 1e-9;
@@ -548,10 +542,7 @@ function diagramBlock(st, res) {
     const pad = Math.max(0.15 * (hi - lo), 0.04 * hi);
     lo = Math.max(1e-6, lo - pad); hi += pad;
     const zgrid = (fn) => { const pts = []; for (let i = 0; i <= 200; i++) { const k = lo + ((hi - lo) * i) / 200; pts.push([k, fn(k)]); } return pts; };
-    const zs = series.filter((x) => x.label !== `f(${kS})`).map((x) => (x.points ? x : { ...x, data: zgrid((k) => x.data === undefined ? 0 : 0) }));
-    const fnFor = [(k) => P0.s * f(k), ...(sChanged ? [(k) => P1.s * f(k)] : []), (k) => ss0.dep * k, ...(depChanged ? [(k) => ss1.dep * k] : [])];
-    let fi = 0;
-    for (const x of zs) if (!x.points) x.data = zgrid(fnFor[fi++]);
+    const zs = series.filter((x) => x.fn !== f).map((x) => (x.points ? x : { ...x, data: zgrid(x.fn) }));
     const ys = zs.flatMap((x) => x.data.map((p) => p[1]));
     const yl = Math.min(...ys), yh = Math.max(...ys), yp = 0.06 * (yh - yl || yh);
     return { title: 'Крупно: окрестность стационара', series: zs, opts: { xLabel: kS, xmin: lo, xmax: hi, ymin: yl - yp, ymax: yh + yp, vlines: vlines.map((v) => ({ ...v, yTo: null })) } };
@@ -575,28 +566,24 @@ function convergenceBlock(st) {
   const ss = steady(st, P);
   const g0 = tp ? st.g : 0;
   const kS = tp ? 'k̃' : 'k';
-  const user = st.k0 > 0 ? st.k0 : ss.k;
-  const lines = [{ k0: user, label: `${kS}₀ = ${fmt3(user)}`, color: '#3d8acb', width: 2.6 }];
+  const k0 = st.k0 > 0 ? st.k0 : ss.k;
+  const sim = simulate({ ...st, shockSize: 0 }, h, N, 0, k0);
   const stride = Math.max(1, Math.round(0.1 / h));
   const out = { k: [], y: [], c: [], gy: [] };
-  for (const L of lines) {
-    const sim = simulate({ ...st, shockSize: 0 }, h, N, 0, L.k0);
-    const k = [], y = [], c = [], gy = [];
-    for (let j = 0; j <= N - 1; j += stride) {
-      const t = +(j * h).toFixed(6), kj = sim.x[j], yj = Math.pow(kj, a);
-      k.push([t, kj]); y.push([t, yj]); c.push([t, (1 - P.s) * yj]);
-      if (disc) { if (j >= 1) gy.push([t, 100 * ((yj / Math.pow(sim.x[j - 1], a)) * (1 + g0) - 1)]); }
-      else gy.push([t, 100 * (a * (P.s * Math.pow(kj, a - 1) - (P.n + g0 + P.delta)) + g0)]);
-    }
-    out.k.push({ ...L, data: k }); out.y.push({ ...L, data: y }); out.c.push({ ...L, data: c }); out.gy.push({ ...L, data: gy });
+  for (let j = 0; j <= N - 1; j += stride) {
+    const t = +(j * h).toFixed(6), kj = sim.x[j], yj = Math.pow(kj, a);
+    out.k.push([t, kj]); out.y.push([t, yj]); out.c.push([t, (1 - P.s) * yj]);
+    if (disc) { if (j >= 1) out.gy.push([t, 100 * ((yj / Math.pow(sim.x[j - 1], a)) * (1 + g0) - 1)]); }
+    else out.gy.push([t, 100 * (a * (P.s * Math.pow(kj, a - 1) - (P.n + g0 + P.delta)) + g0)]);
   }
+  const label = `${kS}₀ = ${fmt3(k0)}`, color = '#3d8acb';
   const e = tp ? 'на эфф. работника' : 'на работника';
-  const ser = (arr) => arr.map((L) => ({ label: L.label, data: L.data, color: L.color, width: L.width }));
-  const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: ser(out[key]), opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }] } });
+  const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: [{ label, data: out[key], color, width: 2.6 }],
+    opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }] } });
   const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => (disc ? `${v}_t` : `${v}(t)`);
   return {
     title: 'Сходимость к стационару',
-    legend: [{ label: `траектория из ${kS}₀ = ${fmt3(user)}`, color: '#3d8acb' }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }],
+    legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }],
     charts: [
       mk(`Капитал ${e}`, x(kt), 'k', ss.k, ''),
       mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),

@@ -24,13 +24,6 @@ const SHOCK_TARGETS = {
   delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
 };
 
-export const meta = {
-  id: 'ramsey',
-  title: 'Модель Рамсея',
-  subtitle: 'Ramsey–Cass–Koopmans model',
-  ready: true,
-};
-
 export const defaults = {
   time: 'discrete', version: 'centralized', variant: 'base', objective: 'mill',
   utility: 'crra', production: 'cd',
@@ -102,8 +95,7 @@ export const controls = [
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
     options: [{ v: 'unexpected', l: 'Неожиданный (MIT)' }, { v: 'expected', l: 'Ожидаемый' }],
     show: (s) => !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
-  { id: 'tHat', label: (s) => 'Момент шока $\\hat t$',
-    type: 'number', min: 0, max: 100, step: 1 },
+  { id: 'tHat', label: 'Момент шока $\\hat t$', type: 'number', min: 0, max: 100, step: 1 },
   { id: 't0', label: 'Объявление $t_0$', type: 'number', min: 0, max: 100, step: 1,
     show: (s) => s.shockTiming === 'expected', hint: 'Должно быть меньше $\\hat t$' },
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
@@ -370,7 +362,7 @@ export function solve(s) {
   const exact0 = steady(s, base, 0, h, g, true);
   const exactF = steady(s, P, N + 1, h, g, true);
   return {
-    ok: true, h: h * stride, t, irf: series, levels: lvl, eff, baseLevels: baseLvl, baseEff, agg, baseAgg,
+    ok: true, t, irf: series, levels: lvl, eff, baseLevels: baseLvl, baseEff, agg, baseAgg,
     ss0: exact0, ssF: exactF, ZF: P.Z[N + 1],
     permanentChange: Math.abs(exactF.k - exact0.k) / exact0.k > 1e-9 || Math.abs(exactF.r - exact0.r) > 1e-12,
     marks: { tHat: s.tHat, t0: sol.expected ? s.t0 : null },
@@ -384,7 +376,6 @@ export function chartSpecs(s) {
   const tp = s.variant === 'tp';
   const D = s.time === 'discrete';
   const x = (v) => (D ? `${v}_t` : `${v}(t)`);
-  const k = tp ? '\\tilde k' : 'k';
   const showL = Math.abs(s.n) > 0 || s.shockTarget === 'n';
   const specs = [
     ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true }] : []),
@@ -524,15 +515,14 @@ export function formulas(s) {
     // децентрализованная версия: правая часть через r_{t+1} (подстановка r — в строке FOC фирмы)
     const R = cen ? `${Bt}\\left(${mpk}+1-\\delta\\right)` : `${Bt}\\,(1+r_{t+1})`;
     const RN = `${BtN}\\left(${mpkN}${pm(1 - d)}\\right)`;
-    const pre = '';
     if (ut === 'cara') {
-      euler = `e^{\\theta\\,(c_{t+1}-c_t)}=${pre}${R}`;
+      euler = `e^{\\theta\\,(c_{t+1}-c_t)}=${R}`;
       eulerN = `e^{${n4(s.theta)}\\,(c_{t+1}-c_t)}=${RN}`;
     } else {
       const ratio = tp ? '\\dfrac{\\tilde c_{t+1}}{\\tilde c_t}' : '\\dfrac{c_{t+1}}{c_t}';
       const growth = tp ? (ut === 'log' ? '(1+g)' : '(1+g)^{\\sigma}') : '';
       const growthN = tp ? `${n4(1 + g)}${ut === 'log' ? '' : `^{${n4(sig)}}`}` : '';
-      euler = ut === 'log' ? `${growth}\\,${ratio}=${pre}${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${pre}${R}`;
+      euler = ut === 'log' ? `${growth}\\,${ratio}=${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${R}`;
       eulerN = ut === 'log' ? `${growthN}\\,${ratio}=${RN}` : `${growthN}\\left(${ratio}\\right)^{${n4(sig)}}=${RN}`;
     }
   } else {

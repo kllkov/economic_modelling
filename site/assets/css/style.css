@@ -121,14 +121,6 @@ a.chip:hover { background: var(--lilac-100); border-color: var(--lilac-200); }
 .hero h1 span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hero-lead { font-size: 18px; color: var(--ink-2); max-width: 620px; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
-.hero-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.fact {
-  background: rgba(255, 255, 255, .78); border: 1px solid rgba(255, 255, 255, .9); border-radius: var(--radius-sm);
-  padding: 16px 18px; box-shadow: var(--shadow);
-}
-.fact b { display: block; font-family: var(--font-head); font-size: 22px; font-weight: 600; color: var(--lilac-800); }
-.fact span { font-size: 13.5px; color: var(--muted); }
-.fact.wide { grid-column: 1 / -1; }
 
 /* ── о курсе ─────────────────────────────── */
 .about-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
@@ -162,14 +154,6 @@ a.chip:hover { background: var(--lilac-100); border-color: var(--lilac-200); }
 .tg-link .tg-ico { width: 28px; height: 28px; border-radius: 50%; background: var(--teal-500); display: grid; place-items: center; color: #fff; }
 .tg-link .tg-ico svg { width: 15px; height: 15px; }
 .tg-link small { font-weight: 600; color: var(--teal-600); }
-.person-side { display: flex; flex-direction: row; align-items: center; gap: 20px; padding: 20px 24px; }
-.avatar {
-  flex: none;
-  width: 92px; height: 92px; border-radius: 26px; background: var(--grad); display: grid; place-items: center;
-  font-family: var(--font-head); color: #fff; font-size: 30px; font-weight: 600;
-}
-.person-side h3 { font-size: 21px; margin-bottom: 2px; }
-.person-side p { color: var(--muted); margin: 0; }
 
 /* ── план ─────────────────────────────── */
 .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -206,13 +190,6 @@ table.grading { width: 100%; border-collapse: collapse; font-size: 14.5px; min-w
 .legend-row { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
 .legend-row i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 
-.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.info-grid .card h3 { margin-bottom: 10px; }
-.info-grid .card p, .info-grid .card li { color: var(--ink-2); font-size: 15px; }
-.info-grid ul { margin: 0; padding-left: 18px; }
-.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.timeline li { display: grid; grid-template-columns: 140px 1fr; gap: 12px; font-size: 15px; color: var(--ink-2); }
-.timeline b { color: var(--lilac-800); font-weight: 800; }
 
 .site-footer { padding: 36px 0 44px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); margin-top: 24px; }
 .site-footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -337,8 +314,6 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .chart-card .ct { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
 .chart-card .ct .u { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .chart-box { position: relative; height: 190px; }
-.chart-card.wide { grid-column: 1 / -1; }
-.chart-card.wide .chart-box { height: 460px; }
 .charts.diagram { grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
 .charts.diagram .chart-box { height: 380px; }
 .chart-legend i.pt { width: 7px; height: 7px; border: none; border-radius: 50%; }
@@ -354,15 +329,12 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .stub-visual { display: grid; place-items: center; background: var(--grad-soft); border-radius: var(--radius-sm); min-height: 220px; border: 1px dashed var(--line-strong); text-align: center; padding: 20px; color: var(--muted); }
 .stub-visual svg { width: 180px; height: 110px; margin-bottom: 10px; }
 
-.spinner { width: 16px; height: 16px; border: 2px solid var(--lilac-200); border-top-color: var(--lilac-600); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: -3px; }
-@keyframes spin { to { transform: rotate(360deg); } }
 .hidden { display: none !important; }
 
 /* ── адаптив ─────────────────────────────── */
 @media (max-width: 980px) {
   .hero .wrap, .about-grid, .team-grid, .plan-grid, .ss-grid, .stub { grid-template-columns: 1fr; }
   .outcomes { grid-template-columns: 1fr 1fr; }
-  .info-grid { grid-template-columns: 1fr; }
   .ws-grid { grid-template-columns: 1fr; }
   .panel { position: static; max-height: none; }
 }
@@ -374,7 +346,6 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
   .person-body { padding: 0 20px 22px; }
   .outcomes { grid-template-columns: 1fr; }
   .sys-row { grid-template-columns: 1fr; gap: 4px; }
-  .timeline li { grid-template-columns: 1fr; gap: 2px; }
   .brand-text small { display: none; }
   .nav a { padding: 8px 12px; }
   .block { padding: 18px 16px; }
@@ -438,7 +409,6 @@ input.range::-moz-range-thumb {
 }
 .dd-item:hover { background: var(--lilac-50); color: var(--lilac-800); }
 .dd-item.on { background: var(--teal-50); color: var(--teal-800); }
-.person-side .avatar { width: 64px; height: 64px; border-radius: 18px; font-size: 22px; }
 
 @media (max-width: 640px) {
   .toggles .seg button { padding: 6px 9px; font-size: 13px; }

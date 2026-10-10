@@ -19,8 +19,6 @@ const SHOCK_TARGETS = {
            note: MIT_NOTE },
 };
 
-export const meta = { id: 'fisher', title: 'Модель Фишера', subtitle: 'Fisher intertemporal choice model', ready: true };
-
 export const defaults = {
   time: 'discrete', variant: 'const', utility: 'crra',
   beta: 0.96, rho: 0.04, sigma: 2, theta: 1, r: 0.05, w: 1, b0: 0, gw: 0.02,
@@ -74,8 +72,7 @@ export const controls = [
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
     options: [{ v: 'unexpected', l: 'Неожиданный (MIT)' }, { v: 'expected', l: 'Ожидаемый' }],
     show: (s) => !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
-  { id: 'tHat', label: (s) => 'Момент шока $\\hat t$',
-    type: 'number', min: 0, max: 100, step: 1 },
+  { id: 'tHat', label: 'Момент шока $\\hat t$', type: 'number', min: 0, max: 100, step: 1 },
   { id: 't0', label: 'Объявление $t_0$', type: 'number', min: 0, max: 100, step: 1,
     show: (s) => s.shockTiming === 'expected', hint: 'Должно быть меньше $\\hat t$' },
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
@@ -190,7 +187,7 @@ function plan(s, P, js, bjs, h, N) {
   let Sm = 0, Sd = 0, Sw = 0, ST = 0;
   for (let j = js; j <= N; j++) {
     Sd += disc[j] * h; Sw += disc[j] * h * P.w[j];
-    if (util === 'cara') Sm += disc[j] * h * m[j]; else Sm += disc[j] * h * m[j];
+    Sm += disc[j] * h * m[j];
     if (j > js) ST += disc[j - 1] * P.T[j];
   }
   // хвост после N: параметры постоянны, заработная плата растёт с постоянным темпом
@@ -292,7 +289,7 @@ export function solve(s) {
     tjs: js * h,
   };
   return {
-    ok: true, h: h * stride, t, irf, levels: lv, baseLevels: bl, summary, yPct: yPositive,
+    ok: true, t, irf, levels: lv, baseLevels: bl, summary,
     marks: { tHat: s.tHat, t0: expected ? s.t0 : null },
   };
 }

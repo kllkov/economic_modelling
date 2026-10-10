@@ -97,7 +97,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
       const res = ramsey.solve(st);
       assert.ok(res.ok, JSON.stringify(st) + res.errors);
       const F = ramsey.formulas(st);
-      const tp = variant === 'tp', D = time === 'discrete', h = res.h;
+      const tp = variant === 'tp', D = time === 'discrete', h = res.t[1] - res.t[0];
       const P = { '\\alpha': st.alpha, '\\beta': st.beta, '\\delta': st.delta, '\\sigma': utility === 'log' ? 1 : st.sigma,
         '\\theta': st.theta, '\\rho': st.rho, n: st.n, g: tp ? st.g : 0 };
       const L = res.levels, E = res.eff;
@@ -142,7 +142,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
     const res = solow.solve(st);
     assert.ok(res.ok);
     const F = solow.formulas(st);
-    const tp = variant === 'tp', D = time === 'discrete', h = res.h;
+    const tp = variant === 'tp', D = time === 'discrete', h = res.t[1] - res.t[0];
     const P = { '\\alpha': st.alpha, '\\delta': st.delta, n: st.n, g: tp ? st.g : 0, s: st.s };
     const L = res.levels, E = res.eff, A = res.agg;
     const where = `Солоу ${time} ${version} ${variant}`;
@@ -150,16 +150,16 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
     for (const i of pts) {
       let V;
       if (D) {
-        V = { ...P, r_t: L.r[i] / 100, w_t: L.w[i], E_t: L.A[i], 'E_{t+1}': L.A[i + 1], L_t: L.L[i], 'L_{t+1}': L.L[i + 1],
+        V = { ...P, r_t: L.r[i] / 100, w_t: L.w[i], E_t: L.E[i], 'E_{t+1}': L.E[i + 1], L_t: L.L[i], 'L_{t+1}': L.L[i + 1],
           Y_t: A.y[i], K_t: A.k[i], 'K_{t+1}': A.k[i + 1], C_t: A.c[i], I_t: A.i[i] };
         if (tp) Object.assign(V, { '\\tilde k_{t+1}': E.k[i + 1], '\\tilde k_t': E.k[i], '\\tilde b_{t+1}': E.k[i + 1], '\\tilde b_t': E.k[i],
-          '\\tilde c_t': E.c[i], '\\tilde y_t': E.y[i], '\\tilde \\imath_t': E.i[i], '\\tilde w_t': L.w[i] / L.A[i] });
+          '\\tilde c_t': E.c[i], '\\tilde y_t': E.y[i], '\\tilde \\imath_t': E.i[i], '\\tilde w_t': L.w[i] / L.E[i] });
         else Object.assign(V, { 'k_{t+1}': L.k[i + 1], k_t: L.k[i], 'b_{t+1}': L.k[i + 1], b_t: L.k[i], c_t: L.c[i], y_t: L.y[i], i_t: L.i[i] });
       } else {
-        V = { ...P, r: L.r[i] / 100, w: L.w[i], E: L.A[i], L: L.L[i], '\\dot L': deriv(L.L, i, h), '\\dot E': deriv(L.A, i, h),
+        V = { ...P, r: L.r[i] / 100, w: L.w[i], E: L.E[i], L: L.L[i], '\\dot L': deriv(L.L, i, h), '\\dot E': deriv(L.E, i, h),
           Y: A.y[i], K: A.k[i], '\\dot K': deriv(A.k, i, h), C: A.c[i], I: A.i[i] };
         if (tp) Object.assign(V, { '\\dot{\\tilde k}': deriv(E.k, i, h), '\\tilde k': E.k[i], '\\dot{\\tilde b}': deriv(E.k, i, h), '\\tilde b': E.k[i],
-          '\\tilde c': E.c[i], '\\tilde y': E.y[i], '\\tilde \\imath': E.i[i], '\\tilde w': L.w[i] / L.A[i] });
+          '\\tilde c': E.c[i], '\\tilde y': E.y[i], '\\tilde \\imath': E.i[i], '\\tilde w': L.w[i] / L.E[i] });
         else Object.assign(V, { '\\dot k': deriv(L.k, i, h), k: L.k[i], '\\dot b': deriv(L.k, i, h), b: L.k[i], c: L.c[i], y: L.y[i], i: L.i[i] });
       }
       const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 1e-5, rel: 1e-4 };
@@ -169,7 +169,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
     }
     const S = res.ss0;
     const VS = { ...P, '\\tilde k^*': S.k, 'k^*': S.k, '\\tilde y^*': S.y, 'y^*': S.y, '\\tilde c^*': S.c, 'c^*': S.c, 'r^*': S.r, '\\tilde w^*': S.w, 'w^*': S.w, 'F^{\\prime}_K': S.r + st.delta, 'F^{\\prime}_L': S.w, '\\tilde F^{\\prime}_L': S.w,
-      '\\tilde k_{GR}': S.kGR, 'k_{GR}': S.kGR, 's_{GR}': S.sGR };
+      '\\tilde k_{GR}': S.kGR, 'k_{GR}': S.kGR, 's_{GR}': st.alpha };
     for (const r of F.ss) { check(r.tex, VS, { abs: 1e-10, rel: 1e-10 }, `${where}, стационар`); check(r.num, VS, { abs: 1e-4, rel: 1e-4 }, `${where}, стационар (числа)`); }
     n++;
   }
@@ -184,7 +184,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
     const res = fisher.solve(st);
     assert.ok(res.ok);
     const F = fisher.formulas(st);
-    const D = time === 'discrete', h = res.h, L = res.levels;
+    const D = time === 'discrete', h = res.t[1] - res.t[0], L = res.levels;
     const P = { '\\beta': st.beta, '\\rho': st.rho, '\\sigma': utility === 'log' ? 1 : st.sigma, '\\theta': st.theta,
       r: st.r, w: st.w, w_0: st.w, b_0: st.b0, g_w: variant === 'growing' ? st.gw : 0, W_0: res.summary.before.W };
     const where = `Фишер ${time} ${variant} ${utility}`;

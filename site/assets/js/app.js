@@ -98,9 +98,9 @@ function writeHash(id, state, defaults) {
 let current = null; // { model, mod, state, charts: [] }
 const view = { levelUnits: 'worker', levelScale: 'linear' };
 
-let routeToken = 0;
+let routeToken = 0; // номер последнего перехода: устаревшая асинхронная загрузка модели не рисуется
 async function route() {
-  routeToken++;
+  const token = ++routeToken;
   const { id, page, params } = parseHash();
   const model = MODELS.find((m) => m.id === id);
   destroyCharts();
@@ -124,7 +124,6 @@ async function route() {
   if (!model.load) { renderStub(model); current = null; return; }
   $('#workspace .wrap').replaceChildren(); // не показываем прежнюю модель, пока грузится новая
   current = null;
-  const token = ++routeToken;
   const mod = await model.load();
   if (token !== routeToken) return;
   const state = { ...mod.defaults };
@@ -169,8 +168,7 @@ function renderAbout(model) {
       el('div', { class: 'block-head' }, el('h2', {}, 'Исходные статьи')),
       el('ol', {}, a.refs.map((r) => el('li', { html: r })))),
     el('div', { class: 'about-cta' },
-      el('a', { class: `btn ${model.load ? 'btn-primary' : 'btn-ghost'}`, href: `#${model.id}` },
-        model.load ? 'Перейти к симуляции →' : 'Симуляция — в разработке'))));
+      el('a', { class: 'btn btn-primary', href: `#${model.id}` }, 'Перейти к симуляции →'))));
 }
 
 function renderStub(model) {
@@ -394,12 +392,12 @@ function run() {
     const grid = el('div', { class: `charts${X.diagram ? ' diagram' : ''}` });
     const legend = el('div', { class: 'chart-legend' }, X.legend.map((L) => el('span', {},
       L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
-        : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color};${L.bold ? 'border-top-width:3.5px' : ''}` }),
+        : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color}` }),
       L.label)));
     out.append(block(num++, X.title, null, legend, grid));
     for (const C of X.charts) {
       const cv = el('canvas');
-      grid.append(el('div', { class: `chart-card${C.wide ? ' wide' : ''}` },
+      grid.append(el('div', { class: 'chart-card' },
         C.title ? el('div', { class: 'ct' }, el('span', {}, C.sym ? `${C.title}, ` : C.title, C.sym ? texInline(C.sym) : null), el('span', { class: 'u' }, C.unit || '')) : null,
         el('div', { class: 'chart-box' }, cv)));
       extraDraws.push(() => current.charts.push(drawDiagram(cv, C.series, C.opts)));

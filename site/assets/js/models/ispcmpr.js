@@ -16,8 +16,6 @@ const SHOCK_TARGETS = {
   a:      { label: 'Технология $a_t$', kind: 'exo', unit: '%', def: 1, step: 0.5 },
 };
 
-export const meta = { id: 'is-pc-mpr', title: 'IS–PC–MPR', subtitle: 'Three-equation New Keynesian model', ready: true };
-
 export const defaults = {
   time: 'discrete', expectations: 'rational',
   beta: 0.99, sigma: 1, varphi: 1, alpha: 0.33, epsilon: 6, theta: 0.67,
@@ -235,7 +233,7 @@ export function solve(st) {
   }
   const moved = ['pi', 'x', 'i', 'r', 'epi'].some((k) => Math.abs(ssF[k] - ss0[k]) > 1e-10);
   return {
-    ok: true, h: 1, t, irf, levels: lvl, baseLevels: base, eff: {}, baseEff: {}, agg: {}, baseAgg: {},
+    ok: true, t, irf, levels: lvl, baseLevels: base,
     ss0, ssF, sim, C, permanentChange: moved,
     marks: { tHat: st.tHat, t0: st.expectations === 'rational' && st.shockTiming === 'expected' ? st.t0 : null },
   };
@@ -261,7 +259,7 @@ export function chartSpecs(st) {
     { id: 'a', title: 'Технология', sym: 'a_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' },
     { id: 'yn', title: 'Естественный выпуск', sym: 'y^n_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' },
     { id: 'y', title: 'Выпуск', sym: 'y_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' });
-  return specs.map((c) => ({ ...c, effAvailable: false }));
+  return specs;
 }
 
 // ───────────────────────────── Формулы ─────────────────────────────
@@ -274,7 +272,6 @@ function fmtTex(x, d = 4) {
 }
 const fmt = (x, d = 3) => (Number.isFinite(x) ? fmtTex(x, d).replace('-', '−') : '—');
 const n4 = (x) => fmtTex(x, 4);
-const pm = (x) => (x < 0 ? `-${n4(-x)}` : `+${n4(x)}`);
 
 export function formulas(st) {
   const C = coefs(st);
