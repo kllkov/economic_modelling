@@ -96,7 +96,7 @@ p { margin: 0 0 12px; }
 }
 .chip.teal { background: var(--teal-50); color: var(--teal-800); border-color: var(--teal-100); }
 a.chip { text-decoration: none; cursor: pointer; transition: background .15s, border-color .15s; }
-a.chip:hover { background: var(--lilac-100); border-color: var(--lilac-300); }
+a.chip:hover { background: var(--lilac-100); border-color: var(--lilac-200); }
 .btn {
   display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
   font-weight: 700; font-size: 15px; border: 1px solid transparent; cursor: pointer; font-family: inherit;
