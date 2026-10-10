@@ -334,12 +334,19 @@ export function drawDiagram(canvas, series, opts) {
         texLayer: { xLabel, draw: (chart) => curveLabels(chart, vlines) },
         zoom: opts.zoom ? {
           limits: { x: { min: opts.xmin ?? 0, max: opts.xmax, minRange: (opts.xmax - (opts.xmin ?? 0)) * 1e-3 }, y: { min: opts.ymin ?? 'original', max: 'original' } },
-          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy', onZoomComplete: onDone },
-          pan: { enabled: true, mode: 'xy', onPanComplete: onDone },
+          // как в Plotly: рамка мышью увеличивает область, колесо и щипок масштабируют, Shift + перетаскивание сдвигает
+          zoom: {
+            wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy', onZoomComplete: onDone,
+            drag: { enabled: true, backgroundColor: 'rgba(124, 98, 216, .12)', borderColor: '#7c62d8', borderWidth: 1 },
+          },
+          pan: { enabled: true, mode: 'xy', modifierKey: 'shift', onPanComplete: onDone },
         } : undefined,
       },
     },
   });
-  if (opts.zoom) chart.canvas.classList.add('zoomable');
+  if (opts.zoom) {
+    chart.canvas.classList.add('zoomable');
+    chart.canvas.addEventListener('dblclick', () => zoomReset(chart));
+  }
   return chart;
 }

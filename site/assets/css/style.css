@@ -323,8 +323,7 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .charts.diagram { grid-template-columns: 1fr; }
 .charts.diagram .chart-box { height: 460px; }
 .zoom-tools { display: flex; gap: 6px; }
-canvas.zoomable { cursor: grab; touch-action: pan-y !important; }
-canvas.zoomable:active { cursor: grabbing; }
+canvas.zoomable { cursor: crosshair; touch-action: pan-y !important; }
 .chart-legend i.pt { width: 7px; height: 7px; border: none; border-radius: 50%; }
 .toggles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
 /* в шапке без кнопки (28px вместо 37px) добираем отступ до такого же, как в блоке с кнопкой (поля схлопываются, поэтому 19, а не 5) */
