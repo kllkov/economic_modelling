@@ -175,6 +175,7 @@ p { margin: 0 0 12px; }
 .plan h3 .num { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--lilac-50); color: var(--lilac-600); font-family: var(--font); font-weight: 800; }
 .plan.macro h3 .num { background: var(--teal-50); color: var(--teal-600); }
 .plan ol { margin: 0; padding: 0; list-style: none; counter-reset: n; display: grid; gap: 2px; }
+.plan ol.from-zero { counter-reset: n -1; }
 .plan li { counter-increment: n; display: flex; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .plan li:first-child { border-top: none; }
 .plan li::before { content: counter(n, decimal-leading-zero); font-weight: 800; color: var(--lilac-400); min-width: 24px; font-size: 14px; padding-top: 1px; }
