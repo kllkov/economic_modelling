@@ -62,10 +62,10 @@ function renderTiles() {
   const box = $('#tiles');
   box.innerHTML = '';
   for (const m of MODELS) {
-    const ready = !!m.load;
+    const ready = !!m.load && !m.wip;
     box.append(el('article', { class: `tile${ready ? ' featured' : ''}` },
       el('div', { class: 'tile-top' }, glyph(m.glyph),
-        el('span', { class: `status ${ready ? 'ready' : 'soon'}` }, ready ? 'Доступно' : 'Скоро')),
+        el('span', { class: `status ${ready ? 'ready' : m.wip ? 'wip' : 'soon'}` }, ready ? 'Доступно' : m.wip ? 'В разработке' : 'Скоро')),
       el('h3', {}, m.title),
       el('div', { class: 'sub' }, m.subtitle),
       el('p', {}, m.blurb),
