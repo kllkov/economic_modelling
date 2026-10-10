@@ -225,26 +225,43 @@ export const MODELS = [
     blurb: 'Кривая IS, кривая Филлипса и правило денежно-кредитной политики: инфляция, разрыв выпуска и ставка центрального банка.',
     tags: ['Монетарная политика', 'Инфляция'],
     glyph: 'damped',
+    load: () => import('./ispcmpr.js'),
     about: {
       lead: [
-        'Трёхуравненная модель описывает краткосрочную динамику выпуска и инфляции при жёстких ценах. Кривая IS связывает разрыв выпуска с реальной ставкой процента, кривая Филлипса — инфляцию с разрывом выпуска, а правило денежно-кредитной политики задаёт реакцию центрального банка.',
-        'Центральный банк меняет номинальную ставку сильнее, чем инфляцию (принцип Тейлора), и тем самым возвращает экономику к целевой инфляции после шоков спроса, предложения или самой политики.',
+        'Трёхуравненная новокейнсианская модель описывает краткосрочную динамику выпуска и инфляции при жёстких ценах. Домохозяйства выбирают потребление, труд, реальные денежные остатки и облигации; монополистически конкурентные фирмы пересматривают цены по Кальво — в каждом периоде с вероятностью $1-\\theta$.',
+        'Лог-линеаризация условий оптимальности вокруг стационара даёт три уравнения: кривую IS для разрыва выпуска $x_t$, новокейнсианскую кривую Филлипса для инфляции $\\pi_t$ и правило денежно-кредитной политики (MPR) для номинальной ставки $i_t$. Наклон кривой Филлипса $\\kappa$ выражается через структурные параметры.',
+        'В симуляторе ожидания агентов задаются одним из трёх правил: наивные (равны цели центрального банка), адаптивные (обучение с коэффициентом $\\gamma$) и рациональные. Центральный банк реагирует на отклонение инфляции от цели $\\pi^*$ и на разрыв выпуска; кривая Филлипса записана в отклонениях от цели.',
       ],
       sections: [
-        { title: 'Три уравнения', eqs: [
-          { label: 'IS', tex: 'x_t=\\mathbb E_t x_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-\\mathbb E_t\\pi_{t+1}-r^n\\big)+u^d_t' },
-          { label: 'PC', tex: '\\pi_t=\\beta\\,\\mathbb E_t\\pi_{t+1}+\\kappa\\,x_t+u^s_t' },
-          { label: 'MPR', tex: 'i_t=r^n+\\pi^*+\\phi_\\pi(\\pi_t-\\pi^*)+\\phi_x\\,x_t+u^m_t,\\qquad \\phi_\\pi>1' },
+        { title: 'Домохозяйства', eqs: [
+          { label: 'Задача', tex: '\\max_{C_t,\\,N_t,\\,\\frac{M_t}{P_t},\\,B_t}\\ \\mathbb E_0\\Big\\{\\sum_{t=0}^{\\infty}\\beta^t u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)\\Big\\}' },
+          { label: 'Бюджетное ограничение', tex: '\\int_0^1 P_{it}C_{it}\\,di+M_t+Q_tB_t\\le M_{t-1}+B_{t-1}+W_tN_t+D_t' },
+          { label: 'Полезность', tex: 'u=\\dfrac{C_t^{1-\\sigma}-1}{1-\\sigma}-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}' },
+          { label: 'Уравнение Эйлера (лог-лин.)', tex: 'c_t=\\mathbb E_t c_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-\\mathbb E_t\\pi_{t+1}-\\rho\\big),\\qquad \\rho=-\\ln\\beta' },
         ] },
-        { title: 'Версия с адаптивными ожиданиями (Карлин–Соскис)', eqs: [
-          { label: 'IS', tex: 'y_t=A-a\\,r_{t-1}' },
-          { label: 'PC', tex: '\\pi_t=\\pi_{t-1}+\\alpha\\,(y_t-y_e)' },
+        { title: 'Фирмы', eqs: [
+          { label: 'Технология', tex: 'Y_{it}=A_tN_{it}^{1-\\alpha}' },
+          { label: 'Выбор цены', tex: '\\max_{P_t^*}\\ \\sum_{k=0}^{\\infty}\\theta^k\\,\\mathbb E_t\\Big\\{\\Lambda_{t,t+k}\\big(P_t^*Y_{i,t+k|t}-TC_{i,t+k|t}(Y_{i,t+k|t})\\big)\\Big\\}' },
+          { label: 'Спрос', tex: 'Y_{i,t+k|t}=\\Big(\\dfrac{P_t^*}{P_{t+k}}\\Big)^{-\\varepsilon}C_{t+k}' },
+        ] },
+        { title: 'Три уравнения', eqs: [
+          { label: 'IS', tex: 'x_t=E^*_t x_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-E^*_t\\pi_{t+1}-r^n_t\\big)' },
+          { label: 'PC', tex: '\\pi_t-\\pi^*=\\beta\\big(E^*_t\\pi_{t+1}-\\pi^*\\big)+\\kappa\\,x_t+u_t,\\qquad \\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big)' },
+          { label: 'MPR', tex: 'i_t=\\rho+\\pi^*+\\phi_\\pi(\\pi_t-\\pi^*)+\\phi_y\\,x_t+\\upsilon_t' },
+          { label: 'Принцип Тейлора', tex: '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\,\\phi_y>0' },
+        ] },
+        { title: 'Ожидания', eqs: [
+          { label: 'Наивные', tex: 'E^*_t\\pi_{t+1}=\\pi^*,\\qquad E^*_t x_{t+1}=0' },
+          { label: 'Адаптивные', tex: 'E^*_t\\pi_{t+1}=E^*_{t-1}\\pi_t+\\gamma\\,\\big(\\pi_{t-1}-E^*_{t-1}\\pi_t\\big)' },
+          { label: 'Рациональные', tex: 'E^*_t=\\mathbb E_t' },
         ] },
       ],
       refs: [
+        'Galí J. (2015). <i>Monetary Policy, Inflation, and the Business Cycle: An Introduction to the New Keynesian Framework and Its Applications</i>. 2nd ed. Princeton: Princeton University Press.',
+        'Calvo G. A. (1983). Staggered Prices in a Utility-Maximizing Framework. <i>Journal of Monetary Economics</i>, 12(3), 383–398.',
         'Taylor J. B. (1993). Discretion versus Policy Rules in Practice. <i>Carnegie-Rochester Conference Series on Public Policy</i>, 39, 195–214.',
         'Clarida R., Galí J., Gertler M. (1999). The Science of Monetary Policy: A New Keynesian Perspective. <i>Journal of Economic Literature</i>, 37(4), 1661–1707.',
-        'Carlin W., Soskice D. (2005). The 3-Equation New Keynesian Model — A Graphical Exposition. <i>Contributions in Macroeconomics</i>, 5(1).',
+        'Molnár K., Santoro S. (2014). Optimal Monetary Policy When Agents Are Learning. <i>European Economic Review</i>, 66, 39–62.',
       ],
     },
     planned: [
