@@ -41,7 +41,7 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
 {
   const combos = [];
   for (const expectations of ['naive', 'adaptive', 'rational'])
-    for (const shockTarget of ['d', 'u', 'v', 'a', 'pistar'])
+    for (const shockTarget of ['d', 'u', 'v', 'a'])
       for (const shockPersistence of ['permanent', 'temporary'])
         for (const shockTiming of expectations === 'rational' ? ['unexpected', 'expected'] : ['unexpected'])
           combos.push({ expectations, shockTarget, shockPersistence, shockTiming });
@@ -65,7 +65,7 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
         near(S.epi[t], S.pi[t + 1], 1e-9, `RE: Eπ = π_{t+1} ${tag}`);
         near(S.ex[t], S.x[t + 1], 1e-9, `RE: Ex = x_{t+1} ${tag}`);
       }
-      if (c.expectations === 'rational' && t < t0) near(S.pi[t], st.piStar, 1e-12, 'RE: до информации — стационар');
+      if (c.expectations === 'rational' && t < t0) near(S.pi[t], 0, 1e-12, 'RE: до информации — стационар');
     }
     formulas(st); steadyTable(st, r); extraBlocks(st, r);
     for (const sp of chartSpecs(st)) assert.ok(r.irf[sp.id].every(Number.isFinite), `${sp.id} конечен`);
@@ -79,27 +79,20 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
   for (let t = 1; t <= 30; t++) near(r.sim.epi[t], r.sim.pi[t - 1], 1e-12, `γ=1, t=${t}`);
 }
 
-// 5. Перманентные шоки: траектория сходится к новому стационару; смена цели при RE и наивных ожиданиях — мгновенно
+// 5. Перманентные шоки: траектория сходится к новому стационару
 {
   for (const expectations of ['naive', 'adaptive', 'rational'])
-    for (const shockTarget of ['d', 'u', 'v', 'pistar']) {
+    for (const shockTarget of ['d', 'u', 'v']) {
       const r = run({ expectations, shockTarget, shockSize: 1, shockPersistence: 'permanent', tHat: 5, horizon: expectations === 'adaptive' ? 1500 : 200 });
       for (const k of ['pi', 'x', 'i', 'r']) near(r.levels[k].at(-1), r.ssF[k], 1e-4, `сходимость ${k}, ${expectations}, ${shockTarget}`);
     }
-  for (const expectations of ['naive', 'rational']) {
-    const r = run({ expectations, shockTarget: 'pistar', shockSize: -1, shockPersistence: 'permanent', tHat: 5, horizon: 20 });
-    near(r.levels.pi[5], defaults.piStar - 1, 1e-9, `смена цели сразу: ${expectations}`);
-    near(r.levels.x[5], 0, 1e-9, `разрыв не меняется: ${expectations}`);
-  }
-  const ad = run({ expectations: 'adaptive', shockTarget: 'pistar', shockSize: -1, shockPersistence: 'permanent', tHat: 5, horizon: 20 });
-  assert.ok(ad.levels.x[5] < -1e-3, 'адаптивные: дезинфляция стоит выпуска');
 }
 
 // 6. Стационар с перманентным шоком издержек (RE): (1−β)π̂ − κx = u, (φπ−1)π̂ + φy x = 0
 {
   const st = { ...defaults, expectations: 'rational', shockTarget: 'u', shockSize: 1, shockPersistence: 'permanent' };
   const r = run(st), C = coefs(st);
-  const ph = r.ssF.pi - st.piStar, x = r.ssF.x;
+  const ph = r.ssF.pi, x = r.ssF.x;
   near((1 - st.beta) * ph - C.kappa * x, 1, 1e-12, 'PC в стационаре');
   near((st.phiPi - 1) * ph + st.phiY * x, 0, 1e-12, 'IS+MPR в стационаре');
 }
@@ -115,13 +108,13 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
 
 // 8. Сходимость из начальных ожиданий (адаптивные)
 {
-  const st = { ...defaults, expectations: 'adaptive', pie0: 8, horizon: 150 };
+  const st = { ...defaults, expectations: 'adaptive', pie0: 8, horizon: 400 };
   const r = run(st);
   const [cv] = extraBlocks(st, r);
   assert.equal(cv.title, 'Сходимость к стационару');
   const pi = cv.charts[0].series[0].data, e = cv.charts[3].series[0].data;
   near(e[0][1], 8, 1e-12, 'старт ожиданий');
-  near(pi.at(-1)[1], st.piStar, 1e-2, 'инфляция сходится к цели');
+  near(pi.at(-1)[1], 0, 1e-2, 'инфляция сходится к нулю');
   assert.ok(cv.charts[1].series[0].data[0][1] < 0, 'высокие ожидания: дезинфляция с отрицательным разрывом');
 }
 
@@ -137,7 +130,7 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
     for (const nm of ['PC′', 'AD′']) { const s = p1.series.find((q) => q.curveLabel === nm); if (s) near(at(s, x4), pi4, 1e-9, `${nm} проходит через (x,π) в t̂, ${expectations}`); }
     for (const nm of ['IS′', 'MPR′']) { const s = p2.series.find((q) => q.curveLabel === nm); if (s) near(at(s, x4), r4, 1e-9, `${nm} проходит через (x,r) в t̂, ${expectations}`); }
     const pc0 = p1.series.find((q) => q.curveLabel === 'PC');
-    near(at(pc0, 0), st.piStar, 1e-9, 'PC до шока проходит через (0, π*)');
+    near(at(pc0, 0), 0, 1e-9, 'PC до шока проходит через (0, 0)');
   }
 }
 console.log('Модель IS–PC–MPR: все проверки пройдены');

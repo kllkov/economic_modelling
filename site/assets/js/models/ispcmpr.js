@@ -1,10 +1,10 @@
 // Трёхуравненная новокейнсианская модель IS–PC–MPR (Galí, гл. 3) в дискретном времени.
-// x_t — разрыв выпуска, π_t — инфляция, i_t — номинальная ставка, r_t = i_t − E*_t π_{t+1} — реальная ставка,
-// r^n_t — естественная ставка, π* — цель ЦБ. Все ставки и инфляция — в процентах за период.
+// ỹ_t (в коде x) — разрыв выпуска, π_t — инфляция, i_t — номинальная ставка, r_t = i_t − E*_t π_{t+1} — реальная ставка,
+// r^n_t — естественная ставка. Модель лог-линеаризована вокруг стационара с нулевой инфляцией (цель ЦБ = 0).
+// Все ставки и инфляция — в процентах за период.
 //
-// Кривая Филлипса записана в отклонениях от цели: π_t − π* = β(E*_t π_{t+1} − π*) + κ x_t + u_t
-// (при π* = 0 совпадает с уравнением Гали).
-// Ожидания: наивные (E* π = π*, E* x = 0), адаптивные (обучение с коэффициентом γ, лекция 5),
+// Кривая Филлипса: π_t = β E*_t π_{t+1} + κ ỹ_t + u_t; правило: i_t = ρ + φ_π π_t + φ_y ỹ_t + v_t (Galí).
+// Ожидания: наивные (E* π = 0 — цели ЦБ, E* ỹ = 0), адаптивные (обучение с коэффициентом γ, лекция 5),
 // рациональные (совершенное предвидение после получения информации в t₀ — MIT-шок или объявленный шок).
 // В каждом периоде при заданных ожиданиях IS, PC и MPR линейны и решаются явно; при рациональных
 // ожиданиях та же формула применяется рекурсивно назад от конечного стационара.
@@ -12,9 +12,8 @@
 const SHOCK_TARGETS = {
   d:      { label: 'Спрос (естественная ставка) $d_t$', kind: 'exo', unit: 'pp', def: 1, step: 0.25 },
   u:      { label: 'Издержки (cost-push) $u_t$', kind: 'exo', unit: 'pp', def: 1, step: 0.25 },
-  v:      { label: 'Денежно-кредитная политика $\\upsilon_t$', kind: 'exo', unit: 'pp', def: 1, step: 0.25 },
+  v:      { label: 'Денежно-кредитная политика $v_t$', kind: 'exo', unit: 'pp', def: 1, step: 0.25 },
   a:      { label: 'Технология $a_t$', kind: 'exo', unit: '%', def: 1, step: 0.5 },
-  pistar: { label: 'Цель по инфляции $\\pi^*$', kind: 'param', unit: 'pp', def: -1, step: 0.5 },
 };
 
 export const meta = { id: 'is-pc-mpr', title: 'IS–PC–MPR', subtitle: 'Three-equation New Keynesian model', ready: true };
@@ -22,7 +21,7 @@ export const meta = { id: 'is-pc-mpr', title: 'IS–PC–MPR', subtitle: 'Three-
 export const defaults = {
   time: 'discrete', expectations: 'rational',
   beta: 0.99, sigma: 1, varphi: 1, alpha: 0.33, epsilon: 6, theta: 0.67,
-  phiPi: 1.5, phiY: 0.125, piStar: 2, gamma: 0.2, pie0: 6,
+  phiPi: 1.5, phiY: 0.125, gamma: 0.2, pie0: 4,
   shockTarget: 'v', shockSize: 1, shockTiming: 'unexpected', tHat: 5, t0: 2,
   shockPersistence: 'temporary', rhoS: 0.5,
   horizon: 40,
@@ -44,7 +43,6 @@ export const controls = [
   { id: 'theta', label: '$\\theta$ — доля фирм без пересмотра цены', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
   { id: 'phiPi', label: '$\\phi_\\pi$ — реакция на инфляцию', type: 'number', min: 0, max: 10, step: 0.05 },
   { id: 'phiY', label: '$\\phi_y$ — реакция на разрыв выпуска', type: 'number', min: 0, max: 5, step: 0.025 },
-  { id: 'piStar', label: '$\\pi^*$ — цель по инфляции, %', type: 'number', min: -5, max: 20, step: 0.5 },
   { id: 'gamma', label: '$\\gamma$ — коэффициент обучения', type: 'number', min: 0.01, max: 1, step: 0.05,
     show: (s) => s.expectations === 'adaptive' },
   { id: 'pie0', label: '$E^*_0\\pi_1$ — начальные ожидания, %', type: 'number', min: -20, max: 50, step: 0.5,
@@ -52,7 +50,7 @@ export const controls = [
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
-    groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'exo' ? 'экзогенные процессы' : 'параметры') },
+    groupLabel: () => 'экзогенные процессы' },
   { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta$(%)' : 'Величина, $\\Delta$(п.п.)'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.25 },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
@@ -103,7 +101,7 @@ function exo(st, t, scale = 1) {
   const p = (t === Infinity ? (st.shockPersistence === 'permanent' ? 1 : 0) : prof(st, t)) * scale;
   const tg = st.shockTarget, z = st.shockSize;
   return {
-    piStar: st.piStar + (tg === 'pistar' ? z * p : 0),
+    piStar: 0,
     d: tg === 'd' ? z * p : 0,
     u: tg === 'u' ? z * p : 0,
     v: tg === 'v' ? z * p : 0,
@@ -223,15 +221,15 @@ export function solve(st) {
   const ss0 = steady(st, exo(st, 0, 0), C);
   const ssF = steady(st, exo(st, Infinity, 1), C);
 
-  const keys = ['pi', 'x', 'i', 'r', 'epi', 'rn', 'u', 'v', 'a', 'yn', 'y', 'pistar'];
+  const keys = ['pi', 'x', 'i', 'r', 'epi', 'rn', 'u', 'v', 'a', 'yn', 'y'];
   const irf = {}, lvl = {}, base = {};
   keys.forEach((k) => { irf[k] = []; lvl[k] = []; base[k] = []; });
   const t = [];
-  const b0 = { pi: ss0.pi, x: 0, i: ss0.i, r: ss0.r, epi: ss0.epi, rn: ss0.rn, u: 0, v: 0, a: 0, yn: 0, y: 0, pistar: st.piStar };
+  const b0 = { pi: ss0.pi, x: 0, i: ss0.i, r: ss0.r, epi: ss0.epi, rn: ss0.rn, u: 0, v: 0, a: 0, yn: 0, y: 0 };
   for (let j = 0; j <= st.horizon; j++) {
     const E = sim.E[j];
     const L = { pi: sim.pi[j], x: sim.x[j], i: sim.i[j], r: sim.r[j], epi: sim.epi[j], rn: sim.rn[j],
-      u: E.u, v: E.v, a: E.a, yn: C.psi * E.a, y: C.psi * E.a + sim.x[j], pistar: E.piStar };
+      u: E.u, v: E.v, a: E.a, yn: C.psi * E.a, y: C.psi * E.a + sim.x[j] };
     t.push(j);
     for (const k of keys) { lvl[k].push(L[k]); base[k].push(b0[k]); irf[k].push(L[k] - b0[k]); }
   }
@@ -251,15 +249,14 @@ export function chartSpecs(st) {
   const tg = st.shockTarget;
   const specs = [
     { id: 'pi', title: 'Инфляция', sym: '\\pi_t', irfUnit: pp, lvlUnit: '%' },
-    { id: 'x', title: 'Разрыв выпуска', sym: 'x_t', irfUnit: pp, lvlUnit: '%' },
+    { id: 'x', title: 'Разрыв выпуска', sym: '\\tilde y_t', irfUnit: pp, lvlUnit: '%' },
     { id: 'i', title: 'Номинальная ставка', sym: 'i_t', irfUnit: pp, lvlUnit: '%' },
     { id: 'r', title: 'Реальная ставка', sym: 'r_t', irfUnit: pp, lvlUnit: '%' },
     { id: 'epi', title: 'Инфляционные ожидания', sym: `${Ex}\\pi_{t+1}`, irfUnit: pp, lvlUnit: '%' },
   ];
   if (tg === 'd' || tg === 'a') specs.push({ id: 'rn', title: 'Естественная ставка', sym: 'r^n_t', irfUnit: pp, lvlUnit: '%' });
   if (tg === 'u') specs.push({ id: 'u', title: 'Шок издержек', sym: 'u_t', irfUnit: pp, lvlUnit: 'п.п.' });
-  if (tg === 'v') specs.push({ id: 'v', title: 'Монетарный шок', sym: '\\upsilon_t', irfUnit: pp, lvlUnit: 'п.п.' });
-  if (tg === 'pistar') specs.push({ id: 'pistar', title: 'Цель по инфляции', sym: '\\pi^*_t', irfUnit: pp, lvlUnit: '%' });
+  if (tg === 'v') specs.push({ id: 'v', title: 'Монетарный шок', sym: 'v_t', irfUnit: pp, lvlUnit: 'п.п.' });
   if (tg === 'a') specs.push(
     { id: 'a', title: 'Технология', sym: 'a_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' },
     { id: 'yn', title: 'Естественный выпуск', sym: 'y^n_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' },
@@ -300,55 +297,54 @@ export function formulas(st) {
     '\\text{s.t.}\\ Y_{i,t+k|t}=\\Big(\\dfrac{P_t^*}{P_{t+k}}\\Big)^{-\\varepsilon}C_{t+k}',
   ] });
   fs.problem.push({ agent: 'Центральный банк', items: [
-    'i_t=\\rho+\\pi^*+\\phi_\\pi(\\pi_t-\\pi^*)+\\phi_y\\,x_t+\\upsilon_t',
+    'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\,\\tilde y_t+v_t',
   ] });
   const expItems = {
-    naive: ['E^*_t\\pi_{t+1}=\\pi^*,\\qquad E^*_t x_{t+1}=0'],
+    naive: ['E^*_t\\pi_{t+1}=0,\\qquad E^*_t\\tilde y_{t+1}=0'],
     adaptive: [
       'E^*_t\\pi_{t+1}=E^*_{t-1}\\pi_t+\\gamma\\,\\big(\\pi_{t-1}-E^*_{t-1}\\pi_t\\big)',
-      'E^*_t x_{t+1}=E^*_{t-1}x_t+\\gamma\\,\\big(x_{t-1}-E^*_{t-1}x_t\\big)',
+      'E^*_t\\tilde y_{t+1}=E^*_{t-1}\\tilde y_t+\\gamma\\,\\big(\\tilde y_{t-1}-E^*_{t-1}\\tilde y_t\\big)',
     ],
-    rational: ['\\mathbb E_t\\pi_{t+1},\\ \\mathbb E_t x_{t+1}\\ \\text{— рациональные ожидания}'],
+    rational: ['\\mathbb E_t\\pi_{t+1},\\ \\mathbb E_t\\tilde y_{t+1}\\ \\text{— рациональные ожидания}'],
   }[st.expectations];
   fs.problem.push({ agent: 'Ожидания', items: expItems });
 
   // ── 2. уравнения динамики
   const s = st.sigma, b = st.beta;
   fs.system.push({ label: 'IS',
-    tex: `x_t=${Ex}x_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)`,
-    num: `x_t=${Ex}x_{t+1}-${n4(1 / s)}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)` });
+    tex: `\\tilde y_t=${Ex}\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)`,
+    num: `\\tilde y_t=${Ex}\\tilde y_{t+1}-${n4(1 / s)}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)` });
   fs.system.push({ label: 'Кривая Филлипса',
-    tex: `\\pi_t-\\pi^*=\\beta\\big(${Ex}\\pi_{t+1}-\\pi^*\\big)+\\kappa\\,x_t+u_t`,
-    num: `\\pi_t-${n4(st.piStar)}=${n4(b)}\\big(${Ex}\\pi_{t+1}-${n4(st.piStar)}\\big)+${n4(C.kappa)}\\,x_t+u_t` });
+    tex: `\\pi_t=\\beta\\,${Ex}\\pi_{t+1}+\\kappa\\,\\tilde y_t+u_t`,
+    num: `\\pi_t=${n4(b)}\\,${Ex}\\pi_{t+1}+${n4(C.kappa)}\\,\\tilde y_t+u_t` });
   fs.system.push({ label: 'Наклон кривой Филлипса',
     tex: '\\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big),\\qquad \\lambda=\\dfrac{(1-\\theta)(1-\\beta\\theta)}{\\theta}\\cdot\\dfrac{1-\\alpha}{1-\\alpha+\\alpha\\varepsilon}',
     num: `\\kappa=${n4(C.kappa)},\\qquad \\lambda=${n4(C.lambda)}` });
   fs.system.push({ label: 'Правило ДКП (MPR)',
-    tex: 'i_t=\\rho+\\pi^*+\\phi_\\pi(\\pi_t-\\pi^*)+\\phi_y\\,x_t+\\upsilon_t',
-    num: `i_t=${n4(C.rho)}+${n4(st.piStar)}+${n4(st.phiPi)}(\\pi_t-${n4(st.piStar)})+${n4(st.phiY)}\\,x_t+\\upsilon_t` });
+    tex: 'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\,\\tilde y_t+v_t',
+    num: `i_t=${n4(C.rho)}+${n4(st.phiPi)}\\,\\pi_t+${n4(st.phiY)}\\,\\tilde y_t+v_t` });
   fs.system.push({ label: 'Реальная ставка',
     tex: `r_t=i_t-${Ex}\\pi_{t+1}` });
   fs.system.push({ label: 'Естественная ставка',
     tex: `r^n_t=\\rho+\\sigma\\psi_{ya}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=-\\ln\\beta`,
     num: `r^n_t=${n4(C.rho)}+${n4(s * C.psi)}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=${n4(C.rho)}\\%` });
   fs.system.push({ label: 'Выпуск',
-    tex: 'y_t=y^n_t+x_t,\\qquad y^n_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\varphi}{\\sigma(1-\\alpha)+\\varphi+\\alpha}',
+    tex: 'y_t=y^n_t+\\tilde y_t,\\qquad y^n_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\varphi}{\\sigma(1-\\alpha)+\\varphi+\\alpha}',
     num: `\\psi_{ya}=${n4(C.psi)}` });
   if (st.expectations === 'naive')
-    fs.system.push({ label: 'Ожидания', tex: 'E^*_t\\pi_{t+1}=\\pi^*,\\qquad E^*_t x_{t+1}=0', num: `E^*_t\\pi_{t+1}=${n4(st.piStar)}` });
+    fs.system.push({ label: 'Ожидания', tex: 'E^*_t\\pi_{t+1}=0,\\qquad E^*_t\\tilde y_{t+1}=0' });
   else if (st.expectations === 'adaptive')
-    fs.system.push({ label: 'Ожидания',
-      tex: 'E^*_t\\pi_{t+1}=E^*_{t-1}\\pi_t+\\gamma\\,\\big(\\pi_{t-1}-E^*_{t-1}\\pi_t\\big),\\qquad E^*_t x_{t+1}=E^*_{t-1}x_t+\\gamma\\,\\big(x_{t-1}-E^*_{t-1}x_t\\big)',
-      num: `\\gamma=${n4(st.gamma)}` });
+    fs.system.push(
+      { label: 'Ожидания инфляции', tex: 'E^*_t\\pi_{t+1}=E^*_{t-1}\\pi_t+\\gamma\\,\\big(\\pi_{t-1}-E^*_{t-1}\\pi_t\\big)', num: `\\gamma=${n4(st.gamma)}` },
+      { label: 'Ожидания разрыва выпуска', tex: 'E^*_t\\tilde y_{t+1}=E^*_{t-1}\\tilde y_t+\\gamma\\,\\big(\\tilde y_{t-1}-E^*_{t-1}\\tilde y_t\\big)' });
 
   // ── шок
   const tg = st.shockTarget;
   const temp = st.shockPersistence === 'temporary';
   const prf = temp ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
-  const sym = { d: 'd', u: 'u', v: '\\upsilon', a: 'a' }[tg];
+  const sym = { d: 'd', u: 'u', v: 'v', a: 'a' }[tg];
   let shockTex, shockNum;
-  if (tg === 'pistar') { shockTex = `\\pi^*_t=\\pi^*+\\Delta\\pi^*\\cdot ${prf}`; shockNum = `\\Delta\\pi^*=${n4(st.shockSize)}`; }
-  else { shockTex = `${sym}_t=\\Delta ${sym}\\cdot ${prf}`; shockNum = `\\Delta ${sym}=${n4(st.shockSize)}`; }
+  { shockTex = `${sym}_t=\\Delta ${sym}\\cdot ${prf}`; shockNum = `\\Delta ${sym}=${n4(st.shockSize)}`; }
   shockNum += `,\\qquad \\hat t=${st.tHat}`;
   if (rat && st.shockTiming === 'expected') shockNum += `,\\qquad t_0=${st.t0}`;
   if (temp) shockNum += `,\\qquad \\rho_s=${n4(st.rhoS)}`;
@@ -357,9 +353,9 @@ export function formulas(st) {
 
   // ── 3. стационар
   fs.ss = [
-    { tex: '\\pi=\\pi^*,\\qquad x=0', num: `\\pi=${n4(st.piStar)},\\qquad x=0` },
-    { tex: 'i=\\rho+\\pi^*,\\qquad r=\\rho', num: `i=${n4(C.rho + st.piStar)},\\qquad r=${n4(C.rho)}` },
-    { tex: `${Ex}\\pi_{t+1}=\\pi^*`, num: `${Ex}\\pi_{t+1}=${n4(st.piStar)}` },
+    { tex: '\\pi=0,\\qquad \\tilde y=0' },
+    { tex: 'i=r=\\rho=-\\ln\\beta', num: `i=r=${n4(C.rho)}` },
+    { tex: `${Ex}\\pi_{t+1}=0` },
   ];
   if (st.expectations !== 'naive') {
     fs.ss.push({ tex: '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\,\\phi_y>0', num: `${n4(C.det)}\\ ${C.det > 0 ? '>' : '\\le'}\\ 0` });
@@ -372,12 +368,11 @@ export function steadyTable(st, res) {
   const Ex = st.expectations === 'rational' ? '\\mathbb E\\pi' : 'E^*\\pi';
   const rows = [
     { sym: '\\pi', name: 'инфляция', key: 'pi', pct: true },
-    { sym: 'x', name: 'разрыв выпуска', key: 'x', pct: true },
+    { sym: '\\tilde y', name: 'разрыв выпуска', key: 'x', pct: true },
     { sym: 'i', name: 'номинальная ставка', key: 'i', pct: true },
     { sym: 'r', name: 'реальная ставка', key: 'r', pct: true },
     { sym: Ex, name: 'инфляционные ожидания', key: 'epi', pct: true },
     { sym: 'r^n', name: 'естественная ставка', key: 'rn', pct: true },
-    { sym: '\\pi^*', name: 'цель по инфляции', key: 'piStar', pct: true },
   ];
   const v = (ss, r) => (r.pct ? `${fmt(ss[r.key], 3)}%` : fmt(ss[r.key], 3));
   const out = rows.map((r) => ({ ...r, before: v(res.ss0, r), after: v(res.ssF, r) }));
@@ -439,10 +434,10 @@ function diagramBlock(st, res) {
     const pts = path.map((p) => p[1]).concat([L0[A](0)]);
     const ylo = Math.min(...pts), yhi = Math.max(...pts), yp = Math.max(0.35 * (yhi - ylo), 0.5);
     return { title, sym: yLabel, series: series.filter((x) => x.data.every((p) => Number.isFinite(p[1]))),
-      opts: { xLabel: 'x', xmin: lo, xmax: hi, ymin: ylo - yp, ymax: yhi + yp, vlines: [{ x: 0, color: DC.ss, label: 'x = 0' }] } };
+      opts: { xLabel: 'ỹ', xmin: lo, xmax: hi, ymin: ylo - yp, ymax: yhi + yp, vlines: [{ x: 0, color: DC.ss, label: 'ỹ = 0' }] } };
   };
-  const p1 = panel('Плоскость', 'pc', 'ad', 'PC', 'AD', pathPi, '(x,\\ \\pi)');
-  const p2 = panel('Плоскость', 'is', 'mpr', 'IS', 'MPR', pathR, '(x,\\ r)');
+  const p1 = panel('Плоскость', 'pc', 'ad', 'PC', 'AD', pathPi, '(\\tilde y,\\ \\pi)');
+  const p2 = panel('Плоскость', 'is', 'mpr', 'IS', 'MPR', pathR, '(\\tilde y,\\ r)');
   const legend = [
     { label: 'PC, IS — до шока', color: DC.pc0 }, { label: 'AD (IS + MPR), MPR (с учётом PC) — до шока', color: DC.ad0 },
     { label: 'PC′, IS′ — в момент шока', color: DC.pc1, dash: true },
@@ -468,7 +463,7 @@ function convergenceBlock(st) {
     legend: [{ label: `траектория из ${lbl}`, color: '#3d8acb' }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }],
     charts: [
       mk('Инфляция', '\\pi_t', 'pi', ss.pi),
-      mk('Разрыв выпуска', 'x_t', 'x', 0),
+      mk('Разрыв выпуска', '\\tilde y_t', 'x', 0),
       mk('Номинальная ставка', 'i_t', 'i', ss.i),
       mk('Инфляционные ожидания', 'E^*_t\\pi_{t+1}', 'epi', ss.epi),
     ],
