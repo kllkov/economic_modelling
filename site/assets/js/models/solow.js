@@ -511,7 +511,8 @@ function diagramBlock(st, res) {
     path.push([k, sj * f(k)]); kMax = Math.max(kMax, k);
   }
   const xmax = 1.35 * kMax;
-  const grid = (fn) => { const pts = []; for (let i = 1; i <= 240; i++) { const k = (xmax * i) / 240; pts.push([k, fn(k)]); } return pts; };
+  // сетка от k̃ = 0 (все кривые выходят из начала координат), сгущённая у нуля, где f(k̃) круто растёт
+  const grid = (fn) => { const pts = []; for (let i = 0; i <= 240; i++) { const k = xmax * (i / 240) ** 2; pts.push([k, fn(k)]); } return pts; };
 
   // подпись линии восстановительных инвестиций; штрихом отмечен параметр, изменённый шоком
   const depLabel = (prime) => {
