@@ -98,7 +98,9 @@ function writeHash(id, state, defaults) {
 let current = null; // { model, mod, state, charts: [] }
 const view = { levelUnits: 'worker', levelScale: 'linear' };
 
+let routeToken = 0;
 async function route() {
+  routeToken++;
   const { id, page, params } = parseHash();
   const model = MODELS.find((m) => m.id === id);
   destroyCharts();
@@ -120,7 +122,11 @@ async function route() {
   }
   document.title = `${model.title} — симуляция`;
   if (!model.load) { renderStub(model); current = null; return; }
+  $('#workspace .wrap').replaceChildren(); // не показываем прежнюю модель, пока грузится новая
+  current = null;
+  const token = ++routeToken;
   const mod = await model.load();
+  if (token !== routeToken) return;
   const state = { ...mod.defaults };
   for (const [k, v] of Object.entries(params)) {
     if (!(k in state)) continue;
