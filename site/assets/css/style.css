@@ -323,7 +323,9 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .charts.diagram { grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
 .charts.diagram .chart-box { height: 380px; }
 .chart-legend i.pt { width: 7px; height: 7px; border: none; border-radius: 50%; }
-.toggles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.toggles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+/* в шапке без кнопки (28px вместо 37px) добираем отступ до такого же, как в блоке с кнопкой (поля схлопываются, поэтому 19, а не 5) */
+.toggles.pad-top { margin-top: 19px; }
 .toggles .seg { min-width: 0; max-width: 100%; flex: 0 1 auto; flex-wrap: wrap; }
 .toggles .seg button { flex: 0 0 auto; min-width: auto; padding: 6px 14px; white-space: nowrap; }
 

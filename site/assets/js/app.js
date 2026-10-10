@@ -420,18 +420,18 @@ function run() {
   if (!effPossible) for (const key of ['irfUnits', 'levelUnits']) if (view[key] === 'eff') view[key] = 'worker';
   out.append(block(num++, 'Импульсные отклики (IRF)',
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadXLSX(res, specs) }, 'Скачать XLSX'),
-    aggPossible ? el('div', { class: 'toggles', style: 'margin-bottom:10px' }, unitSeg('irfUnits')) : null,
+    aggPossible ? el('div', { class: 'toggles' }, unitSeg('irfUnits')) : null,
     legendItems(false),
     flat ? rich(F.flatNote || 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
     irfGrid));
 
   const lvlGrid = el('div', { class: 'charts' });
-  const toggles = el('div', { class: 'toggles' },
+  const toggles = el('div', { class: 'toggles pad-top' },
     aggPossible ? unitSeg('levelUnits') : null,
     el('div', { class: 'seg' },
       el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
       el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
-  out.append(block(num++, 'Траектории переменных', toggles, legendItems(true), lvlGrid));
+  out.append(block(num++, 'Траектории переменных', null, toggles, legendItems(true), lvlGrid));
 
   // дополнительные блоки модели (например, основная диаграмма и сходимость у Солоу)
   extras.filter((X) => !X.beforeSS).forEach(addExtra);
