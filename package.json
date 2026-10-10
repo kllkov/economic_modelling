@@ -1,1 +1,1 @@
-{ "name": "economic-modelling", "private": true, "type": "module", "scripts": { "test": "node tests/ramsey.test.js" } }
+{ "name": "economic-modelling", "private": true, "type": "module", "scripts": { "test": "node tests/solow.test.js && node tests/ramsey.test.js && node tests/fisher.test.js && node tests/ispcmpr.test.js && node tests/consistency.test.js" } }

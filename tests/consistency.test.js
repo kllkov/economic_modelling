@@ -1,4 +1,4 @@
-// Сверка формул на сайте с решателями.
+// Сверка формул на сайте с решателями всех моделей.
 // Берём ровно те TeX-строки, которые показывает сайт (блоки 1–3: задача, уравнения, стационар),
 // подставляем в них параметры и решённые траектории и проверяем, что каждое равенство выполняется.
 // Так ловится любое расхождение между тем, что напечатано, и тем, что считается.
@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import * as ramsey from '../site/assets/js/models/ramsey.js';
 import * as solow from '../site/assets/js/models/solow.js';
 import * as fisher from '../site/assets/js/models/fisher.js';
+import * as ispcmpr from '../site/assets/js/models/ispcmpr.js';
 
 // ─────────────── мини-вычислитель TeX-выражений ───────────────
 function evalTex(src, vars) {
@@ -19,7 +20,7 @@ function evalTex(src, vars) {
   }
   s = s.replace(/\\d?frac/g, '§').replace(/\\ln/g, '¤').replace(/\\cdot/g, '*');
   s = s.replace(/(?<![A-Za-z\\])e\^/g, '€^');
-  if (/[A-Za-z\\]/.test(s)) throw new Error(`не распознано: «${s}» (из «${src}»)`);
+  if (/[A-Za-z\\]/.test(s.replace(/(\d)e(-?\d)/g, '$1$2'))) throw new Error(`не распознано: «${s}» (из «${src}»)`);
   const toks = s.match(/\d+\.?\d*(?:e-?\d+)?|[-+*/^(){}\[\]§¤€]/g) || [];
   let p = 0;
   const peek = () => toks[p];
@@ -65,7 +66,7 @@ function evalTex(src, vars) {
 function equations(tex) {
   let s = tex.replace(/\\text\{[^}]*\}/g, ' ').replace(/\\(left|right|big|Big|bigl|bigr)\b/g, '')
     .replace(/\\[,;!]/g, ' ').replace(/\\ /g, ' ').replace(/\\quad\b/g, ' ')
-    .replace(/\\(qquad|Rightarrow|Leftrightarrow)\b/g, '¦').replace(/\\equiv/g, '=');
+    .replace(/\\(qquad|Rightarrow|Leftrightarrow)\b/g, '¦').replace(/\\equiv/g, '=').replace(/\\%/g, '');
   // запятые верхнего уровня — разделители
   let depth = 0, out = '';
   for (const ch of s) { if ('({['.includes(ch)) depth++; if (')}]'.includes(ch)) depth--; out += ch === ',' && depth === 0 ? '¦' : ch; }
@@ -204,6 +205,56 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
     n++;
   }
   console.log(`Фишер: ${n} конфигураций`);
+}
+
+// ─────────────── модель IS–PC–MPR ───────────────
+// Ставки, инфляция и разрывы в коде — в процентах. Строки с числами сверяются в процентах,
+// символьные формулы (в них ρ = −ln β) — в долях: модель линейна, поэтому все уровни делятся на 100.
+{
+  let n = 0;
+  for (const expectations of ['naive', 'adaptive', 'rational']) for (const shockTarget of ['d', 'u', 'v', 'a'])
+    for (const shockPersistence of ['permanent', 'temporary'])
+      for (const shockTiming of expectations === 'rational' ? ['unexpected', 'expected'] : ['unexpected']) {
+        const st = { ...ispcmpr.defaults, expectations, shockTarget, shockPersistence, shockTiming, shockSize: 1, tHat: 5, t0: 2, horizon: 40 };
+        const res = ispcmpr.solve(st);
+        assert.ok(res.ok, JSON.stringify(st) + res.errors);
+        const F = ispcmpr.formulas(st), C = res.C, S = res.sim;
+        const Ex = expectations === 'rational' ? '\\mathbb E_t' : 'E^*_t';
+        const P = { '\\beta': st.beta, '\\sigma': st.sigma, '\\varphi': st.varphi, '\\alpha': st.alpha, '\\varepsilon': st.epsilon,
+          '\\theta': st.theta, '\\phi_\\pi': st.phiPi, '\\phi_y': st.phiY, '\\gamma': st.gamma,
+          '\\kappa': C.kappa, '\\lambda': C.lambda, '\\psi_{ya}': C.psi };
+        const where = `IS–PC–MPR ${expectations} ${shockTarget} ${shockPersistence} ${shockTiming}`;
+        const vars = (t, q) => {
+          const E = S.E[t], aE = t >= S.t0 ? S.E[t + 1].a : E.a;
+          return { ...P, '\\rho': q === 1 ? C.rho : C.rho / 100,
+            [`${Ex}\\tilde y_{t+1}`]: S.ex[t] / q, [`${Ex}\\pi_{t+1}`]: S.epi[t] / q, [`${Ex}a_{t+1}`]: aE / q,
+            'E^*_{t-1}\\tilde y_t': S.ex[t - 1] / q, 'E^*_{t-1}\\pi_t': S.epi[t - 1] / q,
+            '\\tilde y_{t-1}': S.x[t - 1] / q, '\\pi_{t-1}': S.pi[t - 1] / q,
+            '\\tilde y_t': S.x[t] / q, '\\pi_t': S.pi[t] / q, i_t: S.i[t] / q, r_t: S.r[t] / q, 'r^n_t': S.rn[t] / q,
+            u_t: E.u / q, v_t: E.v / q, d_t: E.d / q, a_t: E.a / q,
+            'y^n_t': C.psi * E.a / q, y_t: (C.psi * E.a + S.x[t]) / q };
+        };
+        const tol = { abs: 1e-10, rel: 1e-10 }, tolN = { abs: 2e-4, rel: 2e-4 };
+        const groups = F.problem.filter((g) => g.agent === 'Центральный банк' || g.agent === 'Ожидания');
+        for (const t of [1, 2, 4, 5, 6, 10, 39]) {
+          const Vf = vars(t, 100), Vp = vars(t, 1);
+          for (const g of groups) for (const it of g.items) check(it, Vf, tol, `${where}, блок «${g.agent}», t=${t}`);
+          for (const r of F.system) {
+            check(r.tex, Vf, tol, `${where}, «${r.label}», t=${t}`);
+            if (r.num) check(r.num, Vp, tolN, `${where}, «${r.label}» (числа), t=${t}`);
+          }
+        }
+        // стационар до шока
+        const s0 = res.ss0;
+        const VS = (q) => ({ ...P, '\\rho': q === 1 ? C.rho : C.rho / 100, '\\pi': s0.pi / q, '\\tilde y': s0.x / q, i: s0.i / q, r: s0.r / q,
+          [`${Ex}\\pi_{t+1}`]: s0.epi / q });
+        for (const r of F.ss) {
+          check(r.tex, VS(100), tol, `${where}, стационар`);
+          if (r.num) check(r.num, VS(1), tolN, `${where}, стационар (числа)`);
+        }
+        n++;
+      }
+  console.log(`IS–PC–MPR: ${n} конфигураций`);
 }
 
 console.log(`Проверено равенств: ${checked}. Формулы на сайте совпадают с решателями.`);

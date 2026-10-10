@@ -87,7 +87,7 @@ const isState = (st) => SHOCK_TARGETS[st.shockTarget]?.kind === 'state';
 
 // профиль шока параметра: 0 до t̂, затем 1 (перманентный) или ρ_s^{t−t̂} (временный)
 function prof(st, t) {
-  if (isState(st) || t < st.tHat - 1e-7) return 0;
+  if (isState(st) || t < st.tHat - 1e-9) return 0;
   if (st.shockPersistence === 'permanent') return 1;
   return Math.pow(st.rhoS, t - st.tHat);
 }
@@ -235,7 +235,7 @@ export function solve(st) {
     // непрерывное: g_{y/L} = α·ẋ/x + (1−α)·[(g(t) − g₀) + Ż/Z] + g₀ (правый предел)
     const xdot = P.s * Math.pow(x[j], a) * Math.pow(Ar[j], 1 - a) - (P.n + g0 + P.delta) * x[j];
     let zdot = 0;
-    if (st.shockTarget === 'tfp' && st.shockPersistence === 'temporary' && j * h >= st.tHat - 1e-7 && st.rhoS > 0)
+    if (st.shockTarget === 'tfp' && st.shockPersistence === 'temporary' && j * h >= st.tHat - 1e-9 && st.rhoS > 0)
       zdot = ((st.shockSize / 100) * Math.log(st.rhoS) * Math.pow(st.rhoS, j * h - st.tHat)) / P.Z;
     return 100 * (a * (xdot / x[j]) + (1 - a) * (P.g - g0 + zdot) + g0);
   };

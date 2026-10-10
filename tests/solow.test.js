@@ -21,7 +21,7 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
 
 // 2. Непрерывное время: точное решение Бернулли k̃^{1−α}(t) = k̃*^{1−α} + (k̃0^{1−α} − k̃*^{1−α}) e^{−(1−α)(n+g+δ)t}
 {
-  const a = 0.3, s = 0.2, d = 0.05, n = 0.01, g = 0.02, lam = (1 - a) * (n + g + d);
+  const a = 0.3, d = 0.05, n = 0.01, g = 0.02, lam = (1 - a) * (n + g + d);
   const r = run({ time: 'continuous', shockTarget: 'k', shockSize: -50, tHat: 0, horizon: 80 });
   const ks = r.ss0.k, k0 = 0.5 * ks;
   let maxErr = 0;
@@ -137,6 +137,18 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
     near(cv.charts[0].series[0].data[0][1], st.k0, 1e-12, 'старт из k̃0');
     const gy = cv.charts[3].series[0].data; // k̃0 < k̃*: темп роста выше g и убывает
     assert.ok(gy[1][1] > 2 && gy[1][1] > gy[20][1], 'условная конвергенция: рост выше g и замедляется');
+  }
+}
+// 12. Непрерывное время: шаг перед шоком считается со старыми параметрами, поэтому
+//     до t̂ траектория совпадает с базовой, а результат не зависит от шага сетки
+{
+  const at = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
+  for (const sh of [{ shockTarget: 's', shockSize: 0.05 }, { shockTarget: 'n', shockSize: 0.01 }, { shockTarget: 'delta', shockSize: 0.02 },
+    { shockTarget: 'tfp', shockSize: 10, shockPersistence: 'temporary' }]) {
+    const st = { ...defaults, time: 'continuous', tHat: 10, horizon: 60, ...sh };
+    const a = solve({ ...st, dt: 0.02 }), b = solve({ ...st, dt: 0.005 });
+    near(a.levels.k[at(a, 10)], a.baseLevels.k[at(a, 10)], 1e-12, `k в момент шока ещё на базовом пути (${sh.shockTarget})`);
+    for (const t of [10.1, 20, 60]) near(a.levels.k[at(a, t)] / b.levels.k[at(b, t)], 1, 1e-9, `k(${t}) не зависит от шага (${sh.shockTarget})`);
   }
 }
 console.log('Модель Солоу: все проверки пройдены');

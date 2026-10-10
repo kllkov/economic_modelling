@@ -34,7 +34,7 @@ const out = {};
 {
   const base = { time: 'continuous', variant: 'tp', shockTarget: 'tfp', shockSize: 10, shockTiming: 'expected', t0: 5, tHat: 15, rho: 0.04 };
   const r1 = run({ ...base, dt: 0.1 }), r2 = run({ ...base, dt: 0.02 }), r3 = run({ ...base, dt: 0.005 });
-  const at = (r, t) => r.irf.c[Math.round(t / r.h)];
+  const at = (r, t) => r.irf.c[Math.round(t / (r.t[1] - r.t[0]))];
   const pts = [5, 10, 14.9, 15, 20, 40];
   out.continuous_dt = pts.map((t) => ({ t, dt_0_1: at(r1, t), dt_0_02: at(r2, t), dt_0_005: at(r3, t) }));
   // линеаризация: скорость сходимости k к стационару = устойчивый корень якобиана
@@ -44,7 +44,7 @@ const out = {};
   const k = Math.pow(al / (rho + de), 1 / (1 - al)), c = k ** al - de * k;
   const fpp = al * (al - 1) * k ** (al - 2);
   const mu = (rho - Math.sqrt(rho * rho - 4 * c * fpp / sig)) / 2;
-  const i1 = Math.round(20 / r.h), i2 = Math.round(40 / r.h);
+  const i1 = Math.round(20 / (r.t[1] - r.t[0])), i2 = Math.round(40 / (r.t[1] - r.t[0]));
   const fitted = Math.log(r.irf.k[i2] / r.irf.k[i1]) / 20;
   out.continuous_eigen = { theory: mu, simulated: fitted };
 }
@@ -73,7 +73,7 @@ const out = {};
         const A = run({ ...o, t0: 5, tHat: 15 }), B = run({ ...o, t0: 20, tHat: 30 });
         if (!A.ok || !B.ok) continue; // недопустимые комбинации отсекаются валидацией
         let e = 0;
-        for (const v of ['c', 'k', 'r']) for (let t = 0; t <= 30; t++) e = Math.max(e, Math.abs(A.irf[v][Math.round((5 + t) / A.h)] - B.irf[v][Math.round((20 + t) / B.h)]));
+        for (const v of ['c', 'k', 'r']) for (let t = 0; t <= 30; t++) e = Math.max(e, Math.abs(A.irf[v][Math.round((5 + t) / (A.t[1] - A.t[0]))] - B.irf[v][Math.round((20 + t) / (B.t[1] - B.t[0]))]));
         if (e > 1e-6) bad.push(`${time} ${variant} ${utility} ${objective} ${tg} ${shockTiming} ${shockPersistence}: ${e}`);
       }
     }
