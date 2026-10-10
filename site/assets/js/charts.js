@@ -52,7 +52,10 @@ function axisLabel(chart, src) {
 
 const texLayer = {
   id: 'texLayer',
-  beforeDraw(chart) { if (chart.$tex) for (const it of chart.$tex.items.values()) it.used = false; },
+  beforeDraw(chart, _args, opts) {
+    if (chart.$tex) for (const it of chart.$tex.items.values()) it.used = false;
+    opts.prepare?.(chart);
+  },
   afterDraw(chart, _args, opts) {
     if (opts.xLabel) axisLabel(chart, opts.xLabel);
     opts.draw?.(chart);
@@ -225,18 +228,50 @@ const curveLines = {
   },
 };
 
-function curveLabels(chart, vlines) {
-  const { chartArea: a, scales } = chart;
-  // подписи вертикальных отметок — у оси x, друг над другом; их прямоугольники подписи кривых обходят
-  const taken = [];
+// Подписи вертикальных отметок. Если в кадре есть ось k (нижняя граница — ноль), подписи стоят под осью,
+// в ряду меток оси x, а мешающие им числовые метки скрываются; если после приближения ноль ушёл
+// из кадра — подписи прижимаются к нижнему краю области графика, друг над другом.
+// Считается до отрисовки холста (prepare), чтобы успеть скрыть числовые метки.
+function prepareMarks(chart, vlines, onAxis) {
+  const { chartArea: a, scales } = chart, sx = scales.x;
+  const axis = onAxis && scales.y.min <= 1e-12;
+  const marks = [];
   vlines.forEach((m, i) => {
-    if (!m.label || m.x == null || m.x < scales.x.min || m.x > scales.x.max) return;
+    if (!m.label || m.x == null || m.x < sx.min || m.x > sx.max) return;
     const n = texItem(chart, `v${i}`, m.label, 'mark');
-    const w = n.offsetWidth, h = n.offsetHeight;
-    const x = Math.min(scales.x.getPixelForValue(m.x) + 4, a.right - w - 2), y = a.bottom - 4 - h - taken.length * (h + 1);
-    place(n, x, y, m.color);
-    taken.push({ x, y, w, h });
+    n.classList.toggle('on-axis', axis);
+    const w = n.offsetWidth, h = n.offsetHeight, px = sx.getPixelForValue(m.x);
+    if (axis) {
+      let x = Math.min(Math.max(px - w / 2, a.left), a.right - w);
+      const prev = marks[marks.length - 1];
+      if (prev && x < prev.x + prev.w + 4) x = prev.x + prev.w + 4;
+      marks.push({ n, x, y: sx.top + 3, w, h, color: m.color });
+    } else {
+      marks.push({ n, x: Math.min(px + 4, a.right - w - 2), y: a.bottom - 4 - h - marks.length * (h + 1), w, h, color: m.color });
+    }
   });
+  chart.$marks = { marks, axis };
+  if (!axis || !marks.length) return;
+  // числовые метки оси x, на которые налезает подпись отметки, не выводятся
+  const { ctx } = chart;
+  ctx.save();
+  ctx.font = `${Chart.defaults.font.size}px ${Chart.defaults.font.family}`;
+  let hidden = false;
+  sx.ticks.forEach((t, i) => {
+    if (!t.label) return;
+    const px = sx.getPixelForTick(i), hw = ctx.measureText(String(t.label)).width / 2 + 4;
+    if (marks.some((r) => px + hw > r.x && px - hw < r.x + r.w)) { t.label = ''; hidden = true; }
+  });
+  ctx.restore();
+  if (hidden) sx._labelItems = null; // метки оси пересчитываются из ticks при отрисовке
+}
+
+function curveLabels(chart) {
+  const { chartArea: a, scales } = chart;
+  const { marks = [], axis = false } = chart.$marks || {};
+  for (const r of marks) place(r.n, r.x, r.y, r.color);
+  // подписи кривых обходят подписи отметок внутри области графика
+  const taken = axis ? [] : marks.map(({ x, y, w, h }) => ({ x, y, w, h }));
   // подписи кривых у правого конца видимой части
   const items = [];
   chart.data.datasets.forEach((ds, i) => {
@@ -291,7 +326,7 @@ export function zoomReset(chart) { chart.resetZoom(); resample(chart); }
  * series: [{ data: [[x,y]...], label, color, width, dash, points, pointRadius, curveLabel, fn }]
  *   fn — функция кривой: при приближении (opts.zoom) кривая пересчитывается на видимом отрезке
  *   label — текст с формулами $…$ (для подсказки), curveLabel — формула TeX у кривой
- * opts: { xLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], discrete, zoom }
+ * opts: { xLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], discrete, zoom, marksOnAxis }
  *   xLabel и label отметок — формулы TeX
  */
 export function drawDiagram(canvas, series, opts) {
@@ -334,7 +369,7 @@ export function drawDiagram(canvas, series, opts) {
         legend: { display: false },
         tooltip: tooltipOpts((items) => `$${xLabel} = ${(+items[0].parsed.x).toFixed(opts.discrete ? 0 : 2)}$`),
         curveLines: { vlines, hlines: opts.hlines || [] },
-        texLayer: { xLabel, draw: (chart) => curveLabels(chart, vlines) },
+        texLayer: { xLabel, prepare: (chart) => prepareMarks(chart, vlines, !!opts.marksOnAxis), draw: curveLabels },
         zoom: opts.zoom ? {
           limits: { x: { min: opts.xmin ?? 0, max: opts.xmax, minRange: (opts.xmax - (opts.xmin ?? 0)) * 1e-3 }, y: { min: opts.ymin ?? 'original', max: 'original' } },
           // как в Plotly: рамка мышью увеличивает область, колесо и щипок масштабируют, Shift + перетаскивание сдвигает

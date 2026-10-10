@@ -544,7 +544,7 @@ function diagramBlock(st, res) {
     title: 'Основная диаграмма модели', diagram: true,
     legend: series.map((s) => ({ label: s.label, color: s.color, dash: s.dash, point: s.points })),
     charts: [
-      { series, opts: { xLabel: kS, xmin: 0, xmax, ymin: 0, vlines, zoom: true } },
+      { series, opts: { xLabel: kS, xmin: 0, xmax, ymin: 0, vlines, zoom: true, marksOnAxis: true } },
     ],
   };
 }
