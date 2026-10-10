@@ -149,9 +149,7 @@ function renderAbout(model) {
   ws.append(wsHeader(model, 'about'));
   if (!model.load) {
     ws.append(el('div', { class: 'block stub-visual', style: 'min-height:260px' },
-      el('div', {}, glyph(model.glyph, 180, 110),
-        el('p', { style: 'margin:0' }, 'Описание модели появится вместе с её симулятором.'),
-        el('p', { style: 'margin:8px 0 0' }, el('a', { href: '#ramsey/about' }, 'Открыть описание модели Рамсея →')))));
+      el('div', {}, glyph(model.glyph, 180, 110))));
     return;
   }
   const a = model.about;
@@ -178,9 +176,7 @@ function renderStub(model) {
       el('div', { class: 'block-head' }, el('h2', {}, 'Что будет в симуляторе')),
       el('ul', { class: 'stub-list' }, model.planned.map(([k, v]) => el('li', {}, el('b', {}, k), rich(v))))),
     el('div', { class: 'stub-visual' },
-      el('div', {}, glyph(model.glyph, 180, 110),
-        el('p', { style: 'margin:0' }, 'Симулятор появится после того, как заработает модель Рамсея.'),
-        el('p', { style: 'margin:8px 0 0' }, el('a', { href: '#ramsey' }, 'Открыть симуляцию модели Рамсея →'))))));
+      el('div', {}, glyph(model.glyph, 180, 110)))));
 }
 
 function renderWorkspace() {
