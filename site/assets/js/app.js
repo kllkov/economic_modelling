@@ -1,6 +1,7 @@
 import { MODELS, GLYPHS } from './models/registry.js';
 import { drawChart, drawDiagram, COLORS } from './charts.js';
 import { tex, texInline, rich } from './tex.js';
+import { xlsxBlob } from './xlsx.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, attrs = {}, ...kids) => {
@@ -412,15 +413,14 @@ function run() {
   const effPossible = specs.some((s) => s.effAvailable);
   const aggPossible = specs.some((s) => s.aggSym);
   // единицы измерения: в уровнях (агрегаты) / на работника / на эффективного работника
-  const unitsOf = (key, sp) => (view[key] === 'eff' && sp.effAvailable ? 'eff' : view[key] === 'agg' && sp.aggSym ? 'agg' : 'worker');
   const unitSeg = (key) => {
     const btn = (v, label) => el('button', { type: 'button', class: view[key] === v ? 'on' : '', onclick: () => { view[key] = v; run(); } }, label);
     return el('div', { class: 'seg' }, btn('agg', 'в уровнях'), btn('worker', 'на работника'), effPossible ? btn('eff', 'на эфф. работника') : null);
   };
   if (!effPossible) for (const key of ['irfUnits', 'levelUnits']) if (view[key] === 'eff') view[key] = 'worker';
   out.append(block(num++, 'Импульсные отклики (IRF)',
-    aggPossible ? el('div', { class: 'toggles' }, unitSeg('irfUnits')) : null,
-    el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadCSV(res, specs) }, 'Скачать CSV'),
+    el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadXLSX(res, specs) }, 'Скачать XLSX'),
+    aggPossible ? el('div', { class: 'toggles', style: 'margin-bottom:10px' }, unitSeg('irfUnits')) : null,
     legendItems(false),
     flat ? rich(F.flatNote || 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
     irfGrid));
@@ -442,9 +442,8 @@ function run() {
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);
   for (const sp of specs) {
     const symOf = (u) => (u === 'eff' ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : u === 'agg' ? sp.aggSym : sp.sym);
-    const uI = unitsOf('irfUnits', sp);
-    const irfY = uI === 'worker' ? res.irf[sp.id]
-      : res.t.map((_, i) => 100 * ((uI === 'eff' ? res.eff : res.agg)[sp.id][i] / (uI === 'eff' ? res.baseEff : res.baseAgg)[sp.id][i] - 1));
+    const uI = unitFor(view.irfUnits, sp);
+    const irfY = seriesOf(res, sp, uI).irf;
     const c1 = el('canvas');
     irfGrid.append(el('div', { class: 'chart-card' },
       el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
@@ -452,9 +451,8 @@ function run() {
     current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? '$\\Delta$ (п.п.)' : '$\\Delta$ (%)', data: pairs(irfY) }],
       { discrete, zero: true, lines, xmax }));
 
-    const uL = unitsOf('levelUnits', sp);
-    const y = uL === 'eff' ? res.eff[sp.id] : uL === 'agg' ? res.agg[sp.id] : res.levels[sp.id];
-    const b = uL === 'eff' ? res.baseEff[sp.id] : uL === 'agg' ? res.baseAgg[sp.id] : res.baseLevels[sp.id];
+    const uL = unitFor(view.levelUnits, sp);
+    const { level: y, base: b } = seriesOf(res, sp, uL);
     const unit = sp.lvlUnit || '';
     const sym = symOf(uL);
     const c2 = el('canvas');
@@ -469,14 +467,31 @@ function run() {
   }
 }
 
-function downloadCSV(res, specs) {
-  const head = ['t', ...specs.map((s) => `irf_${s.id}`), ...specs.map((s) => `level_${s.id}`)];
-  const lines = [head.join(',')];
-  res.t.forEach((t, i) => {
-    lines.push([t, ...specs.map((s) => res.irf[s.id][i]), ...specs.map((s) => res.levels[s.id][i])].join(','));
+// единицы, в которых переменная реально показывается в режиме mode (недоступный режим → на работника)
+const unitFor = (mode, sp) => (mode === 'eff' && sp.effAvailable ? 'eff' : mode === 'agg' && sp.aggSym ? 'agg' : 'worker');
+
+// ряды переменной в выбранных единицах: отклик в % (или п.п.), уровень и базовый путь
+function seriesOf(res, sp, u) {
+  const level = u === 'eff' ? res.eff[sp.id] : u === 'agg' ? res.agg[sp.id] : res.levels[sp.id];
+  const base = u === 'eff' ? res.baseEff[sp.id] : u === 'agg' ? res.baseAgg[sp.id] : res.baseLevels[sp.id];
+  const irf = u === 'worker' ? res.irf[sp.id] : level.map((v, i) => 100 * (v / base[i] - 1));
+  return { irf, level, base };
+}
+
+// Excel-файл: по листу на каждый режим единиц (в уровнях, на работника, на эфф. работника)
+function downloadXLSX(res, specs) {
+  const modes = [['agg', 'В уровнях', specs.some((s) => s.aggSym)], ['worker', 'На работника', true], ['eff', 'На эфф. работника', specs.some((s) => s.effAvailable)]];
+  const sheets = modes.filter(([, , on]) => on).map(([mode, name]) => {
+    const cols = specs.map((sp) => {
+      return { id: sp.id, ...seriesOf(res, sp, unitFor(mode, sp)) };
+    });
+    return {
+      name,
+      rows: [['t', ...cols.flatMap((c) => [`irf_${c.id}`, `level_${c.id}`, `base_${c.id}`])],
+        ...res.t.map((t, i) => [t, ...cols.flatMap((c) => [c.irf[i], c.level[i], c.base[i]])])],
+    };
   });
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
-  const a = el('a', { href: URL.createObjectURL(blob), download: `${current.model.id}-simulation.csv` });
+  const a = el('a', { href: URL.createObjectURL(xlsxBlob(sheets)), download: `${current.model.id}-simulation.xlsx` });
   document.body.append(a); a.click(); a.remove();
 }
 
