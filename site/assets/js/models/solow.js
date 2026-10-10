@@ -53,7 +53,7 @@ export const controls = [
   { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
   { id: 's', label: '$s$ — норма сбережения', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
   { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.99, step: 0.01 },
-  { id: 'n', label: '$n$ — темп роста населения', type: 'number', min: -0.05, max: 1, step: 0.005 },
+  { id: 'n', label: '$n$ — темп роста $L_t$', type: 'number', min: -0.05, max: 1, step: 0.005 },
   { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 1, step: 0.005,
     show: (st) => st.variant === 'tp' },
 

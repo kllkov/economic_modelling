@@ -78,7 +78,7 @@ export const controls = [
   { id: 'rho', label: '$\\rho$ — ставка дисконтирования', type: 'number', min: 0.001, max: 0.5, step: 0.005,
     show: (s) => s.time === 'continuous' },
   { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.99, step: 0.01 },
-  { id: 'n', label: '$n$ — темп роста населения', type: 'number', min: -0.05, max: 1, step: 0.005 },
+  { id: 'n', label: '$n$ — темп роста $L_t$', type: 'number', min: -0.05, max: 1, step: 0.005 },
   { id: 'sigma', label: '$\\sigma$ — неприятие риска', type: 'number', min: 0.1, max: 10, step: 0.1,
     show: (s) => s.utility === 'crra' },
   { id: 'theta', label: '$\\theta$ — неприятие риска', type: 'number', min: 0.05, max: 10, step: 0.05,
