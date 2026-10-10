@@ -73,7 +73,7 @@ function writeHash(id, state, defaults) {
 // ───────────────────────────── рабочая область ─────────────────────────────
 
 let current = null; // { model, mod, state, charts: [] }
-const view = { levelUnits: 'worker', levelScale: 'linear' };
+const view = { irfUnits: 'worker', levelUnits: 'worker', levelScale: 'linear' };
 
 let routeToken = 0; // номер последнего перехода: устаревшая асинхронная загрузка модели не рисуется
 async function route() {
@@ -409,19 +409,25 @@ function run() {
 
   const flat = specs.every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
   const irfGrid = el('div', { class: 'charts' });
+  const effPossible = specs.some((s) => s.effAvailable);
+  const aggPossible = specs.some((s) => s.aggSym);
+  // единицы измерения: в уровнях (агрегаты) / на работника / на эффективного работника
+  const unitsOf = (key, sp) => (view[key] === 'eff' && sp.effAvailable ? 'eff' : view[key] === 'agg' && sp.aggSym ? 'agg' : 'worker');
+  const unitSeg = (key) => {
+    const btn = (v, label) => el('button', { type: 'button', class: view[key] === v ? 'on' : '', onclick: () => { view[key] = v; run(); } }, label);
+    return el('div', { class: 'seg' }, btn('agg', 'в уровнях'), btn('worker', 'на работника'), effPossible ? btn('eff', 'на эфф. работника') : null);
+  };
+  if (!effPossible) for (const key of ['irfUnits', 'levelUnits']) if (view[key] === 'eff') view[key] = 'worker';
   out.append(block(num++, 'Импульсные отклики (IRF)',
+    aggPossible ? el('div', { class: 'toggles' }, unitSeg('irfUnits')) : null,
     el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => downloadCSV(res, specs) }, 'Скачать CSV'),
     legendItems(false),
     flat ? rich(F.flatNote || 'Шок не выводит экономику из стационара: при текущих параметрах он не меняет ни стационарное состояние, ни условия оптимальности на траектории. Например, $\\sigma$ влияет на стационар только при $g > 0$.', 'div', { class: 'callout warn', style: 'margin:0 0 12px' }) : null,
     irfGrid));
 
   const lvlGrid = el('div', { class: 'charts' });
-  const effPossible = specs.some((s) => s.effAvailable);
-  const aggPossible = specs.some((s) => s.aggSym);
-  if (!effPossible && view.levelUnits === 'eff') view.levelUnits = 'worker';
-  const unitBtn = (v, label) => el('button', { type: 'button', class: view.levelUnits === v ? 'on' : '', onclick: () => { view.levelUnits = v; run(); } }, label);
   const toggles = el('div', { class: 'toggles' },
-    aggPossible ? el('div', { class: 'seg' }, unitBtn('agg', 'в уровнях'), unitBtn('worker', 'на работника'), effPossible ? unitBtn('eff', 'на эфф. работника') : null) : null,
+    aggPossible ? unitSeg('levelUnits') : null,
     el('div', { class: 'seg' },
       el('button', { type: 'button', class: view.levelScale === 'linear' ? 'on' : '', onclick: () => { view.levelScale = 'linear'; run(); } }, 'линейная'),
       el('button', { type: 'button', class: view.levelScale === 'log' ? 'on' : '', onclick: () => { view.levelScale = 'log'; run(); } }, 'лог-шкала')));
@@ -435,19 +441,22 @@ function run() {
   const xmax = state.horizon;
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);
   for (const sp of specs) {
+    const symOf = (u) => (u === 'eff' ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : u === 'agg' ? sp.aggSym : sp.sym);
+    const uI = unitsOf('irfUnits', sp);
+    const irfY = uI === 'worker' ? res.irf[sp.id]
+      : res.t.map((_, i) => 100 * ((uI === 'eff' ? res.eff : res.agg)[sp.id][i] / (uI === 'eff' ? res.baseEff : res.baseAgg)[sp.id][i] - 1));
     const c1 = el('canvas');
     irfGrid.append(el('div', { class: 'chart-card' },
-      el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sp.sym)), rich(sp.irfUnit, 'span', { class: 'u' })),
+      el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
       el('div', { class: 'chart-box' }, c1)));
-    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? '$\\Delta$ (п.п.)' : '$\\Delta$ (%)', data: pairs(res.irf[sp.id]) }],
+    current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? '$\\Delta$ (п.п.)' : '$\\Delta$ (%)', data: pairs(irfY) }],
       { discrete, zero: true, lines, xmax }));
 
-    const useEff = view.levelUnits === 'eff' && sp.effAvailable;
-    const useAgg = view.levelUnits === 'agg' && sp.aggSym;
-    const y = useEff ? res.eff[sp.id] : useAgg ? res.agg[sp.id] : res.levels[sp.id];
-    const b = useEff ? res.baseEff[sp.id] : useAgg ? res.baseAgg[sp.id] : res.baseLevels[sp.id];
+    const uL = unitsOf('levelUnits', sp);
+    const y = uL === 'eff' ? res.eff[sp.id] : uL === 'agg' ? res.agg[sp.id] : res.levels[sp.id];
+    const b = uL === 'eff' ? res.baseEff[sp.id] : uL === 'agg' ? res.baseAgg[sp.id] : res.baseLevels[sp.id];
     const unit = sp.lvlUnit || '';
-    const sym = useEff ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : useAgg ? sp.aggSym : sp.sym;
+    const sym = symOf(uL);
     const c2 = el('canvas');
     lvlGrid.append(el('div', { class: 'chart-card' },
       el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sym)), el('span', { class: 'u' }, unit)),
