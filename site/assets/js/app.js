@@ -455,7 +455,7 @@ function run() {
       irfGrid.append(el('div', { class: 'chart-card' },
         el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
         el('div', { class: 'chart-box' }, c1)));
-      current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('п.п.') ? '$\\Delta$ (п.п.)' : '$\\Delta$ (%)', data: pairs(irfY) }],
+      current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('%') ? '$\\Delta_{\\%}$' : '$\\Delta$', data: pairs(irfY) }],
         { discrete, zero: true, lines, xmax }));
     }
 

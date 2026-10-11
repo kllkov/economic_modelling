@@ -89,7 +89,7 @@ export const controls = [
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: (v) => ((SHOCK_TARGETS[v]?.group ?? SHOCK_TARGETS[v]?.kind) === 'state' ? 'state-переменные' : 'параметры') },
-  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta$(%)' : 'Величина, $\\Delta$(уровни)'),
+  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta_{\\%}$' : 'Величина, $\\Delta$'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
@@ -377,17 +377,17 @@ export function chartSpecs(s) {
   const x = (v) => `${v}_t`;
   const showL = Math.abs(s.n) > 0 || s.shockTarget === 'n';
   const specs = [
-    ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true, levelOnly: true }] : []),
-    ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta$(%) от тренда', noEff: true, levelOnly: true }] : []),
-    { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta$(%) от s.s.' },
-    cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
-        : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
-    cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta$(%) от s.s.' }
-        : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 's', title: 'Норма сбережения', sym: 's_t = i_t/y_t', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
+    ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
+    ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
+    { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
+    { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
+    { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
+    { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
+    cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true }
+        : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
+    cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta_{\\%}$ от s.s.' }
+        : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
+    { id: 's', title: 'Норма сбережения', sym: 's_t = i_t/y_t', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
   ];
   return specs.map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }

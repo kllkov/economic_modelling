@@ -66,7 +66,7 @@ export const controls = [
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: (v) => ((SHOCK_TARGETS[v]?.group ?? SHOCK_TARGETS[v]?.kind) === 'state' ? 'state-переменные' : 'параметры') },
-  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta$(%)' : 'Величина, $\\Delta$(уровни)'),
+  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta_{\\%}$' : 'Величина, $\\Delta$'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.01,
     hint: (s) => SHOCK_TARGETS[s.shockTarget]?.note },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
@@ -301,13 +301,13 @@ export function solve(s) {
 export function chartSpecs(s) {
   const x = (v) => `${v}_t`;
   return [
-    { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '$\\Delta$(%) от базового пути' },
+    { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '$\\Delta_{\\%}$ от базового пути' },
     { id: 'b', title: 'Активы', sym: x('b'), irfUnit: '$\\Delta$ от базового пути' },
-    { id: 'y', title: 'Доход', sym: 'y_t = w_t + r_t b_t', irfUnit: '$\\Delta$(%) от базового пути' },
+    { id: 'y', title: 'Доход', sym: 'y_t = w_t + r_t b_t', irfUnit: '$\\Delta_{\\%}$ от базового пути' },
     { id: 'ib', title: 'Процентный доход', sym: 'r_t b_t', irfUnit: '$\\Delta$ от базового пути' },
     { id: 's', title: 'Сбережения', sym: 's_t = y_t - c_t', irfUnit: '$\\Delta$ от базового пути' },
-    { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от базового пути', lvlUnit: '%' },
-    { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от базового пути', noIrf: s.shockTarget !== 'w' },
+    { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$ от базового пути', lvlUnit: '%' },
+    { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta_{\\%}$ от базового пути', noIrf: s.shockTarget !== 'w' },
   ];
 }
 

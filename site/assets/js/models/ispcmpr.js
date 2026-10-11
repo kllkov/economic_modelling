@@ -49,7 +49,7 @@ export const controls = [
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: () => 'экзогенные процессы' },
-  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta$(%)' : 'Величина, $\\Delta$(п.п.)'),
+  { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta_{\\%}$' : 'Величина, $\\Delta$'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.25 },
   { id: 'shockTiming', label: 'Ожидаемость', type: 'segmented',
     options: [{ v: 'unexpected', l: 'Неожиданный (MIT)' }, { v: 'expected', l: 'Ожидаемый' }],
@@ -243,7 +243,7 @@ export function solve(st) {
 
 export function chartSpecs(st) {
   const Ex = st.expectations === 'rational' ? '\\mathbb E_t' : 'E^*_t';
-  const pp = '$\\Delta$(п.п.) от s.s.';
+  const pp = '$\\Delta$ от s.s.';
   const tg = st.shockTarget;
   const specs = [
     { id: 'pi', title: 'Инфляция', sym: '\\pi_t', irfUnit: pp, lvlUnit: '%' },
@@ -256,9 +256,9 @@ export function chartSpecs(st) {
   if (tg === 'u') specs.push({ id: 'u', title: 'Шок издержек', sym: 'u_t', irfUnit: pp, lvlUnit: 'п.п.' });
   if (tg === 'v') specs.push({ id: 'v', title: 'Монетарный шок', sym: 'v_t', irfUnit: pp, lvlUnit: 'п.п.' });
   if (tg === 'a') specs.push(
-    { id: 'a', title: 'Технология', sym: 'a_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' },
-    { id: 'yn', title: 'Естественный выпуск', sym: 'y^n_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' },
-    { id: 'y', title: 'Выпуск', sym: 'y_t', irfUnit: '$\\Delta$(%) от s.s.', lvlUnit: '%' });
+    { id: 'a', title: 'Технология', sym: 'a_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
+    { id: 'yn', title: 'Естественный выпуск', sym: 'y^n_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
+    { id: 'y', title: 'Выпуск', sym: 'y_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' });
   return specs;
 }
 
