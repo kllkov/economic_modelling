@@ -328,8 +328,6 @@ export function formulas(st) {
   const popLaw = D ? 'L_{t+1}=(1+n)\\,L_t' : '\\dot L/L=n';
   const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t' : '\\dot E/E=g';
   const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
-  const prodT = tp ? (D ? 'Y_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}' : 'Y=K^{\\alpha}(EL)^{1-\\alpha}')
-    : (D ? 'Y_t=K_t^{\\alpha}L_t^{1-\\alpha}' : 'Y=K^{\\alpha}L^{1-\\alpha}');
 
   // ── децентрализованная
   if (D) {
@@ -372,17 +370,20 @@ export function formulas(st) {
   const order = ['Домохозяйства', 'Фирмы', 'Рынки', 'Экзогенные процессы'];
   fs.dec.sort((p, q) => order.indexOf(p.agent) - order.indexOf(q.agent));
 
-  // ── централизованная: ресурсное ограничение экономики
-  fs.cen.push({ agent: 'Балансовые условия', items: D ? [
-    prodT,
-    'Y_t=C_t+I_t,\\qquad I_t=s\\,Y_t',
-    'K_{t+1}=(1-\\delta)\\,K_t+I_t,\\qquad K_0\\ \\text{задано}',
-  ] : [
-    prodT,
-    'Y=C+I,\\qquad I=s\\,Y',
-    '\\dot K=I-\\delta K,\\qquad K(0)\\ \\text{задано}',
-  ] });
-  fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
+  // ── централизованная: балансовые условия в нормированных переменных
+  // (на эффективного работника с ТП, на работника без ТП); индекс t — зависимость от времени и в непрерывном времени
+  {
+    const [kk, yy, cc, ii] = tp ? ['\\tilde k', '\\tilde y', '\\tilde c', '\\tilde \\imath'] : ['k', 'y', 'c', 'i'];
+    const growth = tp ? '(n+g+\\delta)' : '(n+\\delta)';
+    fs.cen.push({ agent: 'Балансовые условия', items: [
+      `${yy}_t=${kk}_t^{\\alpha}`,
+      `${yy}_t=${cc}_t+${ii}_t,\\qquad ${ii}_t=s\\,${yy}_t`,
+      D ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\,${kk}_{t+1}=(1-\\delta)\\,${kk}_t+${ii}_t,\\qquad ${kk}_0\\ \\text{задано}`
+        : `\\dot{${kk}}_t=${ii}_t-${growth}\\,${kk}_t,\\qquad ${kk}_0\\ \\text{задано}`,
+    ] });
+    const lawT = D ? lawLine : tp ? '\\dot L_t/L_t=n,\\qquad \\dot E_t/E_t=g' : '\\dot L_t/L_t=n';
+    fs.cen.push({ agent: 'Экзогенные процессы', items: [lawT] });
+  }
 
   // ── основное уравнение динамики
   const k = tl('k'), c = tl('c'), ii = tp ? '\\tilde \\imath' : 'i';
