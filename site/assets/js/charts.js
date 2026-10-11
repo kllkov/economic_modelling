@@ -242,16 +242,17 @@ function prepareMarks(chart, vlines, onAxis) {
     n.classList.toggle('on-axis', axis);
     const w = n.offsetWidth, h = n.offsetHeight, px = sx.getPixelForValue(m.x);
     if (axis) {
-      let x = Math.min(Math.max(px - w / 2, a.left), a.right - w);
-      const prev = marks[marks.length - 1];
-      if (prev && x < prev.x + prev.w + 4) x = prev.x + prev.w + 4;
-      marks.push({ n, x, y: sx.top + 3, w, h, color: m.color });
+      marks.push({ n, px, x: px - w / 2, y: sx.top + 3, w, h, color: m.color });
     } else {
       marks.push({ n, x: Math.min(px + 4, a.right - w - 2), y: a.bottom - 4 - h - marks.length * (h + 1), w, h, color: m.color });
     }
   });
   chart.$marks = { marks, axis };
   if (!axis || !marks.length) return;
+  // по центру под своей отметкой; соседние подписи раздвигаются слева направо, затем прижимаются к правому краю
+  marks.sort((p, q) => p.px - q.px);
+  marks.forEach((r, i) => { r.x = Math.max(r.x, a.left, i ? marks[i - 1].x + marks[i - 1].w + 4 : -Infinity); });
+  for (let i = marks.length - 1; i >= 0; i--) marks[i].x = Math.min(marks[i].x, i < marks.length - 1 ? marks[i + 1].x - marks[i].w - 4 : a.right - marks[i].w);
   // числовые метки оси x, на которые налезает подпись отметки, не выводятся
   const { ctx } = chart;
   ctx.save();
