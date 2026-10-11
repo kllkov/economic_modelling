@@ -239,7 +239,7 @@ export function solve(s) {
   let bjs = bb[js];
   if (s.shockTarget === 'b' && !expected) bjs += s.shockSize;
   const sh = plan(s, Ps, js, bjs, h, N);
-  if (s.utility !== 'cara' && !(sh.W > 0)) return { ok: false, errors: ['После шока пожизненное богатство неположительно. Уменьшите величину шока.'] };
+  if (s.utility !== 'cara' && !(sh.W > 0)) return { ok: false, errors: ['После шока пожизненное богатство неположительно: домохозяйство сильно закредитовано, и долг превышает будущие доходы. Увеличьте $\\beta$ или $b_0$, либо уменьшите величину шока.'] };
   const c = new Float64Array(N + 1), b = new Float64Array(N + 2);
   for (let j = 0; j < js; j++) { c[j] = base.c[j]; b[j] = bb[j]; }
   b[js] = bjs;
