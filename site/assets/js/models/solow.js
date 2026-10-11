@@ -448,8 +448,8 @@ export function steadyTable(st, res) {
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
     { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
     { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
-    { sym: `${k}_{GR}`, name: 'капитал по золотому правилу', key: 'kGR' },
-    { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: 'потребление по золотому правилу', key: 'cGR' },
+    { sym: `${k}_{GR}`, name: `капитал ${e} по золотому правилу`, key: 'kGR' },
+    { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: `потребление ${e} по золотому правилу`, key: 'cGR' },
   ];
   const v = (ss, r) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key], 3));
   const out = rows.map((r) => ({ ...r, before: v(res.ss0, r), after: v(res.ssF, r) }));
