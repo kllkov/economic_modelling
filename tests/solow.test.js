@@ -8,7 +8,7 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
 
 // 1. Стационар: k̃* = (s/dep)^{1/(1−α)}, dep = (1+n)(1+g)−1+δ (дискр.) / n+g+δ (непр.)
 {
-  const a = 0.3, s = 0.2, d = 0.05, n = 0.01, g = 0.02;
+  const a = 0.3, s = defaults.s, d = 0.05, n = 0.01, g = 0.02;
   let r = run({ shockSize: 0 });
   near(r.ss0.k, Math.pow(s / ((1 + n) * (1 + g) - 1 + d), 1 / (1 - a)), 1e-12, 'k* дискр.');
   r = run({ time: 'continuous', shockSize: 0 });
@@ -34,7 +34,7 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
 
 // 3. Дискретное время: рекурсия (1+n)(1+g)k̃' = (1−δ)k̃ + s k̃^α
 {
-  const a = 0.3, s = 0.2, d = 0.05, n = 0.01, g = 0.02;
+  const a = 0.3, s = defaults.s, d = 0.05, n = 0.01, g = 0.02;
   const r = run({ shockTarget: 'k', shockSize: -40, tHat: 3, horizon: 60 });
   let k = r.ss0.k;
   for (let t = 0; t < 60; t++) {
@@ -47,12 +47,12 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
 // 4. Перманентный рост s: сходимость к новому стационару; темп роста y/L — временно выше g, затем → g
 {
   const r = run({ shockTarget: 's', shockSize: 0.05, tHat: 10, horizon: 200 });
-  const ksNew = Math.pow(0.25 / (1.01 * 1.02 - 1 + 0.05), 1 / 0.7);
+  const ksNew = Math.pow((defaults.s + 0.05) / (1.01 * 1.02 - 1 + 0.05), 1 / 0.7);
   near(r.ssF.k, ksNew, 1e-12, 'k* после роста s');
   near(r.eff.k.at(-1), ksNew, 1e-3 * ksNew, 'сходимость к новому k*');
   assert.ok(r.levels.gy[11] > 2 + 0.1, 'темп роста y/L временно выше g');
   near(r.levels.gy.at(-1), 2, 0.01, 'в долгосрочном периоде темп роста y/L → g');
-  near(r.irf.c[10], -100 * 0.05 / 0.8, 1e-9, 'в момент шока потребление падает на Δs/(1−s)');
+  near(r.irf.c[10], -100 * 0.05 / (1 - defaults.s), 1e-9, 'в момент шока потребление падает на Δs/(1−s)');
 }
 
 // 5. Перманентный рост уровня A на 10%: k̃ падает, затем возвращается; y/L в долгосрочном периоде +10% (эффект уровня)
@@ -127,10 +127,10 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
     const [cv, dg] = extraBlocks(st, r);
     const full = dg.charts[0];
     const pathS = full.series.find((x) => x.points);
-    for (const [k, v] of pathS.data) near(v, 0.25 * Math.pow(k, 0.3), 1e-12, 'точка пути на s′·f(k̃)');
+    for (const [k, v] of pathS.data) near(v, (defaults.s + 0.05) * Math.pow(k, 0.3), 1e-12, 'точка пути на s′·f(k̃)');
     const ks = full.opts.vlines.map((v) => v.x);
     near(ks[0], r.ss0.k, 1e-12, 'вертикаль k̃*'); near(ks[1], r.ssF.k, 1e-12, 'вертикаль k̃*′');
-    near(0.2 * Math.pow(ks[0], 0.3), r.ss0.dep * ks[0], 1e-12, 'k̃* — пересечение s·f и линии выбытия');
+    near(defaults.s * Math.pow(ks[0], 0.3), r.ss0.dep * ks[0], 1e-12, 'k̃* — пересечение s·f и линии выбытия');
     near(pathS.data.at(-1)[0], r.ssF.k, 1e-2 * r.ssF.k, 'путь приходит в новый стационар');
     for (const ch of cv.charts.slice(0, 3)) for (const sr of ch.series) near(sr.data.at(-1)[1], ch.opts.hlines[0].y, 0.01 * ch.opts.hlines[0].y, `сходимость ${ch.title}`);
     assert.equal(cv.charts[0].series.length, 1, 'одна траектория — из введённого k̃0');

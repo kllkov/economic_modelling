@@ -20,7 +20,7 @@ const SHOCK_TARGETS = {
 
 export const defaults = {
   time: 'discrete', version: 'centralized', variant: 'tp', production: 'cd',
-  alpha: 0.3, s: 0.2, delta: 0.05, n: 0.01, g: 0.02,
+  alpha: 0.3, s: 0.6, delta: 0.05, n: 0.01, g: 0.02,
   shockTarget: 's', shockSize: 0.05, tHat: 10,
   shockPersistence: 'permanent', rhoS: 0.8,
   horizon: 100, k0: 1.5,
