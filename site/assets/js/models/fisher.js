@@ -251,13 +251,14 @@ export function solve(s) {
   const Np = Math.round(s.horizon / h);
   const stride = Math.max(1, Math.round(0.1 / h));
   const t = [];
-  const lv = { c: [], b: [], y: [], s: [], w: [], r: [] }, bl = { c: [], b: [], y: [], s: [], w: [], r: [] };
+  const lv = { c: [], b: [], y: [], ib: [], s: [], w: [], r: [] }, bl = { c: [], b: [], y: [], ib: [], s: [], w: [], r: [] };
   for (let j = 0; j <= Np; j += stride) {
     t.push(+(j * h).toFixed(6));
     const yS = Ps.w[j] + Ps.r[j] * b[j], yB = Pb.w[j] + Pb.r[j] * bb[j];
     lv.c.push(c[j]); bl.c.push(base.c[j]);
     lv.b.push(b[j]); bl.b.push(bb[j]);
     lv.y.push(yS); bl.y.push(yB);
+    lv.ib.push(Ps.r[j] * b[j]); bl.ib.push(Pb.r[j] * bb[j]);
     lv.s.push(yS - c[j]); bl.s.push(yB - base.c[j]);
     lv.w.push(Ps.w[j]); bl.w.push(Pb.w[j]);
     lv.r.push(100 * Ps.r[j]); bl.r.push(100 * Pb.r[j]);
@@ -269,6 +270,7 @@ export function solve(s) {
     c: s.utility === 'cara' && bl.c.some((v) => v <= 0) ? abs(lv.c, bl.c) : pct(lv.c, bl.c),
     b: abs(lv.b, bl.b),
     y: yPositive ? pct(lv.y, bl.y) : abs(lv.y, bl.y),
+    ib: abs(lv.ib, bl.ib),
     s: abs(lv.s, bl.s),
     w: bl.w.every((v) => v > 0) ? pct(lv.w, bl.w) : abs(lv.w, bl.w),
     r: abs(lv.r, bl.r),
@@ -302,6 +304,7 @@ export function chartSpecs(s) {
     { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '$\\Delta$(%) от базового пути' },
     { id: 'b', title: 'Активы', sym: x('b'), irfUnit: '$\\Delta$ от базового пути' },
     { id: 'y', title: 'Доход', sym: 'y_t = w_t + r_t b_t', irfUnit: '$\\Delta$(%) от базового пути' },
+    { id: 'ib', title: 'Процентный доход', sym: 'r_t b_t', irfUnit: '$\\Delta$ от базового пути' },
     { id: 's', title: 'Сбережения', sym: 's_t = y_t - c_t', irfUnit: '$\\Delta$ от базового пути' },
     { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от базового пути', lvlUnit: '%' },
     { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от базового пути', noIrf: s.shockTarget !== 'w' },
