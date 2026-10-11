@@ -304,7 +304,7 @@ export function chartSpecs(s) {
     { id: 'y', title: 'Доход', sym: 'y_t = w_t + r_t b_t', irfUnit: '$\\Delta$(%) от базового пути' },
     { id: 's', title: 'Сбережения', sym: 's_t = y_t - c_t', irfUnit: '$\\Delta$ от базового пути' },
     { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от базового пути', lvlUnit: '%' },
-    { id: 'w', title: 'Заработная плата', sym: x('w'), noIrf: true },
+    { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от базового пути', noIrf: s.shockTarget !== 'w' },
   ];
 }
 
