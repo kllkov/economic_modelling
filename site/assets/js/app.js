@@ -414,7 +414,7 @@ function run() {
     res.marks.t0 != null ? el('span', {}, vMark(COLORS.announce, DASH_INFO), rich(`объявление $t_0 = ${res.marks.t0}$`)) : null,
     el('span', {}, vMark(COLORS.shock, DASH_SHOCK), rich(`шок $\\hat t = ${res.marks.tHat}$`)));
 
-  const flat = specs.every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
+  const flat = specs.filter((sp) => !sp.noIrf).every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
   const irfGrid = el('div', { class: 'charts' });
   const effPossible = specs.some((s) => s.effAvailable);
   const aggPossible = specs.some((s) => s.aggSym);
@@ -448,7 +448,7 @@ function run() {
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);
   for (const sp of specs) {
     const symOf = (u) => (u === 'eff' ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : u === 'agg' ? sp.aggSym : sp.sym);
-    if (shownIn(view.irfUnits, sp)) {
+    if (shownIn(view.irfUnits, sp) && !sp.noIrf) {
       const uI = unitFor(view.irfUnits, sp);
       const irfY = seriesOf(res, sp, uI).irf;
       const c1 = el('canvas');
@@ -494,11 +494,11 @@ function seriesOf(res, sp, u) {
 function downloadXLSX(res, specs) {
   const modes = [['agg', 'В уровнях', specs.some((s) => s.aggSym)], ['worker', 'На работника', true], ['eff', 'На эфф. работника', specs.some((s) => s.effAvailable)]];
   const sheets = modes.filter(([, , on]) => on).map(([mode, name]) => {
-    const cols = specs.filter((sp) => shownIn(mode, sp)).map((sp) => ({ id: sp.id, ...seriesOf(res, sp, unitFor(mode, sp)) }));
+    const cols = specs.filter((sp) => shownIn(mode, sp)).map((sp) => ({ id: sp.id, noIrf: sp.noIrf, ...seriesOf(res, sp, unitFor(mode, sp)) }));
     return {
       name,
-      rows: [['t', ...cols.flatMap((c) => [`irf_${c.id}`, `level_${c.id}`, `base_${c.id}`])],
-        ...res.t.map((t, i) => [t, ...cols.flatMap((c) => [c.irf[i], c.level[i], c.base[i]])])],
+      rows: [['t', ...cols.flatMap((c) => [...(c.noIrf ? [] : [`irf_${c.id}`]), `level_${c.id}`, `base_${c.id}`])],
+        ...res.t.map((t, i) => [t, ...cols.flatMap((c) => [...(c.noIrf ? [] : [c.irf[i]]), c.level[i], c.base[i]])])],
     };
   });
   const a = el('a', { href: URL.createObjectURL(xlsxBlob(sheets)), download: `${current.model.id}-simulation.xlsx` });
