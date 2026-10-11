@@ -297,14 +297,12 @@ export function solve(s) {
 // ───────────────────────────── Графики ─────────────────────────────
 
 export function chartSpecs(s) {
-  const D = s.time === 'discrete';
-  const x = (v) => (D ? `${v}_t` : `${v}(t)`);
-  const rb = D ? 'r_t b_t' : 'r\\,b';
+  const x = (v) => `${v}_t`;
   return [
     { id: 'c', title: 'Потребление', sym: x('c'), irfUnit: '$\\Delta$(%) от базового пути' },
     { id: 'b', title: 'Активы', sym: x('b'), irfUnit: '$\\Delta$ от базового пути' },
-    { id: 'y', title: 'Доход', sym: D ? `y_t = w_t + ${rb}` : `y = w + ${rb}`, irfUnit: '$\\Delta$(%) от базового пути' },
-    { id: 's', title: 'Сбережения', sym: D ? 's_t = y_t - c_t' : 's = y - c', irfUnit: '$\\Delta$ от базового пути' },
+    { id: 'y', title: 'Доход', sym: 'y_t = w_t + r_t b_t', irfUnit: '$\\Delta$(%) от базового пути' },
+    { id: 's', title: 'Сбережения', sym: 's_t = y_t - c_t', irfUnit: '$\\Delta$ от базового пути' },
     { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta$(%) от базового пути' },
     { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от базового пути', lvlUnit: '%' },
   ];
@@ -335,17 +333,17 @@ export function formulas(s) {
   fs.flatNote = 'Шок не меняет оптимальный план: при текущих параметрах он не влияет ни на пожизненное богатство, ни на уравнение Эйлера.';
 
   const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}\\,e^{-\\theta ${c}}`);
-  const cT = D ? '{c_t}' : 'c(t)';
-  const wLaw = D ? (grow ? 'w_t=w_0\\,(1+g_w)^t' : 'w_t=w') : (grow ? 'w(t)=w_0\\,e^{g_w t}' : 'w(t)=w');
+  const cT = '{c_t}';
+  const wLaw = D ? (grow ? 'w_t=w_0\\,(1+g_w)^t' : 'w_t=w') : (grow ? 'w_t=w_0\\,e^{g_w t}' : 'w_t=w');
 
   fs.problem.push({ agent: 'Домохозяйство', system: true, items: D ? [
     `\\max_{\\{c_t\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}`,
     '\\text{s.t.}\\quad b_{t+1}=(1+r)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
     '\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\dfrac{b_t}{(1+r)^t}=0',
   ] : [
-    `\\max_{c(t)}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
-    '\\text{s.t.}\\quad \\dot b=r\\,b+w(t)-c(t),\\qquad b(0)\\ \\text{задано}',
-    '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-rt}\\,b(t)=0',
+    `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt`,
+    '\\text{s.t.}\\quad \\dot b_t=r\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+    '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-rt}\\,b_t=0',
   ], notes: [`${wLaw},\\qquad r\\ \\text{— экзогенна}`] });
 
   // уравнение Эйлера
@@ -363,11 +361,11 @@ export function formulas(s) {
       eulerN = `\\dfrac{c_{t+1}}{c_t}=${n4(Math.pow(gB, 1 / sig))}`;
     }
   } else if (ut === 'cara') {
-    euler = '\\dot c=\\dfrac{r-\\rho}{\\theta}'; eulerN = `\\dot c=${n4((r - s.rho) / s.theta)}`;
+    euler = '\\dot c_t=\\dfrac{r-\\rho}{\\theta}'; eulerN = `\\dot c_t=${n4((r - s.rho) / s.theta)}`;
   } else if (ut === 'log') {
-    euler = '\\dfrac{\\dot c}{c}=r-\\rho'; eulerN = `\\dfrac{\\dot c}{c}=${n4(r - s.rho)}`;
+    euler = '\\dfrac{\\dot c_t}{c_t}=r-\\rho'; eulerN = `\\dfrac{\\dot c_t}{c_t}=${n4(r - s.rho)}`;
   } else {
-    euler = '\\dfrac{\\dot c}{c}=\\dfrac{r-\\rho}{\\sigma}'; eulerN = `\\dfrac{\\dot c}{c}=${n4((r - s.rho) / sig)}`;
+    euler = '\\dfrac{\\dot c_t}{c_t}=\\dfrac{r-\\rho}{\\sigma}'; eulerN = `\\dfrac{\\dot c_t}{c_t}=${n4((r - s.rho) / sig)}`;
   }
   fs.system.push({ label: 'Уравнение Эйлера', tex: euler, num: eulerN });
 
@@ -379,7 +377,7 @@ export function formulas(s) {
     Wtex = grow ? `W_0=(1+r)\\,b_0+\\dfrac{w_0(1+r)}{r-g_w}` : 'W_0=(1+r)\\,b_0+\\dfrac{w(1+r)}{r}';
   } else {
     H = s.w / (r - gw);
-    budget = '\\int_0^{\\infty}e^{-rt}c(t)\\,dt=b_0+\\int_0^{\\infty}e^{-rt}w(t)\\,dt\\equiv W_0';
+    budget = '\\int_0^{\\infty}e^{-rt}c_t\\,dt=b_0+\\int_0^{\\infty}e^{-rt}w_t\\,dt\\equiv W_0';
     Wtex = grow ? 'W_0=b_0+\\dfrac{w_0}{r-g_w}' : 'W_0=b_0+\\dfrac{w}{r}';
   }
   const W = (D ? (1 + r) * s.b0 : s.b0) + H;
@@ -391,14 +389,14 @@ export function formulas(s) {
   const prof = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'b') {
-    shockTex = `${D ? 'b_{\\hat t}' : 'b(\\hat t)'}=${D ? 'b_{\\hat t}^{-}' : 'b(\\hat t^{-})'}+\\Delta b`;
+    shockTex = 'b_{\\hat t}=b_{\\hat t}^{-}+\\Delta b';
     shockNum = `\\Delta b=${n4(s.shockSize)}`;
   } else if (tg === 'w') {
-    shockTex = `${D ? 'w_t' : 'w(t)'}=${D ? (grow ? 'w_0(1+g_w)^t' : 'w') : (grow ? 'w_0e^{g_wt}' : 'w')}\\big(1+\\varphi\\cdot ${prof}\\big)`;
+    shockTex = `w_t=${D ? (grow ? 'w_0(1+g_w)^t' : 'w') : (grow ? 'w_0e^{g_wt}' : 'w')}\\big(1+\\varphi\\cdot ${prof}\\big)`;
     shockNum = `\\varphi=${n4(s.shockSize / 100)}`;
   } else {
     const sym = { r: 'r', beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta' }[tg];
-    shockTex = `${sym}${D ? '_t' : '(t)'}=${sym}+\\Delta ${sym}\\cdot ${prof}`;
+    shockTex = `${sym}_t=${sym}+\\Delta ${sym}\\cdot ${prof}`;
     shockNum = `\\Delta ${sym}=${n4(s.shockSize)}`;
   }
   shockNum += `,\\qquad \\hat t=${s.tHat}`;
@@ -442,8 +440,8 @@ export function steadyTable(s, res) {
     { sym: `c${sub}`, name: 'потребление в момент пересчёта плана', key: 'c' },
     { sym: `c${sub}/W${sub}`, name: 'склонность к потреблению из богатства', key: 'mpc' },
     s.utility === 'cara'
-      ? { sym: D ? 'c_{t+1}-c_t' : '\\dot c', name: 'прирост потребления', key: 'g' }
-      : { sym: D ? 'c_{t+1}/c_t' : '\\dot c/c', name: D ? 'рост потребления' : 'темп роста потребления', key: 'g' },
+      ? { sym: D ? 'c_{t+1}-c_t' : '\\dot c_t', name: 'прирост потребления', key: 'g' }
+      : { sym: D ? 'c_{t+1}/c_t' : '\\dot c_t/c_t', name: D ? 'рост потребления' : 'темп роста потребления', key: 'g' },
   ];
   return rows.map((r) => ({ ...r, before: fmt(res.summary.before[r.key], 4), after: fmt(res.summary.after[r.key], 4) }));
 }

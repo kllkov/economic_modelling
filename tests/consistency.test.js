@@ -113,13 +113,12 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
           else Object.assign(V, { 'c_{t+1}': L.c[i + 1], c_t: L.c[i], 'k_{t+1}': L.k[i + 1], k_t: L.k[i], 'b_{t+1}': L.k[i + 1], b_t: L.k[i] });
           if (utility === 'cara') Object.assign(V, { 'c_{t+1}': L.c[i + 1], c_t: L.c[i] });
         } else {
-          V = { ...P, r: L.r[i] / 100, w: L.w[i], E: L.E[i], L: L.L[i], '\\dot L': deriv(L.L, i, h), '\\dot E': deriv(L.E, i, h) };
-          if (tp) Object.assign(V, { '\\dot{\\tilde c}': deriv(E.c, i, h), '\\tilde c': E.c[i], '\\dot{\\tilde k}': deriv(E.k, i, h), '\\tilde k': E.k[i],
-            '\\dot{\\tilde b}': deriv(E.k, i, h), '\\tilde b': E.k[i], '\\tilde w': L.w[i] / L.E[i],
-            '\\tilde b(t)': E.k[i], '\\tilde k(t)': E.k[i] });
-          else Object.assign(V, { '\\dot c': deriv(L.c, i, h), c: L.c[i], '\\dot k': deriv(L.k, i, h), k: L.k[i], '\\dot b': deriv(L.k, i, h), b: L.k[i],
-            'b(t)': L.k[i], 'k(t)': L.k[i] });
-          if (utility === 'cara') Object.assign(V, { '\\dot c': deriv(L.c, i, h), c: L.c[i] });
+          // непрерывное время записано с индексом t, как и дискретное
+          V = { ...P, r_t: L.r[i] / 100, w_t: L.w[i], E_t: L.E[i], L_t: L.L[i], '\\dot L_t': deriv(L.L, i, h), '\\dot E_t': deriv(L.E, i, h) };
+          if (tp) Object.assign(V, { '\\dot{\\tilde c}_t': deriv(E.c, i, h), '\\tilde c_t': E.c[i], '\\dot{\\tilde k}_t': deriv(E.k, i, h), '\\tilde k_t': E.k[i],
+            '\\dot{\\tilde b}_t': deriv(E.k, i, h), '\\tilde b_t': E.k[i], '\\tilde w_t': L.w[i] / L.E[i] });
+          else Object.assign(V, { '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i], '\\dot k_t': deriv(L.k, i, h), k_t: L.k[i], '\\dot b_t': deriv(L.k, i, h), b_t: L.k[i] });
+          if (utility === 'cara') Object.assign(V, { '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i] });
         }
         const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 3e-4, rel: 2e-3 };
         const tolN = D ? { abs: 2e-4, rel: 2e-4 } : { abs: 5e-4, rel: 3e-3 };
@@ -193,7 +192,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
     const pts = D ? [0, 1, 5, 20] : [11, 60, 200];
     for (const i of pts) {
       const V = D ? { ...P, 'c_{t+1}': L.c[i + 1], c_t: L.c[i], 'b_{t+1}': L.b[i + 1], b_t: L.b[i], w_t: L.w[i] }
-        : { ...P, '\\dot c': deriv(L.c, i, h), c: L.c[i], '\\dot b': deriv(L.b, i, h), b: L.b[i], 'w(t)': L.w[i], 'c(t)': L.c[i] };
+        : { ...P, '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i], '\\dot b_t': deriv(L.b, i, h), b_t: L.b[i], w_t: L.w[i] };
       const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 5e-4, rel: 3e-3 };
       for (const g of F.problem) for (const it of g.items) check(it, V, tol, `${where}, задача, t=${res.t[i]}`);
       for (const r of F.system) { check(r.tex, V, tol, `${where}, «${r.label}», t=${res.t[i]}`); check(r.num, V, D ? { abs: 2e-4, rel: 2e-4 } : tol, `${where}, «${r.label}» (числа)`); }

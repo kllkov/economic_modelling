@@ -31,9 +31,9 @@ export const MODELS = [
           { label: 'Богатство в момент $t$', tex: 'W_t=(1+r)\\,b_t+\\sum_{s=0}^{\\infty}\\dfrac{w_{t+s}}{(1+r)^s}' },
         ] },
         { title: 'Непрерывное время', eqs: [
-          { label: 'Задача', tex: '\\max_{c(t)}\\int_0^{\\infty}e^{-\\rho t}u(c)\\,dt\\quad\\text{s.t.}\\quad \\dot b=r\\,b+w-c' },
-          { label: 'Уравнение Эйлера', tex: '\\dfrac{\\dot c}{c}=\\dfrac{r-\\rho}{\\sigma}' },
-          { label: 'CRRA', tex: 'c_0=\\dfrac{\\rho-(1-\\sigma)\\,r}{\\sigma}\\Big(b_0+\\int_0^{\\infty}e^{-rt}w(t)\\,dt\\Big)' },
+          { label: 'Задача', tex: '\\max_{\\{c_t\\}_{t\\ge0}}\\int_0^{\\infty}e^{-\\rho t}u(c_t)\\,dt\\quad\\text{s.t.}\\quad \\dot b_t=r\\,b_t+w_t-c_t' },
+          { label: 'Уравнение Эйлера', tex: '\\dfrac{\\dot c_t}{c_t}=\\dfrac{r-\\rho}{\\sigma}' },
+          { label: 'CRRA', tex: 'c_0=\\dfrac{\\rho-(1-\\sigma)\\,r}{\\sigma}\\Big(b_0+\\int_0^{\\infty}e^{-rt}w_t\\,dt\\Big)' },
         ] },
       ],
       refs: [
@@ -64,19 +64,19 @@ export const MODELS = [
           { label: 'Производственная функция', tex: 'Y=F(K,EL),\\qquad \\lambda Y=F(\\lambda K,E\\lambda L)\\ \\ \\text{(CRS)}' },
           { label: 'Интенсивная форма', tex: '\\tilde y=\\dfrac{Y}{EL}=F\\Big(\\dfrac{K}{EL},1\\Big)=f(\\tilde k),\\qquad f(0)=0,\\ \\ f^{\\prime}>0,\\ \\ f^{\\prime\\prime}<0' },
           { label: 'Условия Инады', tex: '\\lim_{\\tilde k\\to 0}f^{\\prime}(\\tilde k)=+\\infty,\\qquad \\lim_{\\tilde k\\to\\infty}f^{\\prime}(\\tilde k)=0' },
-          { label: 'Экзогенные процессы', tex: '\\dfrac{\\dot L}{L}=n,\\qquad \\dfrac{\\dot E}{E}=g' },
+          { label: 'Экзогенные процессы', tex: '\\dfrac{\\dot L_t}{L_t}=n,\\qquad \\dfrac{\\dot E_t}{E_t}=g' },
         ] },
         { title: 'Основное уравнение динамики', eqs: [
-          { label: 'Накопление капитала', tex: '\\dot K=sY-\\delta K\\qquad (I=S:\\ \\dot K+\\delta K=sY)' },
-          { label: 'В эффективных единицах', tex: '\\dot{\\tilde k}=s\\,f(\\tilde k)-(n+g+\\delta)\\,\\tilde k' },
+          { label: 'Накопление капитала', tex: '\\dot K_t=sY_t-\\delta K_t\\qquad (I=S:\\ \\dot K_t+\\delta K_t=sY_t)' },
+          { label: 'В эффективных единицах', tex: '\\dot{\\tilde k}_t=s\\,f(\\tilde k_t)-(n+g+\\delta)\\,\\tilde k_t' },
           { label: 'Дискретное время', tex: '(1+n)(1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\,\\tilde k_t+s\\,f(\\tilde k_t)' },
           { label: 'Устойчивость', tex: '\\dfrac{\\partial\\dot{\\tilde k}}{\\partial\\tilde k}\\Big|_{\\tilde k^*}<0' },
         ] },
         { title: 'Децентрализованная версия', eqs: [
           { label: 'Фирмы', tex: '\\max_{K,L}\\ \\pi=F(K,EL)-wL-(r+\\delta)K' },
           { label: 'Цены факторов', tex: 'f^{\\prime}(\\tilde k)=r+\\delta,\\qquad w=E\\big(f(\\tilde k)-f^{\\prime}(\\tilde k)\\,\\tilde k\\big),\\qquad \\pi=0' },
-          { label: 'Домохозяйства', tex: '\\tilde c=(1-s)\\,\\tilde y,\\qquad \\dot{\\tilde b}=(r-n-g)\\,\\tilde b+\\tilde w-\\tilde c' },
-          { label: 'Рынок капитала', tex: '\\tilde b=\\tilde k\\ \\Rightarrow\\ \\dot{\\tilde k}=s\\,f(\\tilde k)-(n+g+\\delta)\\,\\tilde k' },
+          { label: 'Домохозяйства', tex: '\\tilde c_t=(1-s)\\,\\tilde y_t,\\qquad \\dot{\\tilde b}_t=(r_t-n-g)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t' },
+          { label: 'Рынок капитала', tex: '\\tilde b_t=\\tilde k_t\\ \\Rightarrow\\ \\dot{\\tilde k}_t=s\\,f(\\tilde k_t)-(n+g+\\delta)\\,\\tilde k_t' },
         ] },
         { title: 'Траектория сбалансированного роста', eqs: [
           { label: 'Стационар', tex: 's\\,f(\\tilde k^*)=(n+g+\\delta)\\,\\tilde k^*' },
@@ -145,7 +145,7 @@ export const MODELS = [
           { label: 'Уравнение Эйлера (Милль)', tex: '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\dfrac{\\beta}{1+n}\\left[f\'(k_{t+1})+1-\\delta\\right]' },
           { label: 'Уравнение Эйлера (Бентам)', tex: '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta\\left[f\'(k_{t+1})+1-\\delta\\right]' },
           { label: 'Динамика капитала', tex: '(1+n)\\,k_{t+1}=(1-\\delta)\\,k_t+f(k_t)-c_t' },
-          { label: 'Непрерывное время (Милль; у Бентама без $-n$)', tex: '\\dfrac{\\dot c}{c}=\\dfrac{f\'(k)-\\delta-\\rho-n}{\\sigma(c)},\\qquad \\dot k=f(k)-c-(n+\\delta)\\,k,\\qquad \\sigma(c)=-\\dfrac{c\\,u\'\'(c)}{u\'(c)}' },
+          { label: 'Непрерывное время (Милль; у Бентама без $-n$)', tex: '\\dfrac{\\dot c_t}{c_t}=\\dfrac{f\'(k_t)-\\delta-\\rho-n}{\\sigma(c_t)},\\qquad \\dot k_t=f(k_t)-c_t-(n+\\delta)\\,k_t,\\qquad \\sigma(c)=-\\dfrac{c\\,u\'\'(c)}{u\'(c)}' },
         ] },
         { title: 'Стационарное состояние', eqs: [
           { label: 'Милль', tex: 'f\'(k^*)=\\dfrac{1+n}{\\beta}-1+\\delta,\\qquad c^*=f(k^*)-(n+\\delta)\\,k^*' },
