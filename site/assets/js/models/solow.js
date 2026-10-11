@@ -282,7 +282,6 @@ export function solve(st) {
 export function chartSpecs(st) {
   const cen = st.version === 'centralized';
   const tp = st.variant === 'tp';
-  const D = st.time === 'discrete';
   const x = (v) => `${v}_t`;
   const showL = Math.abs(st.n) > 0 || st.shockTarget === 'n';
   const specs = [
