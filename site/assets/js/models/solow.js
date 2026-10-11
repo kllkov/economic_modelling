@@ -350,7 +350,7 @@ export function formulas(st) {
   // ── централизованная: балансовые условия в нормированных переменных
   // (на эффективного работника с ТП, на работника без ТП); индекс t — зависимость от времени и в непрерывном времени
   {
-    const [kk, yy, cc, ii] = tp ? ['\\tilde k', '\\tilde y', '\\tilde c', '\\tilde \\imath'] : ['k', 'y', 'c', 'i'];
+    const [kk, yy, cc, ii] = tp ? ['\\tilde k', '\\tilde y', '\\tilde c', '\\tilde i'] : ['k', 'y', 'c', 'i'];
     const growth = tp ? '(n+g+\\delta)' : '(n+\\delta)';
     fs.cen.push({ agent: 'Балансовые условия', items: [
       `${yy}_t=${kk}_t^{\\alpha}`,
@@ -362,7 +362,7 @@ export function formulas(st) {
   }
 
   // ── основное уравнение динамики
-  const k = tl('k'), c = tl('c'), ii = tp ? '\\tilde \\imath' : 'i';
+  const k = tl('k'), c = tl('c'), ii = tp ? '\\tilde i' : 'i';
   if (D) {
     const lhs = tp ? '(1+n)(1+g)' : '(1+n)';
     fs.system.push({ label: 'Основное уравнение динамики',
@@ -444,7 +444,7 @@ export function steadyTable(st, res) {
   const rows = [
     { sym: `${k}^*`, name: `капитал ${e}`, key: 'k' },
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
-    { sym: tp ? '\\tilde \\imath^*' : 'i^*', name: 'инвестиции', key: 'i' },
+    { sym: tp ? '\\tilde i^*' : 'i^*', name: 'инвестиции', key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
     { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
     { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
