@@ -283,7 +283,7 @@ export function chartSpecs(st) {
   const cen = st.version === 'centralized';
   const tp = st.variant === 'tp';
   const D = st.time === 'discrete';
-  const x = (v) => (D ? `${v}_t` : `${v}(t)`);
+  const x = (v) => `${v}_t`;
   const showL = Math.abs(st.n) > 0 || st.shockTarget === 'n';
   const specs = [
     ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta$(%) от тренда', noEff: true, levelOnly: true }] : []),
@@ -292,7 +292,7 @@ export function chartSpecs(st) {
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta$(%) от s.s.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta$(%) от s.s.' },
-    { id: 'gy', title: 'Темп роста выпуска на работника', sym: D ? 'g_{y,t}' : 'g_y(t)', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
+    { id: 'gy', title: 'Темп роста выпуска на работника', sym: 'g_{y,t}', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$(п.п.) от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta$(%) от s.s.' }
@@ -325,46 +325,24 @@ export function formulas(st) {
   fs.systemTitle = 'Уравнения динамики';
   fs.ssTitle = 'Траектория сбалансированного роста';
 
-  const popLaw = D ? 'L_{t+1}=(1+n)\\,L_t' : '\\dot L/L=n';
-  const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t' : '\\dot E/E=g';
+  const popLaw = D ? 'L_{t+1}=(1+n)\\,L_t' : '\\dot L_t/L_t=n';
+  const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t' : '\\dot E_t/E_t=g';
   const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
 
   // ── децентрализованная
-  if (D) {
-    fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
-         : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
-    ] });
-    fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      ...(tp ? [
-        '\\tilde c_t=(1-s)\\,\\tilde y_t,\\qquad 0<s<1\\ \\text{задана экзогенно}',
-        '(1+n)(1+g)\\,\\tilde b_{t+1}=(1+r_t)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
-      ] : [
-        'c_t=(1-s)\\,y_t,\\qquad 0<s<1\\ \\text{задана экзогенно}',
-        '(1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-      ]),
-    ] });
-    fs.dec.push({ agent: 'Рынки', items: [
-      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
-    ] });
-  } else {
-    fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K,L}\\; \\pi=K^{\\alpha}(EL)^{1-\\alpha}-wL-(r+\\delta)K'
-         : '\\max_{K,L}\\; \\pi=K^{\\alpha}L^{1-\\alpha}-wL-(r+\\delta)K',
-    ] });
-    fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      ...(tp ? [
-        '\\tilde c=(1-s)\\,\\tilde y,\\qquad 0<s<1\\ \\text{задана экзогенно}',
-        '\\dot{\\tilde b}=(r-n-g)\\,\\tilde b+\\tilde w-\\tilde c,\\qquad \\tilde b(0)\\ \\text{задано}',
-      ] : [
-        'c=(1-s)\\,y,\\qquad 0<s<1\\ \\text{задана экзогенно}',
-        '\\dot b=(r-n)\\,b+w-c,\\qquad b(0)\\ \\text{задано}',
-      ]),
-    ] });
-    fs.dec.push({ agent: 'Рынки', items: [
-      tp ? '\\tilde b=\\tilde k\\quad\\text{(рынок капитала)}' : 'b=k\\quad\\text{(рынок капитала)}',
-    ] });
-  }
+  const [kk0, cc0, yy0, bb0, ww0] = tp ? ['\\tilde k', '\\tilde c', '\\tilde y', '\\tilde b', '\\tilde w'] : ['k', 'c', 'y', 'b', 'w'];
+  const budget = D
+    ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\,${bb0}_{t+1}=(1+r_t)\\,${bb0}_t+${ww0}_t-${cc0}_t`
+    : `\\dot{${bb0}}_t=(r_t-n${tp ? '-g' : ''})\\,${bb0}_t+${ww0}_t-${cc0}_t`;
+  fs.dec.push({ agent: 'Фирмы', items: [
+    tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
+       : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
+  ] });
+  fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
+    `${cc0}_t=(1-s)\\,${yy0}_t,\\qquad 0<s<1\\ \\text{задана экзогенно}`,
+    `${budget},\\qquad ${bb0}_0\\ \\text{задано}`,
+  ] });
+  fs.dec.push({ agent: 'Рынки', items: [`${bb0}_t=${kk0}_t\\quad\\text{(рынок капитала)}`] });
   fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   // порядок блоков: домохозяйства, фирмы, рынки, экзогенные процессы
   const order = ['Домохозяйства', 'Фирмы', 'Рынки', 'Экзогенные процессы'];
@@ -381,8 +359,7 @@ export function formulas(st) {
       D ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\,${kk}_{t+1}=(1-\\delta)\\,${kk}_t+${ii}_t,\\qquad ${kk}_0\\ \\text{задано}`
         : `\\dot{${kk}}_t=${ii}_t-${growth}\\,${kk}_t,\\qquad ${kk}_0\\ \\text{задано}`,
     ] });
-    const lawT = D ? lawLine : tp ? '\\dot L_t/L_t=n,\\qquad \\dot E_t/E_t=g' : '\\dot L_t/L_t=n';
-    fs.cen.push({ agent: 'Экзогенные процессы', items: [lawT] });
+    fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
 
   // ── основное уравнение динамики
@@ -394,18 +371,17 @@ export function formulas(st) {
       num: `${n4((1 + nn) * (1 + g))}\\,${k}_{t+1}=${n4(1 - d)}\\,${k}_t+${n4(sv)}\\,${k}_t^{${n4(a)}}` });
   } else {
     fs.system.push({ label: 'Основное уравнение динамики',
-      tex: `\\dot{${k}}=s\\,${k}^{\\alpha}-${tp ? '(n+g+\\delta)' : '(n+\\delta)'}\\,${k}`,
-      num: `\\dot{${k}}=${n4(sv)}\\,${k}^{${n4(a)}}-${n4(nn + g + d)}\\,${k}` });
+      tex: `\\dot{${k}}_t=s\\,${k}_t^{\\alpha}-${tp ? '(n+g+\\delta)' : '(n+\\delta)'}\\,${k}_t`,
+      num: `\\dot{${k}}_t=${n4(sv)}\\,${k}_t^{${n4(a)}}-${n4(nn + g + d)}\\,${k}_t` });
   }
   if (!cen) {
-    const kk = D ? `${k}_t` : k;
-    const r = D ? 'r_t' : 'r', w = D ? 'w_t' : 'w', Et = tp ? (D ? 'E_t\\,' : 'E\\,') : '';
+    const kk = `${k}_t`, r = 'r_t', w = 'w_t', Et = tp ? 'E_t\\,' : '';
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
       tex: `${r}=\\alpha\\,${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)\\,${Et}${kk}^{\\alpha}`,
       num: `${r}=${n4(a)}\\,${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}\\,${Et}${kk}^{${n4(a)}}` });
   }
   {
-    const kk = D ? `${k}_t` : k, cc = D ? `${c}_t` : c, iv = D ? `${ii}_t` : ii;
+    const kk = `${k}_t`, cc = `${c}_t`, iv = `${ii}_t`;
     fs.system.push({ label: 'Потребление и инвестиции',
       tex: `${cc}=(1-s)\\,${kk}^{\\alpha},\\qquad ${iv}=s\\,${kk}^{\\alpha}`,
       num: `${cc}=${n4(1 - sv)}\\,${kk}^{${n4(a)}},\\qquad ${iv}=${n4(sv)}\\,${kk}^{${n4(a)}}` });
@@ -417,14 +393,14 @@ export function formulas(st) {
   const prf = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'tfp') {
-    shockTex = `${D ? 'E_t=(1+g)^t' : 'E(t)=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
+    shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
     shockNum = `\\varphi=${n4(st.shockSize / 100)}`;
   } else if (tg === 'k') {
-    shockTex = `${D ? 'K_{\\hat t}' : 'K(\\hat t)'}=(1+\\varphi_k)\\,${D ? 'K_{\\hat t}^{-}' : 'K(\\hat t^{-})'}`;
+    shockTex = 'K_{\\hat t}=(1+\\varphi_k)\\,K_{\\hat t}^{-}';
     shockNum = `\\varphi_k=${n4(st.shockSize / 100)}`;
   } else {
     const sym = { s: 's', n: 'n', g: 'g', delta: '\\delta' }[tg];
-    shockTex = `${sym}${D ? '_t' : '(t)'}=${sym}+\\Delta ${sym}\\cdot ${prf}`;
+    shockTex = `${sym}_t=${sym}+\\Delta ${sym}\\cdot ${prf}`;
     shockNum = `\\Delta ${sym}=${n4(st.shockSize)}`;
   }
   shockNum += `,\\qquad \\hat t=${st.tHat}`;
@@ -566,7 +542,7 @@ function convergenceBlock(st) {
     if (disc) { if (j >= 1) out.gy.push([t, 100 * ((yj / Math.pow(sim.x[j - 1], a)) * (1 + g0) - 1)]); }
     else out.gy.push([t, 100 * (a * (P.s * Math.pow(kj, a - 1) - (P.n + g0 + P.delta)) + g0)]);
   }
-  const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => (disc ? `${v}_t` : `${v}(t)`);
+  const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => `${v}_t`;
   const label = `$${kt}_0 = ${fmtTex(st.k0, 3)}$`, color = '#3d8acb';
   const e = tp ? 'на эфф. работника' : 'на работника';
   const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: [{ label, data: out[key], color, width: 2.6 }],
@@ -578,7 +554,7 @@ function convergenceBlock(st) {
       mk(`Капитал ${e}`, x(kt), 'k', ss.k, ''),
       mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),
       mk(`Потребление ${e}`, x(ct), 'c', ss.c, ''),
-      mk('Темп роста выпуска на работника', disc ? 'g_{y,t}' : 'g_y(t)', 'gy', 100 * g0, '%'),
+      mk('Темп роста выпуска на работника', 'g_{y,t}', 'gy', 100 * g0, '%'),
     ],
   };
 }

@@ -157,15 +157,12 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
           '\\tilde c_t': E.c[i], '\\tilde y_t': E.y[i], '\\tilde \\imath_t': E.i[i], '\\tilde w_t': L.w[i] / L.E[i] });
         else Object.assign(V, { 'k_{t+1}': L.k[i + 1], k_t: L.k[i], 'b_{t+1}': L.k[i + 1], b_t: L.k[i], c_t: L.c[i], y_t: L.y[i], i_t: L.i[i] });
       } else {
-        V = { ...P, r: L.r[i] / 100, w: L.w[i], E: L.E[i], L: L.L[i], '\\dot L': deriv(L.L, i, h), '\\dot E': deriv(L.E, i, h),
-          Y: A.y[i], K: A.k[i], '\\dot K': deriv(A.k, i, h), C: A.c[i], I: A.i[i],
-          // централизованная версия записана с индексом t и в непрерывном времени
-          L_t: L.L[i], E_t: L.E[i], '\\dot L_t': deriv(L.L, i, h), '\\dot E_t': deriv(L.E, i, h) };
-        if (tp) Object.assign(V, { '\\dot{\\tilde k}_t': deriv(E.k, i, h), '\\tilde k_t': E.k[i], '\\tilde c_t': E.c[i], '\\tilde y_t': E.y[i], '\\tilde \\imath_t': E.i[i] });
-        else Object.assign(V, { '\\dot k_t': deriv(L.k, i, h), k_t: L.k[i], c_t: L.c[i], y_t: L.y[i], i_t: L.i[i] });
-        if (tp) Object.assign(V, { '\\dot{\\tilde k}': deriv(E.k, i, h), '\\tilde k': E.k[i], '\\dot{\\tilde b}': deriv(E.k, i, h), '\\tilde b': E.k[i],
-          '\\tilde c': E.c[i], '\\tilde y': E.y[i], '\\tilde \\imath': E.i[i], '\\tilde w': L.w[i] / L.E[i] });
-        else Object.assign(V, { '\\dot k': deriv(L.k, i, h), k: L.k[i], '\\dot b': deriv(L.k, i, h), b: L.k[i], c: L.c[i], y: L.y[i], i: L.i[i] });
+        // непрерывное время записано с индексом t, как и дискретное
+        V = { ...P, r_t: L.r[i] / 100, w_t: L.w[i], E_t: L.E[i], L_t: L.L[i], '\\dot L_t': deriv(L.L, i, h), '\\dot E_t': deriv(L.E, i, h),
+          Y_t: A.y[i], K_t: A.k[i], C_t: A.c[i], I_t: A.i[i] };
+        if (tp) Object.assign(V, { '\\dot{\\tilde k}_t': deriv(E.k, i, h), '\\tilde k_t': E.k[i], '\\dot{\\tilde b}_t': deriv(E.k, i, h), '\\tilde b_t': E.k[i],
+          '\\tilde c_t': E.c[i], '\\tilde y_t': E.y[i], '\\tilde \\imath_t': E.i[i], '\\tilde w_t': L.w[i] / L.E[i] });
+        else Object.assign(V, { '\\dot k_t': deriv(L.k, i, h), k_t: L.k[i], '\\dot b_t': deriv(L.k, i, h), b_t: L.k[i], c_t: L.c[i], y_t: L.y[i], i_t: L.i[i] });
       }
       const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 1e-5, rel: 1e-4 };
       const tolN = D ? { abs: 2e-4, rel: 2e-4 } : { abs: 2e-4, rel: 2e-4 };
