@@ -286,7 +286,7 @@ export function formulas(st) {
   fs.problem.push({ agent: 'Домохозяйства', items: [
     '\\max_{C_t,\\,N_t,\\,\\frac{M_t}{P_t},\\,B_t}\\ \\mathbb E_0\\Big\\{\\sum_{t=0}^{\\infty}\\beta^t u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)\\Big\\}',
     '\\text{s.t.}\\ \\int_0^1 P_{it}C_{it}\\,di+M_t+Q_tB_t\\le M_{t-1}+B_{t-1}+W_tN_t+D_t',
-    'u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)=\\begin{cases}\\dfrac{C_t^{1-\\sigma}-1}{1-\\sigma}-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}, & \\sigma\\ne1\\\\[8pt] \\ln C_t-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}}{1-\\nu}, & \\sigma=1\\end{cases}',
+    'u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)=\\begin{cases}\\dfrac{C_t^{1-\\sigma}-1}{1-\\sigma}-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}, & \\sigma\\ne1\\\\[8pt] \\ln C_t-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}, & \\sigma=1\\end{cases}',
   ] });
   fs.problem.push({ agent: 'Фирмы', items: [
     'Y_{it}=A_tN_{it}^{1-\\alpha},\\qquad \\Pr\\{\\text{цена не пересматривается}\\}=\\theta',

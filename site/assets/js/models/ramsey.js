@@ -622,8 +622,8 @@ export function steadyTable(s, res) {
   const D = s.time === 'discrete';
   const e = tp ? 'на эфф. работника' : 'на работника';
   const invName = D
-    ? (tp ? 'инвестиции $[(1+n)(1+g)-1+\\delta]\\tilde k^*$' : 'инвестиции $(n+\\delta)k^*$')
-    : (tp ? 'инвестиции $(n+g+\\delta)\\tilde k^*$' : 'инвестиции $(n+\\delta)k^*$');
+    ? (tp ? `инвестиции ${e} $[(1+n)(1+g)-1+\\delta]\\tilde k^*$` : `инвестиции ${e} $(n+\\delta)k^*$`)
+    : (tp ? `инвестиции ${e} $(n+g+\\delta)\\tilde k^*$` : `инвестиции ${e} $(n+\\delta)k^*$`);
   const rows = [
     { sym: tp ? '\\tilde k^*' : 'k^*', name: `капитал ${e}`, key: 'k' },
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
@@ -631,7 +631,7 @@ export function steadyTable(s, res) {
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
     { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
     { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
-    { sym: 's^*', name: 'норма сбережения $i^*/y^*$', key: 's', pct: true },
+    { sym: 's^*', name: tp ? 'норма сбережения $\\tilde i^*/\\tilde y^*$' : 'норма сбережения $i^*/y^*$', key: 's', pct: true },
   ];
   const v = (ss, r, Z) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key] / Z, 3));
   const ZF = tp ? res.ZF : 1;

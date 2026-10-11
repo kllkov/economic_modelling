@@ -295,7 +295,7 @@ export function chartSpecs(st) {
     cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta_{\\%}$ от s.s.' }
-        : { id: 'w', title: 'Заработная плата', sym: x('w'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
+        : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
   ];
   return specs.map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }
@@ -444,9 +444,9 @@ export function steadyTable(st, res) {
   const rows = [
     { sym: `${k}^*`, name: `капитал ${e}`, key: 'k' },
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
-    { sym: tp ? '\\tilde i^*' : 'i^*', name: 'инвестиции', key: 'i' },
+    { sym: tp ? '\\tilde i^*' : 'i^*', name: `инвестиции ${e}`, key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'заработная плата', key: 'w' },
+    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
     { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
     { sym: `${k}_{GR}`, name: 'капитал по золотому правилу', key: 'kGR' },
     { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: 'потребление по золотому правилу', key: 'cGR' },
