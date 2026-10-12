@@ -116,6 +116,9 @@ const jumpDots = {
     for (const j of opts.jumps || []) {
       if (j.x < scales.x.min || j.x > scales.x.max) continue;
       const px = scales.x.getPixelForValue(j.x);
+      ctx.strokeStyle = j.color; ctx.lineWidth = 2; ctx.lineCap = 'butt'; ctx.beginPath();
+      ctx.moveTo(scales.x.getPixelForValue(j.xPrev), scales.y.getPixelForValue(j.yPrev)); ctx.lineTo(px, scales.y.getPixelForValue(j.yL)); ctx.stroke();
+      ctx.lineWidth = 1.8;
       for (const [y, open] of [[j.yL, true], [j.yR, false]]) {
         const py = scales.y.getPixelForValue(y);
         if (py < a.top - r || py > a.bottom + r) continue;
@@ -136,7 +139,7 @@ function splitJumps(data, events, base) {
     const d0 = i ? y - data[i - 1][1] : 0, d1 = i < data.length - 1 ? data[i + 1][1] - y : 0;
     if (i && events.some((e) => Math.abs(x - e) < 1e-6) && Math.abs(d0) > tol && Math.abs(d0) > 2.5 * Math.abs(d1)) {
       const yL = base?.[i]?.[1] ?? data[i - 1][1];
-      pts.push({ x, y: yL }, { x, y: null }); jumps.push({ x, yL, yR: y });
+      jumps.push({ i, x, yL, yR: y, xPrev: data[i - 1][0], yPrev: data[i - 1][1] });
     }
     pts.push({ x, y });
   });
@@ -197,8 +200,8 @@ export function drawChart(canvas, series, opts) {
   const events = (opts.lines || []).map((l) => l.x).filter((v) => v != null), jumps = [];
   const datasets = series.map((s) => {
     const isBase = s.kind === 'base';
-    let data = s.data.map(([x, y]) => ({ x, y }));
-    if (!isBase) { const sp = splitJumps(s.data, events, series.find((q) => q.kind === 'base')?.data); data = sp.pts; jumps.push(...sp.jumps); }
+    let data = s.data.map(([x, y]) => ({ x, y })), cut = null;
+    if (!isBase) { const sp = splitJumps(s.data, events, series.find((q) => q.kind === 'base')?.data); data = sp.pts; jumps.push(...sp.jumps); cut = new Set(sp.jumps.map((j) => j.i)); }
     return {
       label: s.label,
       data,
@@ -208,7 +211,7 @@ export function drawChart(canvas, series, opts) {
       borderDash: isBase ? [2, 4] : [],
       pointRadius: 0,
       pointHoverRadius: 4,
-      spanGaps: false,
+      segment: cut?.size ? { borderColor: (c) => (cut.has(c.p1DataIndex) ? 'transparent' : undefined) } : undefined,
       tension: 0,
       fill: false,
       order: isBase ? 2 : 1,
