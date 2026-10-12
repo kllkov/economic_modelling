@@ -107,10 +107,45 @@ const markers = {
   },
 };
 
+// Разрыв непрерывной траектории в момент события: выколотая точка слева, закрашенная справа
+const jumpDots = {
+  id: 'jumpDots',
+  afterDatasetsDraw(chart, _args, opts) {
+    const { ctx, chartArea: a, scales } = chart, r = 3.8;
+    ctx.save(); ctx.setLineDash([]); ctx.lineWidth = 1.8;
+    for (const j of opts.jumps || []) {
+      if (j.x < scales.x.min || j.x > scales.x.max) continue;
+      const px = scales.x.getPixelForValue(j.x);
+      for (const [y, open] of [[j.yL, true], [j.yR, false]]) {
+        const py = scales.y.getPixelForValue(y);
+        if (py < a.top - r || py > a.bottom + r) continue;
+        ctx.beginPath(); ctx.arc(px, py, r, 0, 2 * Math.PI);
+        ctx.fillStyle = open ? '#fff' : j.color; ctx.strokeStyle = j.color; ctx.fill(); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  },
+};
+
+// Разбивает траекторию на куски в моментах событий (шок, объявление), где значение скачет:
+// слева кривая доходит до предела слева, справа начинается с нового значения
+function splitJumps(data, events) {
+  const ys = data.map((d) => d[1]), tol = Math.max(0.015 * (Math.max(...ys) - Math.min(...ys)), 1e-12);
+  const pts = [], jumps = [];
+  data.forEach(([x, y], i) => {
+    if (i && events.some((e) => Math.abs(x - e) < 1e-6) && Math.abs(y - data[i - 1][1]) > tol) {
+      const yL = data[i - 1][1];
+      pts.push({ x, y: yL }, { x, y: null }); jumps.push({ x, yL, yR: y });
+    }
+    pts.push({ x, y });
+  });
+  return { pts, jumps };
+}
+
 let registered = false;
 function ensure() {
   if (registered || typeof Chart === 'undefined') return;
-  Chart.register(markers, texLayer, curveLines);
+  Chart.register(markers, texLayer, curveLines, jumpDots);
   if (typeof ChartZoom !== 'undefined') Chart.register(ChartZoom);
   Chart.defaults.font.family = "'Manrope', system-ui, sans-serif";
   Chart.defaults.font.size = 11;
@@ -158,17 +193,21 @@ const tooltipOpts = (title) => ({
 export function drawChart(canvas, series, opts) {
   ensure();
   const xLabel = opts.xLabel || 't';
+  const events = (opts.lines || []).map((l) => l.x).filter((v) => v != null), jumps = [];
   const datasets = series.map((s) => {
     const isBase = s.kind === 'base';
+    let data = s.data.map(([x, y]) => ({ x, y }));
+    if (!isBase && !opts.discrete) { const sp = splitJumps(s.data, events); data = sp.pts; jumps.push(...sp.jumps); }
     return {
       label: s.label,
-      data: s.data.map(([x, y]) => ({ x, y })),
+      data,
       borderColor: isBase ? COLORS.base : COLORS.path,
       backgroundColor: isBase ? COLORS.base : COLORS.path,
-      borderWidth: isBase ? 1.6 : (opts.discrete ? 1.4 : 2.2),
+      borderWidth: isBase ? 1.6 : 2,
       borderDash: isBase ? [2, 4] : [],
-      pointRadius: !isBase && opts.discrete ? 2.2 : 0,
+      pointRadius: 0,
       pointHoverRadius: 4,
+      spanGaps: false,
       tension: 0,
       fill: false,
       order: isBase ? 2 : 1,
@@ -197,6 +236,7 @@ export function drawChart(canvas, series, opts) {
         legend: { display: false },
         tooltip: tooltipOpts((items) => `$${xLabel} = ${(+items[0].parsed.x).toFixed(opts.discrete ? 0 : 1)}$`),
         markers: { zero: !!opts.zero, lines: opts.lines || [] },
+        jumpDots: { jumps: jumps.map((j) => ({ ...j, color: COLORS.path })) },
         texLayer: { xLabel },
       },
     },
