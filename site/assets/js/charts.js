@@ -128,13 +128,14 @@ const jumpDots = {
 };
 
 // Разбивает траекторию на куски в моментах событий (шок, объявление), где значение скачет:
-// слева кривая доходит до предела слева, справа начинается с нового значения
-function splitJumps(data, events) {
+// слева кривая доходит до предела слева (базовый путь, если он есть), справа начинается с нового значения
+function splitJumps(data, events, base) {
   const ys = data.map((d) => d[1]), tol = Math.max(0.015 * (Math.max(...ys) - Math.min(...ys)), 1e-12);
   const pts = [], jumps = [];
   data.forEach(([x, y], i) => {
-    if (i && events.some((e) => Math.abs(x - e) < 1e-6) && Math.abs(y - data[i - 1][1]) > tol) {
-      const yL = data[i - 1][1];
+    const d0 = i ? y - data[i - 1][1] : 0, d1 = i < data.length - 1 ? data[i + 1][1] - y : 0;
+    if (i && events.some((e) => Math.abs(x - e) < 1e-6) && Math.abs(d0) > tol && Math.abs(d0) > 2.5 * Math.abs(d1)) {
+      const yL = base?.[i]?.[1] ?? data[i - 1][1];
       pts.push({ x, y: yL }, { x, y: null }); jumps.push({ x, yL, yR: y });
     }
     pts.push({ x, y });
@@ -197,7 +198,7 @@ export function drawChart(canvas, series, opts) {
   const datasets = series.map((s) => {
     const isBase = s.kind === 'base';
     let data = s.data.map(([x, y]) => ({ x, y }));
-    if (!isBase && !opts.discrete) { const sp = splitJumps(s.data, events); data = sp.pts; jumps.push(...sp.jumps); }
+    if (!isBase) { const sp = splitJumps(s.data, events, series.find((q) => q.kind === 'base')?.data); data = sp.pts; jumps.push(...sp.jumps); }
     return {
       label: s.label,
       data,
