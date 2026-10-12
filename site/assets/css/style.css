@@ -271,7 +271,7 @@ select:disabled, input:disabled { background: var(--surface-2); color: var(--mut
 .block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; min-width: 0; }
 .block-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .block-head h2 { font-size: 19px; display: flex; align-items: center; gap: 10px; }
-.block-head h2 .n { width: 28px; height: 28px; border-radius: 9px; background: var(--grad-strong); color: #fff; font-size: 13px; display: grid; place-items: center; font-family: var(--font); font-weight: 800; }
+.block-head h2 .n { flex: none; width: 28px; height: 28px; border-radius: 9px; background: var(--grad-strong); color: #fff; font-size: 13px; display: grid; place-items: center; font-family: var(--font); font-weight: 800; }
 .block-head .note { color: var(--muted); font-size: 13.5px; }
 .agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 14px; }
 @media (max-width: 640px) { .agents { grid-template-columns: 1fr; } }
