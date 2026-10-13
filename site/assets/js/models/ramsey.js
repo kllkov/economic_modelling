@@ -55,8 +55,8 @@ export const controls = [
     ] },
   { id: 'objective', label: 'Целевая функция', type: 'segmented',
     options: (s) => (s.time === 'discrete'
-      ? [{ v: 'mill', l: '$\\sum\\beta^t u(c_t)$' }, { v: 'bentham', l: '$\\sum\\beta^t L_t\\, u(c_t)$' }]
-      : [{ v: 'mill', l: '$\\int e^{-\\rho t}u(c)\\,dt$' }, { v: 'bentham', l: '$\\int e^{-\\rho t}L\\,u(c)\\,dt$' }]),
+      ? [{ v: 'mill', l: '$\\sum\\beta^t u(c_t)$' }, { v: 'bentham', l: '$\\sum\\beta^t L_t\\cdot  u(c_t)$' }]
+      : [{ v: 'mill', l: '$\\int e^{-\\rho t}u(c)\\,dt$' }, { v: 'bentham', l: '$\\int e^{-\\rho t}L\\cdot u(c)\\,dt$' }]),
     hint: (s) => (s.objective === 'mill'
       ? 'Милль: максимизируется полезность на душу населения'
       : 'Бентам: максимизируется сумма полезностей всех членов домохозяйства') },
@@ -419,18 +419,18 @@ export function formulas(s) {
   const fs = { dec: [], cen: [], system: [], shock: [], ss: [] };
 
   // полезность и предельная полезность от аргумента
-  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}\\,e^{-\\theta ${c}}`);
+  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}\\cdot e^{-\\theta ${c}}`);
   const Up = (c) => (ut === 'crra' ? `${c}^{-\\sigma}` : ut === 'log' ? `\\dfrac{1}{${c}}` : `e^{-\\theta ${c}}`);
   const cT = '{c_t}';
   const growthD = tp ? '(1+n)(1+g)' : '(1+n)';
   const growthC = tp ? '(n+g+\\delta)' : '(n+\\delta)';
-  const popLaw = D ? 'L_{t+1}=(1+n)\\,L_t' : '\\dot L_t/L_t=n';
-  const tpLaw = D ? 'E_{t+1}=(1+g)\\,E_t' : '\\dot E_t/E_t=g';
+  const popLaw = D ? 'L_{t+1}=(1+n)\\cdot L_t' : '\\dot L_t/L_t=n';
+  const tpLaw = D ? 'E_{t+1}=(1+g)\\cdot E_t' : '\\dot E_t/E_t=g';
   const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
 
   // целевая функция и дисконтирование в TVC
-  const objD = mill ? `\\sum_{t=0}^{\\infty}\\beta^t\\,${U(cT)}` : `\\sum_{t=0}^{\\infty}\\beta^t L_t\\,${U(cT)}`;
-  const objC = mill ? `\\int_0^{\\infty}e^{-\\rho t}\\,${U(cT)}\\,dt` : `\\int_0^{\\infty}e^{-\\rho t}L_t\\,${U(cT)}\\,dt`;
+  const objD = mill ? `\\sum_{t=0}^{\\infty}\\beta^t\\cdot ${U(cT)}` : `\\sum_{t=0}^{\\infty}\\beta^t L_t\\cdot ${U(cT)}`;
+  const objC = mill ? `\\int_0^{\\infty}e^{-\\rho t}\\cdot ${U(cT)}\\,dt` : `\\int_0^{\\infty}e^{-\\rho t}L_t\\cdot ${U(cT)}\\,dt`;
   const tvcW = D ? (mill ? '\\beta^t' : '\\beta^t L_t') : (mill ? 'e^{-\\rho t}' : 'e^{-(\\rho-n)t}');
   // с ТП задачи записываются в единицах на эффективного работника: c = c̃·E
   const cE = '(\\tilde c_tE_t)';
@@ -443,12 +443,12 @@ export function formulas(s) {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       ...(tp ? [
         `\\max_{\\{\\tilde c_t,\\,\\tilde b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`,
-        '\\text{s.t.}\\quad (1+n)(1+g)\\,\\tilde b_{t+1}=(1+r_t)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E_t\\,\\tilde b_t=0`,
+        '\\text{s.t.}\\quad (1+n)(1+g)\\cdot \\tilde b_{t+1}=(1+r_t)\\cdot \\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde b_t=0`,
       ] : [
         `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
-        '\\text{s.t.}\\quad (1+n)\\,b_{t+1}=(1+r_t)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b_t=0`,
+        '\\text{s.t.}\\quad (1+n)\\cdot b_{t+1}=(1+r_t)\\cdot b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot b_t=0`,
       ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -463,12 +463,12 @@ export function formulas(s) {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       ...(tp ? [
         `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}`,
-        '\\text{s.t.}\\quad \\dot{\\tilde b}_t=(r_t-n-g)\\,\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E_t\\,\\tilde b_t=0`,
+        '\\text{s.t.}\\quad \\dot{\\tilde b}_t=(r_t-n-g)\\cdot \\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde b_t=0`,
       ] : [
         `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
-        '\\text{s.t.}\\quad \\dot b_t=(r_t-n)\\,b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,b_t=0`,
+        '\\text{s.t.}\\quad \\dot b_t=(r_t-n)\\cdot b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot b_t=0`,
       ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -486,43 +486,43 @@ export function formulas(s) {
     fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
       tp ? `\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`
          : `\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
-      tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\,\\tilde k_{t+1}=(1-\\delta)\\,\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
-         : '\\text{s.t.}\\quad (1+n)\\,k_{t+1}=(1-\\delta)\\,k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
-      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E_{t+1}\\,\\tilde k_{t+1}=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k_{t+1}=0`,
+      tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\cdot \\tilde k_{t+1}=(1-\\delta)\\cdot \\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
+         : '\\text{s.t.}\\quad (1+n)\\cdot k_{t+1}=(1-\\delta)\\cdot k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
+      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_{t+1}\\cdot \\tilde k_{t+1}=0`
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot k_{t+1}=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
     fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
       tp ? `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}` : `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
-      tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}_t=\\tilde k_t^{\\alpha}-\\tilde c_t-(n+g+\\delta)\\,\\tilde k_t,\\qquad \\tilde k_0\\ \\text{задано}'
-         : '\\text{s.t.}\\quad \\dot k_t=k_t^{\\alpha}-c_t-(n+\\delta)\\,k_t,\\qquad k_0>0\\ \\text{задано}',
-      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${UpE}\\,E_t\\,\\tilde k_t=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\,${Up(cT)}\\,k_t=0`,
+      tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}_t=\\tilde k_t^{\\alpha}-\\tilde c_t-(n+g+\\delta)\\cdot \\tilde k_t,\\qquad \\tilde k_0\\ \\text{задано}'
+         : '\\text{s.t.}\\quad \\dot k_t=k_t^{\\alpha}-c_t-(n+\\delta)\\cdot k_t,\\qquad k_0>0\\ \\text{задано}',
+      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde k_t=0`
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot k_t=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
 
   // ── итоговая система (с подставленными функциями) и та же система в числах
   const K1 = D ? `${tl('k')}_{t+1}` : `${tl('k')}_t`;
-  const mpk = `\\alpha\\,${K1}^{\\alpha-1}`;
-  const mpkN = `${n4(a)}\\,${K1}^{${n4(a - 1)}}`;
+  const mpk = `\\alpha\\cdot ${K1}^{\\alpha-1}`;
+  const mpkN = `${n4(a)}\\cdot ${K1}^{${n4(a - 1)}}`;
   let euler, eulerN;
   if (D) {
     const Bt = mill ? '\\dfrac{\\beta}{1+n}' : '\\beta';
     const BtN = n4(mill ? s.beta / (1 + nn) : s.beta);
     // децентрализованная версия: правая часть через r_{t+1} (подстановка r — в строке FOC фирмы)
-    const R = cen ? `${Bt}\\left(${mpk}+1-\\delta\\right)` : `${Bt}\\,(1+r_{t+1})`;
+    const R = cen ? `${Bt}\\left(${mpk}+1-\\delta\\right)` : `${Bt}\\cdot (1+r_{t+1})`;
     const RN = `${BtN}\\left(${mpkN}${pm(1 - d)}\\right)`;
     if (ut === 'cara') {
-      euler = `e^{\\theta\\,(c_{t+1}-c_t)}=${R}`;
-      eulerN = `e^{${n4(s.theta)}\\,(c_{t+1}-c_t)}=${RN}`;
+      euler = `e^{\\theta\\cdot (c_{t+1}-c_t)}=${R}`;
+      eulerN = `e^{${n4(s.theta)}\\cdot (c_{t+1}-c_t)}=${RN}`;
     } else {
       const ratio = tp ? '\\dfrac{\\tilde c_{t+1}}{\\tilde c_t}' : '\\dfrac{c_{t+1}}{c_t}';
       const growth = tp ? (ut === 'log' ? '(1+g)' : '(1+g)^{\\sigma}') : '';
       const growthN = tp ? `${n4(1 + g)}${ut === 'log' ? '' : `^{${n4(sig)}}`}` : '';
-      euler = ut === 'log' ? `${growth}\\,${ratio}=${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${R}`;
-      eulerN = ut === 'log' ? `${growthN}\\,${ratio}=${RN}` : `${growthN}\\left(${ratio}\\right)^{${n4(sig)}}=${RN}`;
+      euler = ut === 'log' ? `${growth ? `${growth}\\cdot ` : ''}${ratio}=${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${R}`;
+      eulerN = ut === 'log' ? `${growthN ? `${growthN}\\cdot ` : ''}${ratio}=${RN}` : `${growthN}\\left(${ratio}\\right)^{${n4(sig)}}=${RN}`;
     }
   } else {
     const k = `${tl('k')}_t`;
@@ -531,9 +531,9 @@ export function formulas(s) {
     const lhs = ut === 'cara' ? '\\dot c_t' : (tp ? '\\dfrac{\\dot{\\tilde c}_t}{\\tilde c_t}' : '\\dfrac{\\dot c_t}{c_t}');
     const den = ut === 'cara' ? '\\theta' : '\\sigma';
     const preNum = `r_t-\\rho${nTerm}${gTerm}`;
-    const num = `\\alpha\\,${k}^{\\alpha-1}-\\delta-\\rho${nTerm}${gTerm}`;
+    const num = `\\alpha\\cdot ${k}^{\\alpha-1}-\\delta-\\rho${nTerm}${gTerm}`;
     const cst = d + s.rho + (mill ? nn : 0) + (ut === 'cara' ? 0 : sig * g);
-    const numN = `${n4(a)}\\,${k}^{${n4(a - 1)}}${pm(-cst)}`;
+    const numN = `${n4(a)}\\cdot ${k}^{${n4(a - 1)}}${pm(-cst)}`;
     if (ut === 'log') {
       euler = `${lhs}=${cen ? num : preNum}`;
       eulerN = `${lhs}=${numN}`;
@@ -546,11 +546,11 @@ export function formulas(s) {
 
   if (!cen) {
     const k = `${tl('k')}_t`, r = 'r_t', w = 'w_t';
-    const wl = tp ? 'w_t=(1-\\alpha)\\,E_t' : `${w}=(1-\\alpha)\\,`;
-    const wlN = tp ? `w_t=${n4(1 - a)}\\,E_t` : `${w}=${n4(1 - a)}\\,`;
+    const wl = tp ? 'w_t=(1-\\alpha)\\cdot E_t\\cdot ' : `${w}=(1-\\alpha)\\cdot `;
+    const wlN = tp ? `w_t=${n4(1 - a)}\\cdot E_t\\cdot ` : `${w}=${n4(1 - a)}\\cdot `;
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
-      tex: `${r}=\\alpha\\,${k}^{\\alpha-1}-\\delta,\\qquad ${wl}${k}^{\\alpha}`,
-      num: `${r}=${n4(a)}\\,${k}^{${n4(a - 1)}}${pm(-d)},\\qquad ${wlN}${k}^{${n4(a)}}`,
+      tex: `${r}=\\alpha\\cdot ${k}^{\\alpha-1}-\\delta,\\qquad ${wl}${k}^{\\alpha}`,
+      num: `${r}=${n4(a)}\\cdot ${k}^{${n4(a - 1)}}${pm(-d)},\\qquad ${wlN}${k}^{${n4(a)}}`,
     });
   }
 
@@ -558,11 +558,11 @@ export function formulas(s) {
   {
     const k = tl('k'), c = tl('c');
     if (D) {
-      accum = `${growthD}\\,${k}_{t+1}=(1-\\delta)\\,${k}_t+${k}_t^{\\alpha}-${c}_t`;
-      accumN = `${n4((1 + nn) * (1 + g))}\\,${k}_{t+1}=${n4(1 - d)}\\,${k}_t+${k}_t^{${n4(a)}}-${c}_t`;
+      accum = `${growthD}\\cdot ${k}_{t+1}=(1-\\delta)\\cdot ${k}_t+${k}_t^{\\alpha}-${c}_t`;
+      accumN = `${n4((1 + nn) * (1 + g))}\\cdot ${k}_{t+1}=${n4(1 - d)}\\cdot ${k}_t+${k}_t^{${n4(a)}}-${c}_t`;
     } else {
-      accum = `\\dot{${k}}_t=${k}_t^{\\alpha}-${c}_t-${growthC}\\,${k}_t`;
-      accumN = `\\dot{${k}}_t=${k}_t^{${n4(a)}}-${c}_t-${n4(nn + g + d)}\\,${k}_t`;
+      accum = `\\dot{${k}}_t=${k}_t^{\\alpha}-${c}_t-${growthC}\\cdot ${k}_t`;
+      accumN = `\\dot{${k}}_t=${k}_t^{${n4(a)}}-${c}_t-${n4(nn + g + d)}\\cdot ${k}_t`;
     }
   }
   fs.system.push({ label: cen ? 'Ресурсное ограничение' : 'Динамика капитала (бюджет + рынок + FOC фирмы)', tex: accum, num: accumN });
@@ -576,7 +576,7 @@ export function formulas(s) {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prof}\\big)`;
     shockNum = `\\varphi=${n4(s.shockSize / 100)}`;
   } else if (tg === 'k') {
-    shockTex = 'k_{\\hat t}=(1+\\varphi_k)\\,k_{\\hat t}^{-}';
+    shockTex = 'k_{\\hat t}=(1+\\varphi_k)\\cdot k_{\\hat t}^{-}';
     shockNum = `\\varphi_k=${n4(s.shockSize / 100)}`;
   } else {
     const sym = { beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta', delta: '\\delta', n: 'n' }[tg];
@@ -610,7 +610,7 @@ export function formulas(s) {
     { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{${FKs}}\\right)^{\\frac{1}{1-\\alpha}}`,
       num: `${tl('k')}^*=${n4(kv)}` },
     { tex: `${WS}=(1-\\alpha)\\left(${tl('k')}^*\\right)^{\\alpha}`, num: `${WS}=${n4((1 - a) * Math.pow(kv, a))}` },
-    { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}\\,${tl('k')}^*`,
+    { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}\\cdot ${tl('k')}^*`,
       num: `${tl('c')}^*=${n4(cv)}` },
   ];
   return fs;
