@@ -331,7 +331,7 @@ export function formulas(st) {
   // ── децентрализованная
   const [kk0, cc0, yy0, bb0, ww0] = tp ? ['\\tilde k', '\\tilde c', '\\tilde y', '\\tilde b', '\\tilde w'] : ['k', 'c', 'y', 'b', 'w'];
   const budget = D
-    ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\cdot ${bb0}_{t+1}=(1+r_t)${bb0}_t+${ww0}_t-${cc0}_t`
+    ? `${tp ? '(1+n)(1+g)' : '(1+n)'}${bb0}_{t+1}=(1+r_t)${bb0}_t+${ww0}_t-${cc0}_t`
     : `\\dot{${bb0}}_t=(r_t-n${tp ? '-g' : ''})${bb0}_t+${ww0}_t-${cc0}_t`;
   fs.dec.push({ agent: 'Фирмы', items: [
     tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
@@ -355,7 +355,7 @@ export function formulas(st) {
     fs.cen.push({ agent: 'Балансовые условия', items: [
       `${yy}_t=${kk}_t^{\\alpha}`,
       `${yy}_t=${cc}_t+${ii}_t,\\qquad ${ii}_t=s\\cdot ${yy}_t`,
-      D ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\cdot ${kk}_{t+1}=(1-\\delta)${kk}_t+${ii}_t,\\qquad ${kk}_0\\ \\text{задано}`
+      D ? `${tp ? '(1+n)(1+g)' : '(1+n)'}${kk}_{t+1}=(1-\\delta)${kk}_t+${ii}_t,\\qquad ${kk}_0\\ \\text{задано}`
         : `\\dot{${kk}}_t=${ii}_t-${growth}${kk}_t,\\qquad ${kk}_0\\ \\text{задано}`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
@@ -366,11 +366,11 @@ export function formulas(st) {
   if (D) {
     const lhs = tp ? '(1+n)(1+g)' : '(1+n)';
     fs.system.push({ label: 'Основное уравнение динамики',
-      tex: `${lhs}\\cdot ${k}_{t+1}=(1-\\delta)${k}_t+s\\cdot ${k}_t^{\\alpha}`,
+      tex: `${lhs}${k}_{t+1}=(1-\\delta)${k}_t+s\\cdot ${k}_t^{\\alpha}`,
       num: `${n4((1 + nn) * (1 + g))}${k}_{t+1}=${n4(1 - d)}${k}_t+${n4(sv)}${k}_t^{${n4(a)}}` });
   } else {
     fs.system.push({ label: 'Основное уравнение динамики',
-      tex: `\\dot{${k}}_t=s\\cdot ${k}_t^{\\alpha}-${tp ? '(n+g+\\delta)' : '(n+\\delta)'}\\cdot ${k}_t`,
+      tex: `\\dot{${k}}_t=s\\cdot ${k}_t^{\\alpha}-${tp ? '(n+g+\\delta)' : '(n+\\delta)'}${k}_t`,
       num: `\\dot{${k}}_t=${n4(sv)}${k}_t^{${n4(a)}}-${n4(nn + g + d)}${k}_t` });
   }
   if (!cen) {

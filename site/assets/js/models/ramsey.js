@@ -610,7 +610,7 @@ export function formulas(s) {
     { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{${FKs}}\\right)^{\\frac{1}{1-\\alpha}}`,
       num: `${tl('k')}^*=${n4(kv)}` },
     { tex: `${WS}=(1-\\alpha)\\left(${tl('k')}^*\\right)^{\\alpha}`, num: `${WS}=${n4((1 - a) * Math.pow(kv, a))}` },
-    { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}\\cdot ${tl('k')}^*`,
+    { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}${tl('k')}^*`,
       num: `${tl('c')}^*=${n4(cv)}` },
   ];
   return fs;
