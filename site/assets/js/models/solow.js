@@ -549,11 +549,11 @@ function convergenceBlock(st) {
     const h = halfLife(out[key], hl, disc);
     return { title, sym, unit, series: [{ label: `$${sym}$`, data: out[key], color, width: 2.6 }],
       opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }], marksOnAxis: true,
-        vlines: h ? [{ x: h.x, yTo: h.y, color: HL, dash: [4, 4], label: `t_{1/2}=${fmtTex(h.x, disc ? 0 : 1)}` }] : [] } };
+        vlines: h ? [{ x: h.x, yTo: h.y, color: HL, dots: true, label: `t_{1/2}=${fmtTex(h.x, disc ? 0 : 1)}` }] : [] } };
   };
   return {
     title: 'Сходимость к стационару',
-    legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }, { label: 'период полусходимости', color: HL, dash: true }],
+    legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }, { label: 'период полусходимости', color: HL, dots: true }],
     charts: [
       mk(`Капитал ${e}`, x(kt), 'k', ss.k, ''),
       mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),

@@ -372,7 +372,7 @@ function run() {
     const grid = el('div', { class: `charts${X.diagram ? ' diagram' : ''}` });
     const legend = el('div', { class: 'chart-legend' }, X.legend.map((L) => el('span', {},
       L.point ? el('i', { class: 'pt', style: `background:${L.color}` })
-        : el('i', { class: L.dash ? 'dash' : '', style: `border-color:${L.color}` }),
+        : el('i', { class: L.dots ? 'dots' : L.dash ? 'dash' : '', style: `border-color:${L.color}` }),
       rich(L.label))));
     // кнопки масштаба — у диаграмм с приближением (колесо, щипок и перетаскивание тоже работают)
     const ref = {};

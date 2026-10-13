@@ -271,7 +271,7 @@ const curveLines = {
     for (const m of opts.vlines || []) {
       if (m.x == null || m.x < scales.x.min || m.x > scales.x.max) continue;
       const x = scales.x.getPixelForValue(m.x);
-      ctx.strokeStyle = m.color; ctx.lineWidth = 1.2; ctx.setLineDash(m.dash || [3, 4]);
+      ctx.strokeStyle = m.color; ctx.lineWidth = m.dots ? 2.4 : 1.2; ctx.setLineDash(m.dots ? [0.1, 5] : m.dash || [3, 4]); ctx.lineCap = m.dots ? 'round' : 'butt';
       const yTop = m.yTo != null ? scales.y.getPixelForValue(m.yTo) : a.top;
       ctx.beginPath(); ctx.moveTo(x, a.bottom); ctx.lineTo(x, yTop); ctx.stroke();
     }
