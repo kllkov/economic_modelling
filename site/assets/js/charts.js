@@ -146,10 +146,35 @@ function splitJumps(data, events, base) {
   return { pts, jumps };
 }
 
+// Путь экономики: вместо точек — стрелки-шевроны «>» на самой траектории, по направлению движения (к следующему состоянию)
+const chevrons = {
+  id: 'chevrons',
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea: a } = chart, S = 5.5;
+    chart.data.datasets.forEach((ds, di) => {
+      if (!ds.chev || !chart.isDatasetVisible(di)) return;
+      const P = chart.getDatasetMeta(di).data.map((e) => [e.x, e.y]);
+      let last = null;
+      ctx.save(); ctx.strokeStyle = ds.borderColor; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([]);
+      P.forEach(([x, y], j) => {
+        if (x < a.left - 1 || x > a.right + 1 || y < a.top - 1 || y > a.bottom + 1) return;
+        if (last && Math.hypot(x - last[0], y - last[1]) < 13) return;
+        let q = P.slice(j + 1).find(([u, v]) => Math.hypot(u - x, v - y) >= 6), ang;
+        if (q) ang = Math.atan2(q[1] - y, q[0] - x);
+        else { const r = [...P.slice(0, j)].reverse().find(([u, v]) => Math.hypot(u - x, v - y) >= 6); if (!r) return; ang = Math.atan2(y - r[1], x - r[0]); }
+        ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+        ctx.beginPath(); ctx.moveTo(-S * 0.7, -S); ctx.lineTo(S * 0.7, 0); ctx.lineTo(-S * 0.7, S); ctx.stroke(); ctx.restore();
+        last = [x, y];
+      });
+      ctx.restore();
+    });
+  },
+};
+
 let registered = false;
 function ensure() {
   if (registered || typeof Chart === 'undefined') return;
-  Chart.register(markers, texLayer, curveLines, jumpDots);
+  Chart.register(markers, texLayer, curveLines, jumpDots, chevrons);
   if (typeof ChartZoom !== 'undefined') Chart.register(ChartZoom);
   Chart.defaults.font.family = "'Manrope', system-ui, sans-serif";
   Chart.defaults.font.size = 11;
@@ -397,8 +422,9 @@ export function drawDiagram(canvas, series, opts) {
     borderWidth: s.points ? 0 : (s.width ?? 2),
     borderDash: s.dash || [],
     showLine: !s.points,
-    pointRadius: s.points ? (s.pointRadius ?? 3) : 0,
+    pointRadius: 0,
     pointHoverRadius: 4,
+    chev: !!s.points,
     tension: 0, fill: false, borderJoin: 'round',
     // у сплошной линии без сглаживания Chart.js сводит точки одного пикселя по x в вертикальный отрезок,
     // и почти вертикальная кривая у нуля выходит ступенькой; монотонная интерполяция отключает этот режим

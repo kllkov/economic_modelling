@@ -305,6 +305,7 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .chart-legend > span { display: inline-flex; align-items: center; gap: 8px; }
 .chart-legend i { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid; }
 .chart-legend i.dash { border-top-style: dashed; }
+.chart-legend i.chev { display: inline-block; width: 13px; height: 13px; -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M3 1.5L8.5 6L3 10.5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat; mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M3 1.5L8.5 6L3 10.5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat; }
 .chart-legend i.dots { border-top-style: dotted; border-top-width: 3px; }
 .chart-legend i.dot { border-top-style: dotted; }
 .chart-legend .vmark { display: inline-flex; align-items: center; }
