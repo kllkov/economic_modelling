@@ -291,7 +291,7 @@ export function chartSpecs(st) {
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
-    { id: 'gy', title: 'Темп роста выпуска на работника', sym: 'g_{y,t}', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
+    { id: 'gy', title: 'Темп роста выпуска', sym: 'g_{y,t}', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta_{\\%}$ от s.s.' }
