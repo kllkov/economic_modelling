@@ -187,8 +187,21 @@ function axes(xTitleSize) {
 }
 const tooltipOpts = (title) => ({
   enabled: false, external: tooltip,
-  callbacks: { title, label: (it) => `${it.dataset.label}: ${fmtNum(it.parsed.y)}` },
+  callbacks: { title, label: (it) => `${it.dataset.label}${it.dataset.label.startsWith('$') ? ' = ' : ': '}${fmtNum(it.parsed.y)}` },
 });
+
+// Период полусходимости: момент, когда отклонение от стационарного значения ss впервые вдвое меньше начального.
+// В непрерывном времени момент уточняется линейной интерполяцией, в дискретном — первый такт. Возвращает { x, y } или null.
+export function halfLife(data, ss, discrete) {
+  const d0 = data[0][1] - ss;
+  if (!(Math.abs(d0) > 1e-9)) return null;
+  const i = data.findIndex(([, v]) => Math.abs(v - ss) <= Math.abs(d0) / 2);
+  if (i < 1) return null;
+  const y = ss + d0 / 2;
+  if (discrete) return { x: data[i][0], y: data[i][1] };
+  const [x0, v0] = data[i - 1], [x1, v1] = data[i], w = (y - v0) / (v1 - v0);
+  return { x: x0 + w * (x1 - x0), y };
+}
 
 /**
  * series: [{ data: [[x,y]...], label, kind: 'path' | 'base' }] — label может содержать формулы $…$

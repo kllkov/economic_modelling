@@ -7,7 +7,7 @@
 // Внутри счёт ведётся в x = K/(L·(1+g)^t) — капитал на работника, очищенный от базового тренда;
 // фактический уровень технологии относительно базового тренда — Ar(t) = E(t)/(1+g)^t.
 
-import { sample } from '../charts.js';
+import { sample, halfLife } from '../charts.js';
 
 const SHOCK_TARGETS = {
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
@@ -544,11 +544,16 @@ function convergenceBlock(st) {
   const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => `${v}_t`;
   const label = `$${kt}_0 = ${fmtTex(st.k0, 3)}$`, color = '#3d8acb';
   const e = tp ? 'на эфф. работника' : 'на работника';
-  const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: [{ label: `$${sym}$`, data: out[key], color, width: 2.6 }],
-    opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }] } });
+  const HL = '#7c62d8';
+  const mk = (title, sym, key, hl, unit) => {
+    const h = halfLife(out[key], hl, disc);
+    return { title, sym, unit, series: [{ label: `$${sym}$`, data: out[key], color, width: 2.6 }],
+      opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }], marksOnAxis: true,
+        vlines: h ? [{ x: h.x, yTo: h.y, color: HL, dash: [4, 4], label: `t_{1/2}=${fmtTex(h.x, disc ? 0 : 1)}` }] : [] } };
+  };
   return {
     title: 'Сходимость к стационару',
-    legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }],
+    legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }, { label: 'период полусходимости', color: HL, dash: true }],
     charts: [
       mk(`Капитал ${e}`, x(kt), 'k', ss.k, ''),
       mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),
