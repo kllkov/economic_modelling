@@ -455,7 +455,7 @@ function convergenceBlock(st) {
   const lbl = `$E^*_0\\pi_1 = ${fmtTex(st.pie0, 2)}\\%$`;
   const mk = (title, sym, key, hl) => ({
     title, sym, unit: '%',
-    series: [{ label: lbl, data: sim ? sim[key].map((v, j) => [j, v]) : [], color: '#3d8acb', width: 2.6 }],
+    series: [{ label: `$${sym}$`, data: sim ? sim[key].map((v, j) => [j, v]) : [], color: '#3d8acb', width: 2.6 }],
     opts: { xLabel: 't', xmin: 0, xmax: N, discrete: true, hlines: [{ y: hl, color: '#7d7ca5' }] },
   });
   return {

@@ -544,7 +544,7 @@ function convergenceBlock(st) {
   const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => `${v}_t`;
   const label = `$${kt}_0 = ${fmtTex(st.k0, 3)}$`, color = '#3d8acb';
   const e = tp ? 'на эфф. работника' : 'на работника';
-  const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: [{ label, data: out[key], color, width: 2.6 }],
+  const mk = (title, sym, key, hl, unit) => ({ title, sym, unit, series: [{ label: `$${sym}$`, data: out[key], color, width: 2.6 }],
     opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }] } });
   return {
     title: 'Сходимость к стационару',
