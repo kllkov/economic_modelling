@@ -424,8 +424,8 @@ export function formulas(s) {
   const cT = '{c_t}';
   const growthD = tp ? '(1+n)(1+g)' : '(1+n)';
   const growthC = tp ? '(n+g+\\delta)' : '(n+\\delta)';
-  const popLaw = D ? 'L_{t+1}=(1+n)\\cdot L_t' : '\\dot L_t/L_t=n';
-  const tpLaw = D ? 'E_{t+1}=(1+g)\\cdot E_t' : '\\dot E_t/E_t=g';
+  const popLaw = D ? 'L_{t+1}=(1+n)L_t' : '\\dot L_t/L_t=n';
+  const tpLaw = D ? 'E_{t+1}=(1+g)E_t' : '\\dot E_t/E_t=g';
   const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
 
   // целевая функция и дисконтирование в TVC
@@ -443,12 +443,12 @@ export function formulas(s) {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       ...(tp ? [
         `\\max_{\\{\\tilde c_t,\\,\\tilde b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`,
-        '\\text{s.t.}\\quad (1+n)(1+g)\\cdot \\tilde b_{t+1}=(1+r_t)\\cdot \\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
+        '\\text{s.t.}\\quad (1+n)(1+g)\\tilde b_{t+1}=(1+r_t)\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
         `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde b_t=0`,
       ] : [
         `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
-        '\\text{s.t.}\\quad (1+n)\\cdot b_{t+1}=(1+r_t)\\cdot b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot b_t=0`,
+        '\\text{s.t.}\\quad (1+n)b_{t+1}=(1+r_t)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}b_t=0`,
       ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -463,12 +463,12 @@ export function formulas(s) {
     fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
       ...(tp ? [
         `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}`,
-        '\\text{s.t.}\\quad \\dot{\\tilde b}_t=(r_t-n-g)\\cdot \\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
+        '\\text{s.t.}\\quad \\dot{\\tilde b}_t=(r_t-n-g)\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
         `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde b_t=0`,
       ] : [
         `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
-        '\\text{s.t.}\\quad \\dot b_t=(r_t-n)\\cdot b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot b_t=0`,
+        '\\text{s.t.}\\quad \\dot b_t=(r_t-n)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}b_t=0`,
       ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -486,19 +486,19 @@ export function formulas(s) {
     fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
       tp ? `\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`
          : `\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
-      tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\cdot \\tilde k_{t+1}=(1-\\delta)\\cdot \\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
-         : '\\text{s.t.}\\quad (1+n)\\cdot k_{t+1}=(1-\\delta)\\cdot k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
+      tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\tilde k_{t+1}=(1-\\delta)\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
+         : '\\text{s.t.}\\quad (1+n)k_{t+1}=(1-\\delta)k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
       tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_{t+1}\\cdot \\tilde k_{t+1}=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot k_{t+1}=0`,
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}k_{t+1}=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
     fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
       tp ? `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}` : `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
-      tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}_t=\\tilde k_t^{\\alpha}-\\tilde c_t-(n+g+\\delta)\\cdot \\tilde k_t,\\qquad \\tilde k_0\\ \\text{задано}'
-         : '\\text{s.t.}\\quad \\dot k_t=k_t^{\\alpha}-c_t-(n+\\delta)\\cdot k_t,\\qquad k_0>0\\ \\text{задано}',
+      tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}_t=\\tilde k_t^{\\alpha}-\\tilde c_t-(n+g+\\delta)\\tilde k_t,\\qquad \\tilde k_0\\ \\text{задано}'
+         : '\\text{s.t.}\\quad \\dot k_t=k_t^{\\alpha}-c_t-(n+\\delta)k_t,\\qquad k_0>0\\ \\text{задано}',
       tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde k_t=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}\\cdot k_t=0`,
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}k_t=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
@@ -512,17 +512,17 @@ export function formulas(s) {
     const Bt = mill ? '\\dfrac{\\beta}{1+n}' : '\\beta';
     const BtN = n4(mill ? s.beta / (1 + nn) : s.beta);
     // децентрализованная версия: правая часть через r_{t+1} (подстановка r — в строке FOC фирмы)
-    const R = cen ? `${Bt}\\left(${mpk}+1-\\delta\\right)` : `${Bt}\\cdot (1+r_{t+1})`;
+    const R = cen ? `${Bt}\\left(${mpk}+1-\\delta\\right)` : `${Bt}(1+r_{t+1})`;
     const RN = `${BtN}\\left(${mpkN}${pm(1 - d)}\\right)`;
     if (ut === 'cara') {
-      euler = `e^{\\theta\\cdot (c_{t+1}-c_t)}=${R}`;
-      eulerN = `e^{${n4(s.theta)}\\cdot (c_{t+1}-c_t)}=${RN}`;
+      euler = `e^{\\theta(c_{t+1}-c_t)}=${R}`;
+      eulerN = `e^{${n4(s.theta)}(c_{t+1}-c_t)}=${RN}`;
     } else {
       const ratio = tp ? '\\dfrac{\\tilde c_{t+1}}{\\tilde c_t}' : '\\dfrac{c_{t+1}}{c_t}';
       const growth = tp ? (ut === 'log' ? '(1+g)' : '(1+g)^{\\sigma}') : '';
       const growthN = tp ? `${n4(1 + g)}${ut === 'log' ? '' : `^{${n4(sig)}}`}` : '';
-      euler = ut === 'log' ? `${growth ? `${growth}\\cdot ` : ''}${ratio}=${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${R}`;
-      eulerN = ut === 'log' ? `${growthN ? `${growthN}\\cdot ` : ''}${ratio}=${RN}` : `${growthN}\\left(${ratio}\\right)^{${n4(sig)}}=${RN}`;
+      euler = ut === 'log' ? `${growth}${ratio}=${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${R}`;
+      eulerN = ut === 'log' ? `${growthN}${ratio}=${RN}` : `${growthN}\\left(${ratio}\\right)^{${n4(sig)}}=${RN}`;
     }
   } else {
     const k = `${tl('k')}_t`;
@@ -546,7 +546,7 @@ export function formulas(s) {
 
   if (!cen) {
     const k = `${tl('k')}_t`, r = 'r_t', w = 'w_t';
-    const wl = tp ? 'w_t=(1-\\alpha)\\cdot E_t\\cdot ' : `${w}=(1-\\alpha)\\cdot `;
+    const wl = tp ? 'w_t=(1-\\alpha)E_t\\cdot ' : `${w}=(1-\\alpha)`;
     const wlN = tp ? `w_t=${n4(1 - a)}\\cdot E_t\\cdot ` : `${w}=${n4(1 - a)}\\cdot `;
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
       tex: `${r}=\\alpha\\cdot ${k}^{\\alpha-1}-\\delta,\\qquad ${wl}${k}^{\\alpha}`,
@@ -558,10 +558,10 @@ export function formulas(s) {
   {
     const k = tl('k'), c = tl('c');
     if (D) {
-      accum = `${growthD}\\cdot ${k}_{t+1}=(1-\\delta)\\cdot ${k}_t+${k}_t^{\\alpha}-${c}_t`;
+      accum = `${growthD}${k}_{t+1}=(1-\\delta)${k}_t+${k}_t^{\\alpha}-${c}_t`;
       accumN = `${n4((1 + nn) * (1 + g))}\\cdot ${k}_{t+1}=${n4(1 - d)}\\cdot ${k}_t+${k}_t^{${n4(a)}}-${c}_t`;
     } else {
-      accum = `\\dot{${k}}_t=${k}_t^{\\alpha}-${c}_t-${growthC}\\cdot ${k}_t`;
+      accum = `\\dot{${k}}_t=${k}_t^{\\alpha}-${c}_t-${growthC}${k}_t`;
       accumN = `\\dot{${k}}_t=${k}_t^{${n4(a)}}-${c}_t-${n4(nn + g + d)}\\cdot ${k}_t`;
     }
   }
@@ -576,7 +576,7 @@ export function formulas(s) {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prof}\\big)`;
     shockNum = `\\varphi=${n4(s.shockSize / 100)}`;
   } else if (tg === 'k') {
-    shockTex = 'k_{\\hat t}=(1+\\varphi_k)\\cdot k_{\\hat t}^{-}';
+    shockTex = 'k_{\\hat t}=(1+\\varphi_k)k_{\\hat t}^{-}';
     shockNum = `\\varphi_k=${n4(s.shockSize / 100)}`;
   } else {
     const sym = { beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta', delta: '\\delta', n: 'n' }[tg];

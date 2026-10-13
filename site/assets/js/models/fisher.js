@@ -143,7 +143,7 @@ function checkConstants(s, r, beta, rho, sig, th, label) {
   } else if (D) {
     const gamma = Math.pow(beta * (1 + r), 1 / sig);
     if (!(gamma < 1 + r)) errs.push(`${label}нужно $[\\beta(1+r)]^{1/\\sigma} < 1+r$, иначе домохозяйство бесконечно откладывает потребление.`);
-  } else if (!(rho - (1 - sig) * r > 0)) errs.push(`${label}нужно $\\rho > (1-\\sigma)\\cdot r$, иначе домохозяйство бесконечно откладывает потребление.`);
+  } else if (!(rho - (1 - sig) * r > 0)) errs.push(`${label}нужно $\\rho > (1-\\sigma)r$, иначе домохозяйство бесконечно откладывает потребление.`);
   return errs;
 }
 
@@ -337,11 +337,11 @@ export function formulas(s) {
 
   const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}\\cdot e^{-\\theta ${c}}`);
   const cT = '{c_t}';
-  const wLaw = D ? (grow ? 'w_t=w_0\\cdot (1+g_w)^t' : 'w_t=w') : (grow ? 'w_t=w_0\\cdot e^{g_w t}' : 'w_t=w');
+  const wLaw = D ? (grow ? 'w_t=w_0(1+g_w)^t' : 'w_t=w') : (grow ? 'w_t=w_0\\cdot e^{g_w t}' : 'w_t=w');
 
   fs.problem.push({ agent: 'Домохозяйство', system: true, items: D ? [
     `\\max_{\\{c_t\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\cdot ${U(cT)}`,
-    '\\text{s.t.}\\quad b_{t+1}=(1+r)\\cdot b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
+    '\\text{s.t.}\\quad b_{t+1}=(1+r)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
     '\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\dfrac{b_t}{(1+r)^t}=0',
   ] : [
     `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\cdot ${U(cT)}\\,dt`,
@@ -376,8 +376,8 @@ export function formulas(s) {
   let H, budget, Wtex;
   if (D) {
     H = s.w * (1 + r) / (r - gw);
-    budget = '\\sum_{t=0}^{\\infty}\\dfrac{c_t}{(1+r)^t}=(1+r)\\cdot b_0+\\sum_{t=0}^{\\infty}\\dfrac{w_t}{(1+r)^t}\\equiv W_0';
-    Wtex = grow ? `W_0=(1+r)\\cdot b_0+\\dfrac{w_0(1+r)}{r-g_w}` : 'W_0=(1+r)\\cdot b_0+\\dfrac{w(1+r)}{r}';
+    budget = '\\sum_{t=0}^{\\infty}\\dfrac{c_t}{(1+r)^t}=(1+r)b_0+\\sum_{t=0}^{\\infty}\\dfrac{w_t}{(1+r)^t}\\equiv W_0';
+    Wtex = grow ? `W_0=(1+r)b_0+\\dfrac{w_0(1+r)}{r-g_w}` : 'W_0=(1+r)b_0+\\dfrac{w(1+r)}{r}';
   } else {
     H = s.w / (r - gw);
     budget = '\\int_0^{\\infty}e^{-rt}c_t\\,dt=b_0+\\int_0^{\\infty}e^{-rt}w_t\\,dt\\equiv W_0';
@@ -418,7 +418,7 @@ export function formulas(s) {
       const gm = Math.pow(s.beta * (1 + r), 1 / sig);
       fs.ss = [
         ...(ut === 'log' ? [] : [{ tex: '\\gamma=\\big[\\beta(1+r)\\big]^{1/\\sigma}', num: `\\gamma=${n4(gm)}` }]),
-        { tex: ut === 'log' ? 'c_0=(1-\\beta)\\cdot W_0' : 'c_0=\\Big(1-\\dfrac{\\gamma}{1+r}\\Big)W_0',
+        { tex: ut === 'log' ? 'c_0=(1-\\beta)W_0' : 'c_0=\\Big(1-\\dfrac{\\gamma}{1+r}\\Big)W_0',
           num: `c_0=${n4((1 - gm / (1 + r)) * W)}` },
       ];
     }
@@ -427,7 +427,7 @@ export function formulas(s) {
     fs.ss = [{ tex: 'c_0=r\\cdot W_0-\\dfrac{\\Delta}{r},\\qquad \\Delta=\\dfrac{r-\\rho}{\\theta}', num: `c_0=${n4(r * W - dl / r)}` }];
   } else {
     const mpc = (s.rho - (1 - sig) * r) / sig;
-    fs.ss = [{ tex: ut === 'log' ? 'c_0=\\rho\\cdot W_0' : 'c_0=\\dfrac{\\rho-(1-\\sigma)\\cdot r}{\\sigma}\\cdot W_0', num: `c_0=${n4(mpc * W)}` }];
+    fs.ss = [{ tex: ut === 'log' ? 'c_0=\\rho\\cdot W_0' : 'c_0=\\dfrac{\\rho-(1-\\sigma)r}{\\sigma}\\cdot W_0', num: `c_0=${n4(mpc * W)}` }];
   }
   fs.ss.unshift({ tex: Wtex, num: `W_0=${n4(W)}` });
   return fs;

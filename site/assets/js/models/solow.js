@@ -324,21 +324,21 @@ export function formulas(st) {
   fs.systemTitle = 'Уравнения динамики';
   fs.ssTitle = 'Траектория сбалансированного роста';
 
-  const popLaw = D ? 'L_{t+1}=(1+n)\\cdot L_t' : '\\dot L_t/L_t=n';
-  const tpLaw = D ? 'E_{t+1}=(1+g)\\cdot E_t' : '\\dot E_t/E_t=g';
+  const popLaw = D ? 'L_{t+1}=(1+n)L_t' : '\\dot L_t/L_t=n';
+  const tpLaw = D ? 'E_{t+1}=(1+g)E_t' : '\\dot E_t/E_t=g';
   const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
 
   // ── децентрализованная
   const [kk0, cc0, yy0, bb0, ww0] = tp ? ['\\tilde k', '\\tilde c', '\\tilde y', '\\tilde b', '\\tilde w'] : ['k', 'c', 'y', 'b', 'w'];
   const budget = D
-    ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\cdot ${bb0}_{t+1}=(1+r_t)\\cdot ${bb0}_t+${ww0}_t-${cc0}_t`
-    : `\\dot{${bb0}}_t=(r_t-n${tp ? '-g' : ''})\\cdot ${bb0}_t+${ww0}_t-${cc0}_t`;
+    ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\cdot ${bb0}_{t+1}=(1+r_t)${bb0}_t+${ww0}_t-${cc0}_t`
+    : `\\dot{${bb0}}_t=(r_t-n${tp ? '-g' : ''})${bb0}_t+${ww0}_t-${cc0}_t`;
   fs.dec.push({ agent: 'Фирмы', items: [
     tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
        : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
   ] });
   fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-    `${cc0}_t=(1-s)\\cdot ${yy0}_t,\\qquad 0<s<1\\ \\text{задана экзогенно}`,
+    `${cc0}_t=(1-s)${yy0}_t,\\qquad 0<s<1\\ \\text{задана экзогенно}`,
     `${budget},\\qquad ${bb0}_0\\ \\text{задано}`,
   ] });
   fs.dec.push({ agent: 'Рынки', items: [`${bb0}_t=${kk0}_t\\quad\\text{(рынок капитала)}`] });
@@ -355,8 +355,8 @@ export function formulas(st) {
     fs.cen.push({ agent: 'Балансовые условия', items: [
       `${yy}_t=${kk}_t^{\\alpha}`,
       `${yy}_t=${cc}_t+${ii}_t,\\qquad ${ii}_t=s\\cdot ${yy}_t`,
-      D ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\cdot ${kk}_{t+1}=(1-\\delta)\\cdot ${kk}_t+${ii}_t,\\qquad ${kk}_0\\ \\text{задано}`
-        : `\\dot{${kk}}_t=${ii}_t-${growth}\\cdot ${kk}_t,\\qquad ${kk}_0\\ \\text{задано}`,
+      D ? `${tp ? '(1+n)(1+g)' : '(1+n)'}\\cdot ${kk}_{t+1}=(1-\\delta)${kk}_t+${ii}_t,\\qquad ${kk}_0\\ \\text{задано}`
+        : `\\dot{${kk}}_t=${ii}_t-${growth}${kk}_t,\\qquad ${kk}_0\\ \\text{задано}`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
@@ -366,7 +366,7 @@ export function formulas(st) {
   if (D) {
     const lhs = tp ? '(1+n)(1+g)' : '(1+n)';
     fs.system.push({ label: 'Основное уравнение динамики',
-      tex: `${lhs}\\cdot ${k}_{t+1}=(1-\\delta)\\cdot ${k}_t+s\\cdot ${k}_t^{\\alpha}`,
+      tex: `${lhs}\\cdot ${k}_{t+1}=(1-\\delta)${k}_t+s\\cdot ${k}_t^{\\alpha}`,
       num: `${n4((1 + nn) * (1 + g))}\\cdot ${k}_{t+1}=${n4(1 - d)}\\cdot ${k}_t+${n4(sv)}\\cdot ${k}_t^{${n4(a)}}` });
   } else {
     fs.system.push({ label: 'Основное уравнение динамики',
@@ -376,13 +376,13 @@ export function formulas(st) {
   if (!cen) {
     const kk = `${k}_t`, r = 'r_t', w = 'w_t', Et = tp ? 'E_t\\cdot ' : '';
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
-      tex: `${r}=\\alpha\\cdot ${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)\\cdot ${Et}${kk}^{\\alpha}`,
+      tex: `${r}=\\alpha\\cdot ${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)${Et}${kk}^{\\alpha}`,
       num: `${r}=${n4(a)}\\cdot ${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}\\cdot ${Et}${kk}^{${n4(a)}}` });
   }
   {
     const kk = `${k}_t`, cc = `${c}_t`, iv = `${ii}_t`;
     fs.system.push({ label: 'Потребление и инвестиции',
-      tex: `${cc}=(1-s)\\cdot ${kk}^{\\alpha},\\qquad ${iv}=s\\cdot ${kk}^{\\alpha}`,
+      tex: `${cc}=(1-s)${kk}^{\\alpha},\\qquad ${iv}=s\\cdot ${kk}^{\\alpha}`,
       num: `${cc}=${n4(1 - sv)}\\cdot ${kk}^{${n4(a)}},\\qquad ${iv}=${n4(sv)}\\cdot ${kk}^{${n4(a)}}` });
   }
 
@@ -395,7 +395,7 @@ export function formulas(st) {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
     shockNum = `\\varphi=${n4(st.shockSize / 100)}`;
   } else if (tg === 'k') {
-    shockTex = 'K_{\\hat t}=(1+\\varphi_k)\\cdot K_{\\hat t}^{-}';
+    shockTex = 'K_{\\hat t}=(1+\\varphi_k)K_{\\hat t}^{-}';
     shockNum = `\\varphi_k=${n4(st.shockSize / 100)}`;
   } else {
     const sym = { s: 's', n: 'n', g: 'g', delta: '\\delta' }[tg];
@@ -495,8 +495,8 @@ function diagramBlock(st, res) {
   const depLabel = (prime) => {
     const p = (sym, key) => sym + (prime === key ? '^{\\prime}' : '');
     const n = p('n', 'n'), g = p('g', 'g'), d = p('\\delta', 'delta');
-    if (D && tp) return `\\big[(1+${n})(1+${g})-1+${d}\\big]\\cdot ${kS}`;
-    return tp ? `(${n}+${g}+${d})\\cdot ${kS}` : `(${n}+${d})\\cdot ${kS}`;
+    if (D && tp) return `\\big[(1+${n})(1+${g})-1+${d}\\big]${kS}`;
+    return tp ? `(${n}+${g}+${d})${kS}` : `(${n}+${d})${kS}`;
   };
   const sChanged = Math.abs(P1.s - P0.s) > 1e-12;
   const depChanged = Math.abs(ss1.dep - ss0.dep) > 1e-12;
