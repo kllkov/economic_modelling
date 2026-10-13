@@ -447,13 +447,14 @@ function run() {
   const xmax = state.horizon;
   const pairs = (ys) => res.t.map((t, i) => [t, ys[i]]);
   for (const sp of specs) {
+    const titleOf = (u) => (u !== 'agg' && sp.wTitle) || sp.title;
     const symOf = (u) => (u === 'eff' ? sp.sym.replace(/^([a-z])/, '\\tilde $1') : u === 'agg' ? sp.aggSym : sp.sym);
     if (shownIn(view.irfUnits, sp) && !sp.noIrf) {
       const uI = unitFor(view.irfUnits, sp);
       const irfY = seriesOf(res, sp, uI).irf;
       const c1 = el('canvas');
       irfGrid.append(el('div', { class: 'chart-card' },
-        el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
+        el('div', { class: 'ct' }, el('span', {}, `${titleOf(uI)}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
         el('div', { class: 'chart-box' }, c1)));
       current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('%') ? '$\\Delta_{\\%}$' : '$\\Delta$', data: pairs(irfY) }],
         { discrete, zero: true, lines, xmax }));
@@ -466,7 +467,7 @@ function run() {
     const sym = symOf(uL);
     const c2 = el('canvas');
     lvlGrid.append(el('div', { class: 'chart-card' },
-      el('div', { class: 'ct' }, el('span', {}, `${sp.title}, `, texInline(sym)), el('span', { class: 'u' }, unit)),
+      el('div', { class: 'ct' }, el('span', {}, `${titleOf(uL)}, `, texInline(sym)), el('span', { class: 'u' }, unit)),
       el('div', { class: 'chart-box' }, c2)));
     const positive = y.every((v) => v > 0) && b.every((v) => v > 0);
     current.charts.push(drawChart(c2, [

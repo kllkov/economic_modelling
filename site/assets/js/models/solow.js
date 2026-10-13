@@ -287,7 +287,7 @@ export function chartSpecs(st) {
   const specs = [
     ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
     ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
-    { id: 'k', title: 'Капитал', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
+    { id: 'k', title: 'Капитал', wTitle: 'Капиталовооружённость', sym: x('k'), aggSym: x('K'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
