@@ -412,7 +412,7 @@ export function formulas(s) {
       const dl = Math.log(s.beta * (1 + r)) / s.theta;
       fs.ss = [
         { tex: '\\Delta=\\dfrac{\\ln\\big[\\beta(1+r)\\big]}{\\theta}', num: `\\Delta=${n4(dl)}` },
-        { tex: 'c_0=\\dfrac{r}{1+r}\\cdot W_0-\\dfrac{\\Delta}{r}', num: `c_0=${n4((r / (1 + r)) * W - dl / r)}` },
+        { tex: 'c_0=\\dfrac{r}{1+r}W_0-\\dfrac{\\Delta}{r}', num: `c_0=${n4((r / (1 + r)) * W - dl / r)}` },
       ];
     } else {
       const gm = Math.pow(s.beta * (1 + r), 1 / sig);
@@ -427,7 +427,7 @@ export function formulas(s) {
     fs.ss = [{ tex: 'c_0=r\\cdot W_0-\\dfrac{\\Delta}{r},\\qquad \\Delta=\\dfrac{r-\\rho}{\\theta}', num: `c_0=${n4(r * W - dl / r)}` }];
   } else {
     const mpc = (s.rho - (1 - sig) * r) / sig;
-    fs.ss = [{ tex: ut === 'log' ? 'c_0=\\rho\\cdot W_0' : 'c_0=\\dfrac{\\rho-(1-\\sigma)r}{\\sigma}\\cdot W_0', num: `c_0=${n4(mpc * W)}` }];
+    fs.ss = [{ tex: ut === 'log' ? 'c_0=\\rho\\cdot W_0' : 'c_0=\\dfrac{\\rho-(1-\\sigma)r}{\\sigma}W_0', num: `c_0=${n4(mpc * W)}` }];
   }
   fs.ss.unshift({ tex: Wtex, num: `W_0=${n4(W)}` });
   return fs;

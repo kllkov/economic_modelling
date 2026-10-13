@@ -367,23 +367,23 @@ export function formulas(st) {
     const lhs = tp ? '(1+n)(1+g)' : '(1+n)';
     fs.system.push({ label: 'Основное уравнение динамики',
       tex: `${lhs}\\cdot ${k}_{t+1}=(1-\\delta)${k}_t+s\\cdot ${k}_t^{\\alpha}`,
-      num: `${n4((1 + nn) * (1 + g))}\\cdot ${k}_{t+1}=${n4(1 - d)}\\cdot ${k}_t+${n4(sv)}\\cdot ${k}_t^{${n4(a)}}` });
+      num: `${n4((1 + nn) * (1 + g))}${k}_{t+1}=${n4(1 - d)}${k}_t+${n4(sv)}${k}_t^{${n4(a)}}` });
   } else {
     fs.system.push({ label: 'Основное уравнение динамики',
       tex: `\\dot{${k}}_t=s\\cdot ${k}_t^{\\alpha}-${tp ? '(n+g+\\delta)' : '(n+\\delta)'}\\cdot ${k}_t`,
-      num: `\\dot{${k}}_t=${n4(sv)}\\cdot ${k}_t^{${n4(a)}}-${n4(nn + g + d)}\\cdot ${k}_t` });
+      num: `\\dot{${k}}_t=${n4(sv)}${k}_t^{${n4(a)}}-${n4(nn + g + d)}${k}_t` });
   }
   if (!cen) {
     const kk = `${k}_t`, r = 'r_t', w = 'w_t', Et = tp ? 'E_t\\cdot ' : '';
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
       tex: `${r}=\\alpha\\cdot ${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)${Et}${kk}^{\\alpha}`,
-      num: `${r}=${n4(a)}\\cdot ${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}\\cdot ${Et}${kk}^{${n4(a)}}` });
+      num: `${r}=${n4(a)}${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}${Et}${kk}^{${n4(a)}}` });
   }
   {
     const kk = `${k}_t`, cc = `${c}_t`, iv = `${ii}_t`;
     fs.system.push({ label: 'Потребление и инвестиции',
       tex: `${cc}=(1-s)${kk}^{\\alpha},\\qquad ${iv}=s\\cdot ${kk}^{\\alpha}`,
-      num: `${cc}=${n4(1 - sv)}\\cdot ${kk}^{${n4(a)}},\\qquad ${iv}=${n4(sv)}\\cdot ${kk}^{${n4(a)}}` });
+      num: `${cc}=${n4(1 - sv)}${kk}^{${n4(a)}},\\qquad ${iv}=${n4(sv)}${kk}^{${n4(a)}}` });
   }
 
   // ── шок

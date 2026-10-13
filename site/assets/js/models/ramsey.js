@@ -506,7 +506,7 @@ export function formulas(s) {
   // ── итоговая система (с подставленными функциями) и та же система в числах
   const K1 = D ? `${tl('k')}_{t+1}` : `${tl('k')}_t`;
   const mpk = `\\alpha\\cdot ${K1}^{\\alpha-1}`;
-  const mpkN = `${n4(a)}\\cdot ${K1}^{${n4(a - 1)}}`;
+  const mpkN = `${n4(a)}${K1}^{${n4(a - 1)}}`;
   let euler, eulerN;
   if (D) {
     const Bt = mill ? '\\dfrac{\\beta}{1+n}' : '\\beta';
@@ -533,7 +533,7 @@ export function formulas(s) {
     const preNum = `r_t-\\rho${nTerm}${gTerm}`;
     const num = `\\alpha\\cdot ${k}^{\\alpha-1}-\\delta-\\rho${nTerm}${gTerm}`;
     const cst = d + s.rho + (mill ? nn : 0) + (ut === 'cara' ? 0 : sig * g);
-    const numN = `${n4(a)}\\cdot ${k}^{${n4(a - 1)}}${pm(-cst)}`;
+    const numN = `${n4(a)}${k}^{${n4(a - 1)}}${pm(-cst)}`;
     if (ut === 'log') {
       euler = `${lhs}=${cen ? num : preNum}`;
       eulerN = `${lhs}=${numN}`;
@@ -547,10 +547,10 @@ export function formulas(s) {
   if (!cen) {
     const k = `${tl('k')}_t`, r = 'r_t', w = 'w_t';
     const wl = tp ? 'w_t=(1-\\alpha)E_t\\cdot ' : `${w}=(1-\\alpha)`;
-    const wlN = tp ? `w_t=${n4(1 - a)}\\cdot E_t\\cdot ` : `${w}=${n4(1 - a)}\\cdot `;
+    const wlN = tp ? `w_t=${n4(1 - a)}E_t\\cdot ` : `${w}=${n4(1 - a)}`;
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
       tex: `${r}=\\alpha\\cdot ${k}^{\\alpha-1}-\\delta,\\qquad ${wl}${k}^{\\alpha}`,
-      num: `${r}=${n4(a)}\\cdot ${k}^{${n4(a - 1)}}${pm(-d)},\\qquad ${wlN}${k}^{${n4(a)}}`,
+      num: `${r}=${n4(a)}${k}^{${n4(a - 1)}}${pm(-d)},\\qquad ${wlN}${k}^{${n4(a)}}`,
     });
   }
 
@@ -559,10 +559,10 @@ export function formulas(s) {
     const k = tl('k'), c = tl('c');
     if (D) {
       accum = `${growthD}${k}_{t+1}=(1-\\delta)${k}_t+${k}_t^{\\alpha}-${c}_t`;
-      accumN = `${n4((1 + nn) * (1 + g))}\\cdot ${k}_{t+1}=${n4(1 - d)}\\cdot ${k}_t+${k}_t^{${n4(a)}}-${c}_t`;
+      accumN = `${n4((1 + nn) * (1 + g))}${k}_{t+1}=${n4(1 - d)}${k}_t+${k}_t^{${n4(a)}}-${c}_t`;
     } else {
       accum = `\\dot{${k}}_t=${k}_t^{\\alpha}-${c}_t-${growthC}${k}_t`;
-      accumN = `\\dot{${k}}_t=${k}_t^{${n4(a)}}-${c}_t-${n4(nn + g + d)}\\cdot ${k}_t`;
+      accumN = `\\dot{${k}}_t=${k}_t^{${n4(a)}}-${c}_t-${n4(nn + g + d)}${k}_t`;
     }
   }
   fs.system.push({ label: cen ? 'Ресурсное ограничение' : 'Динамика капитала (бюджет + рынок + FOC фирмы)', tex: accum, num: accumN });
