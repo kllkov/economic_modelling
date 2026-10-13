@@ -39,6 +39,8 @@ function texItem(chart, key, src, cls = '') {
   it.used = true;
   return it.node;
 }
+// холст растровый, а формулы — HTML (векторные): рисуем с запасом по плотности, чтобы текст на осях не был мутнее формул
+const DPR = Math.max(globalThis.devicePixelRatio || 1, 3);
 const place = (node, x, y, color) => {
   node.style.left = `${x}px`; node.style.top = `${y}px`;
   if (color) node.style.color = color;
@@ -267,7 +269,7 @@ export function drawChart(canvas, series, opts) {
     data: { datasets },
     options: {
       animation: false,
-      responsive: true,
+      responsive: true, devicePixelRatio: DPR,
       maintainAspectRatio: false,
       parsing: false,
       normalized: true,
@@ -445,7 +447,7 @@ export function drawDiagram(canvas, series, opts) {
     type: 'line',
     data: { datasets },
     options: {
-      animation: false, responsive: true, maintainAspectRatio: false, parsing: false, normalized: true,
+      animation: false, responsive: true, devicePixelRatio: DPR, maintainAspectRatio: false, parsing: false, normalized: true,
       interaction: { mode: 'nearest', intersect: false },
       layout: { padding: { top: 8, right: 8 } },
       scales: sc,
