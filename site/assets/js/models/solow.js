@@ -11,7 +11,7 @@ import { sample, halfLife } from '../charts.js';
 
 const SHOCK_TARGETS = {
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
-  k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -30, step: 1 },
+  k:     { label: 'Капиталовооружённость $k_t$', kind: 'state', unit: '%', def: -30, step: 1 },
   s:     { label: 'Норма сбережения $s$', kind: 'param', unit: 'Δ', def: 0.05, step: 0.01 },
   n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
   g:     { label: 'Темп роста технологии $g$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, variant: 'tp' },
@@ -442,13 +442,13 @@ export function steadyTable(st, res) {
   const e = tp ? 'на эфф. работника' : 'на работника';
   const k = tp ? '\\tilde k' : 'k';
   const rows = [
-    { sym: `${k}^*`, name: `капитал ${e}`, key: 'k' },
+    { sym: `${k}^*`, name: `капиталовооружённость${tp ? ' на эфф. работника' : ''}`, key: 'k' },
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
     { sym: tp ? '\\tilde i^*' : 'i^*', name: `инвестиции ${e}`, key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
     { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
     { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
-    { sym: `${k}_{GR}`, name: `капитал ${e} по золотому правилу`, key: 'kGR' },
+    { sym: `${k}_{GR}`, name: `капиталовооружённость${tp ? ' на эфф. работника' : ''} по золотому правилу`, key: 'kGR' },
     { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: `потребление ${e} по золотому правилу`, key: 'cGR' },
   ];
   const v = (ss, r) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key], 3));
@@ -555,7 +555,7 @@ function convergenceBlock(st) {
     title: 'Сходимость к стационару',
     legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }, { label: 'период полусходимости', color: HL, dots: true }],
     charts: [
-      mk(`Капитал ${e}`, x(kt), 'k', ss.k, ''),
+      mk(`Капиталовооружённость${tp ? ' на эфф. работника' : ''}`, x(kt), 'k', ss.k, ''),
       mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),
       mk(`Потребление ${e}`, x(ct), 'c', ss.c, ''),
       mk('Темп роста выпуска на работника', 'g_{y,t}', 'gy', 100 * g0, '%'),

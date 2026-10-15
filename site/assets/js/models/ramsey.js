@@ -13,7 +13,7 @@ const MIT_NOTE = 'Только неожиданный перманентный: 
 
 const SHOCK_TARGETS = {
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
-  k:     { label: 'Капитал $k_t$', kind: 'state', unit: '%', def: -20, step: 1 },
+  k:     { label: 'Капиталовооружённость $k_t$', kind: 'state', unit: '%', def: -20, step: 1 },
   n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
   beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete' },
   rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous' },
@@ -213,7 +213,7 @@ function validate(s) {
   if (s.shockTiming === 'expected' && !(s.t0 < s.tHat))
     errors.push('Для ожидаемого шока момент объявления $t_0$ должен быть раньше $\\hat t$.');
   if (s.shockTarget === 'tfp' && s.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
-  if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капитал не может упасть больше чем на 100%.');
+  if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капиталовооружённость не может упасть больше чем на 100%.');
   if (s.shockTarget === 'tfp' && s.shockSize <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
   return errors;
 }
@@ -625,7 +625,7 @@ export function steadyTable(s, res) {
     ? (tp ? `инвестиции ${e} $[(1+n)(1+g)-1+\\delta]\\tilde k^*$` : `инвестиции ${e} $(n+\\delta)k^*$`)
     : (tp ? `инвестиции ${e} $(n+g+\\delta)\\tilde k^*$` : `инвестиции ${e} $(n+\\delta)k^*$`);
   const rows = [
-    { sym: tp ? '\\tilde k^*' : 'k^*', name: `капитал ${e}`, key: 'k' },
+    { sym: tp ? '\\tilde k^*' : 'k^*', name: `капиталовооружённость${tp ? ' на эфф. работника' : ''}`, key: 'k' },
     { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
     { sym: tp ? '\\tilde i^*' : 'i^*', name: invName, key: 'i' },
     { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
