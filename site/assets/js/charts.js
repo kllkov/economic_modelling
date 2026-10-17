@@ -3,16 +3,17 @@
 // не на холсте, а HTML-слоем поверх него через KaTeX.
 /* global Chart, ChartZoom */
 import { texInline, rich } from './tex.js';
+import { isDark } from './theme.js';
 
-export const COLORS = {
-  path: '#3d8acb',
-  base: '#aaa3dd',
-  shock: '#7c62d8',
-  announce: '#b09cf5',
-  zero: '#cdd1f0',
-  grid: '#eef0fa',
-  tick: '#7d7ca5',
-};
+const LIGHT = { path: '#3d8acb', base: '#aaa3dd', shock: '#7c62d8', announce: '#b09cf5', zero: '#cdd1f0', grid: '#eef0fa', tick: '#7d7ca5', surface: '#ffffff' };
+const DARK = { path: '#a9abd6', base: '#7e7fa8', shock: '#f4acc4', announce: '#f29fbb', zero: '#3a3d62', grid: '#141a44', tick: '#8d8cab', surface: '#060a30' };
+// цвета холста зависят от темы; читаются в момент отрисовки
+export const COLORS = new Proxy({}, { get: (_, k) => (isDark() ? DARK : LIGHT)[k] });
+// светлые цвета моделей (кривые, подписи) → их аналоги в тёмной теме
+const DARK_MAP = { '#3d8acb': '#a9abd6', '#2a6aa3': '#a9abd6', '#3f8fd6': '#a9abd6', '#86c2f0': '#cfd0ea', '#86cdf5': '#cfd0ea', '#5aa9e6': '#9a9cc9',
+  '#7c62d8': '#f4acc4', '#c2b2f7': '#f9d2e0', '#b09cf5': '#f29fbb', '#463687': '#f6c77d', '#7d7ca5': '#8d8cab', '#23214a': '#f0edf5', '#e4e6f7': '#212337' };
+export const tc = (c) => (isDark() ? DARK_MAP[c] || c : c);
+export const tcMap = (o) => new Proxy(o, { get: (t, k) => (typeof t[k] === 'string' ? tc(t[k]) : t[k]) });
 
 // ───────────── HTML-слой с формулами поверх холста ─────────────
 // Элементы создаются один раз и переиспользуются при перерисовке (например, при изменении размера окна).
@@ -125,7 +126,7 @@ const jumpDots = {
         const py = scales.y.getPixelForValue(y);
         if (py < a.top - r || py > a.bottom + r) continue;
         ctx.beginPath(); ctx.arc(px, py, r, 0, 2 * Math.PI);
-        ctx.fillStyle = open ? '#fff' : j.color; ctx.strokeStyle = j.color; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = open ? COLORS.surface : j.color; ctx.strokeStyle = j.color; ctx.fill(); ctx.stroke();
       }
     }
     ctx.restore();
@@ -461,7 +462,7 @@ export function drawDiagram(canvas, series, opts) {
           // как в Plotly: рамка мышью увеличивает область, колесо и щипок масштабируют, Shift + перетаскивание сдвигает
           zoom: {
             wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy', onZoomComplete: onDone,
-            drag: { enabled: true, backgroundColor: 'rgba(124, 98, 216, .12)', borderColor: '#7c62d8', borderWidth: 1 },
+            drag: { enabled: true, backgroundColor: 'rgba(124, 98, 216, .12)', borderColor: tc('#7c62d8'), borderWidth: 1 },
           },
           pan: { enabled: true, mode: 'xy', modifierKey: 'shift', onPanComplete: onDone },
         } : undefined,

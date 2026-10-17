@@ -7,7 +7,7 @@
 // Внутри счёт ведётся в x = K/(L·(1+g)^t) — капитал на работника, очищенный от базового тренда;
 // фактический уровень технологии относительно базового тренда — Ar(t) = E(t)/(1+g)^t.
 
-import { sample, halfLife } from '../charts.js';
+import { sample, halfLife, tc, tcMap } from '../charts.js';
 
 const SHOCK_TARGETS = {
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
@@ -460,10 +460,10 @@ export function steadyTable(st, res) {
 
 // ───────────── Дополнительные блоки: основная диаграмма и сходимость ─────────────
 
-const DC = {
+const DC = tcMap({
   f: '#463687', sf0: '#3d8acb', sf1: '#86c2f0', dep0: '#7c62d8', dep1: '#c2b2f7',
   ss0: '#7d7ca5', ss1: '#3d8acb', path: '#23214a',
-};
+});
 
 export function extraBlocks(st, res) {
   return [{ ...convergenceBlock(st), beforeSS: true }, diagramBlock(st, res)];
@@ -542,13 +542,13 @@ function convergenceBlock(st) {
     else out.gy.push([t, 100 * (a * (P.s * Math.pow(kj, a - 1) - (P.n + g0 + P.delta)) + g0)]);
   }
   const kt = tp ? '\\tilde k' : 'k', yt = tp ? '\\tilde y' : 'y', ct = tp ? '\\tilde c' : 'c', x = (v) => `${v}_t`;
-  const label = `$${kt}_0 = ${fmtTex(st.k0, 3)}$`, color = '#3d8acb';
+  const label = `$${kt}_0 = ${fmtTex(st.k0, 3)}$`, color = tc('#3d8acb');
   const e = tp ? 'на эфф. работника' : 'на работника';
-  const HL = '#7c62d8';
+  const HL = tc('#7c62d8');
   const mk = (title, sym, key, hl, unit) => {
     const h = halfLife(out[key], hl, disc);
     return { title, sym, unit, series: [{ label: `$${sym}$`, data: out[key], color, width: 2.6 }],
-      opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: '#7d7ca5' }], marksOnAxis: true,
+      opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: tc('#7d7ca5') }], marksOnAxis: true,
         vlines: h ? [{ x: h.x, yTo: h.y, color: HL, dots: true, label: `t_{1/2}=${fmtTex(h.x, disc ? 0 : 1)}` }] : [] } };
   };
   return {

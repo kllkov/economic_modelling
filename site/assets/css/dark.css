@@ -1,0 +1,76 @@
+/* Тёмная тема (палитра: тёмно-синий + розовый). Включается атрибутом data-theme="dark" на <html>. */
+:root[data-theme="dark"] { --bg: #000218;
+  --surface: #ffffff;
+  --surface-2: #05071c;
+  --ink: #f0edf5;
+  --ink-2: #bbb9c4;
+  --muted: #81808f;
+  --line: #0f1126;
+  --line-strong: #212337;
+
+  --lilac-50: #221d42;
+  --lilac-100: #2b2347;
+  --lilac-200: #3a2d50;
+  --lilac-400: #ee82a6;
+  --lilac-500: #ef89ab;
+  --lilac-600: #f092b1;
+  --lilac-800: #e9b2c4;
+
+  --teal-50: #1a1e45;
+  --teal-100: #23264e;
+  --teal-300: #a6a7cf;
+  --teal-500: #adafd3;
+  --teal-600: #b5b7d7;
+  --teal-800: #bdbedb;
+
+  --grad: linear-gradient(120deg, #ee82a6 0%, #a3a5ce 50%, #a6a7cf 100%);
+  --grad-strong: linear-gradient(120deg, #f093b2 0%, #adaed3 50%, #b3b5d6 100%);
+  --grad-soft: linear-gradient(135deg, #241e42 0%, #1a1d44 50%, #1b1f46 100%);
+
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 8px 28px rgba(0, 0, 0, .07);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, .06), 0 18px 48px rgba(0, 0, 0, .12);
+
+  --font: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-head: 'Unbounded', 'Manrope', system-ui, sans-serif;
+  color-scheme: light; }
+:root[data-theme="dark"] .site-header { position: sticky; top: 0; z-index: 50;
+  background: rgba(0, 2, 24, .82);
+  backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid var(--line); }
+:root[data-theme="dark"] .brand-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--grad-strong);
+  display: grid; place-items: center; color: #000218; flex: none; }
+:root[data-theme="dark"] .nav a.active { background: var(--ink); color: var(--bg); }
+:root[data-theme="dark"] .btn-primary { background: var(--grad-strong); color: #000218; box-shadow: 0 6px 20px rgba(244, 172, 196, .28); }
+:root[data-theme="dark"] .btn-primary:hover { color: #000218; transform: translateY(-1px); box-shadow: 0 10px 26px rgba(244, 172, 196, .34); }
+:root[data-theme="dark"] .hero::before { width: 420px; height: 420px; background: #3e3053; top: -160px; right: -80px; }
+:root[data-theme="dark"] .hero::after { width: 360px; height: 360px; background: #2c2f57; bottom: -200px; left: -100px; }
+:root[data-theme="dark"] .feature { background: var(--ink); color: #06081e; border: none; position: relative; overflow: hidden; }
+:root[data-theme="dark"] .feature h3 { color: #000218; margin-bottom: 10px; }
+:root[data-theme="dark"] .feature p { color: #1f2035; position: relative; z-index: 1; }
+:root[data-theme="dark"] .tg-link .tg-ico { width: 28px; height: 28px; border-radius: 50%; background: var(--teal-500); display: grid; place-items: center; color: #000218; }
+:root[data-theme="dark"] .tile .status.wip { background: #251d2e; color: #f0b275; border: 1px solid #452f2b; }
+:root[data-theme="dark"] .seg button.on { background: var(--surface); color: var(--lilac-800); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+:root[data-theme="dark"] .block-head h2 .n { flex: none; width: 28px; height: 28px; border-radius: 9px; background: var(--grad-strong); color: #000218; font-size: 13px; display: grid; place-items: center; font-family: var(--font); font-weight: 800; }
+:root[data-theme="dark"] .agent.mkt h3 { color: #ce97ba; }
+:root[data-theme="dark"] .callout.warn { background: #22172e; border-color: #3b222c; color: #eca979; }
+:root[data-theme="dark"] .callout.err { background: #200d33; border-color: #350f35; color: #e87d96; }
+:root[data-theme="dark"] .chart-tex-item.curve, :root[data-theme="dark"] .chart-tex-item.mark { font-size: 12.5px; background: rgba(6, 10, 48, .85); padding: 1px 2px; border-radius: 3px; }
+:root[data-theme="dark"] .chart-tip { position: absolute; pointer-events: none; opacity: 0; z-index: 2; background: #060A30; border: 1px solid #484a67; color: #F0EDF5; padding: 7px 9px;
+  border-radius: 6px; font-size: 12px; line-height: 1.45; white-space: nowrap; }
+:root[data-theme="dark"] .seg.tabs a.on { background: var(--surface); color: var(--lilac-800); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+:root[data-theme="dark"] input.range::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #060A30;
+  border: 2px solid var(--lilac-600); box-shadow: 0 1px 4px rgba(0, 0, 0, .25); cursor: pointer; }
+:root[data-theme="dark"] input.range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #060A30; border: 2px solid var(--lilac-600); cursor: pointer; }
+:root[data-theme="dark"] { --bg: #000218; --surface: #060A30; --surface-2: #030624; --ink: #F0EDF5; --ink-2: #c5c3cd; --muted: #8b8a98; --line: #272a4c; --line-strong: #484a67;
+  --grad: linear-gradient(120deg, #F4ACC4 0%, #595B82 50%, #9a9cc9 100%);
+  --grad-strong: linear-gradient(120deg, #F4ACC4 0%, #c7a4c6 100%);
+  --grad-soft: linear-gradient(135deg, #231d42 0%, #181c42 100%);
+  --glyph-a: #F4ACC4; --glyph-b: #9a9cc9; --glyph-axis: #484a67;
+  color-scheme: dark; }
+:root[data-theme="dark"] .hero::before { background: #49354c; }
+:root[data-theme="dark"] .hero::after { background: #2e304d; }
+:root[data-theme="dark"] .feature { background: #362a4e; color: #F0EDF5; }
+:root[data-theme="dark"] .feature p { color: #F0EDF5; }
+:root[data-theme="dark"] .feature h3 { color: #F0EDF5; }

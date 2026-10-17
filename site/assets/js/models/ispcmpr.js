@@ -9,6 +9,8 @@
 // В каждом периоде при заданных ожиданиях IS, PC и MPR линейны и решаются явно; при рациональных
 // ожиданиях та же формула применяется рекурсивно назад от конечного стационара.
 
+import { tc, tcMap } from '../charts.js';
+
 const SHOCK_TARGETS = {
   d:      { label: 'Спрос (естественная ставка) $d_t$', kind: 'exo', unit: 'pp', def: 1, step: 0.25 },
   u:      { label: 'Издержки (cost-push) $u_t$', kind: 'exo', unit: 'pp', def: 1, step: 0.25 },
@@ -383,7 +385,7 @@ export function steadyTable(st, res) {
 
 // ───────────── Дополнительные блоки: основная диаграмма и сходимость ─────────────
 
-const DC = { pc0: '#3d8acb', pc1: '#86c2f0', ad0: '#7c62d8', ad1: '#c2b2f7', ss: '#7d7ca5', path: '#23214a' };
+const DC = tcMap({ pc0: '#3d8acb', pc1: '#86c2f0', ad0: '#7c62d8', ad1: '#c2b2f7', ss: '#7d7ca5', path: '#23214a' });
 
 export function extraBlocks(st, res) {
   const out = [];
@@ -455,12 +457,12 @@ function convergenceBlock(st) {
   const lbl = `$E^*_0\\pi_1 = ${fmtTex(st.pie0, 2)}\\%$`;
   const mk = (title, sym, key, hl) => ({
     title, sym, unit: '%',
-    series: [{ label: `$${sym}$`, data: sim ? sim[key].map((v, j) => [j, v]) : [], color: '#3d8acb', width: 2.6 }],
-    opts: { xLabel: 't', xmin: 0, xmax: N, discrete: true, hlines: [{ y: hl, color: '#7d7ca5' }] },
+    series: [{ label: `$${sym}$`, data: sim ? sim[key].map((v, j) => [j, v]) : [], color: tc('#3d8acb'), width: 2.6 }],
+    opts: { xLabel: 't', xmin: 0, xmax: N, discrete: true, hlines: [{ y: hl, color: tc('#7d7ca5') }] },
   });
   return {
     title: 'Сходимость к стационару',
-    legend: [{ label: `траектория из ${lbl}`, color: '#3d8acb' }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }],
+    legend: [{ label: `траектория из ${lbl}`, color: tc('#3d8acb') }, { label: 'стационарное значение', color: tc('#7d7ca5'), dash: true }],
     charts: [
       mk('Инфляция', '\\pi_t', 'pi', ss.pi),
       mk('Разрыв выпуска', '\\tilde y_t', 'x', 0),

@@ -28,8 +28,8 @@ function glyph(name, w = 100, h = 64) {
   svg.setAttribute('width', w); svg.setAttribute('height', h);
   svg.setAttribute('aria-hidden', 'true');
   const id = `g${Math.random().toString(36).slice(2, 8)}`;
-  svg.innerHTML = `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#b09cf5"/><stop offset="1" stop-color="#5aa9e6"/></linearGradient></defs>
-    <path d="M6 58 H96" stroke="#e4e6f7" stroke-width="1.5"/><path d="M6 4 V58" stroke="#e4e6f7" stroke-width="1.5"/>
+  svg.innerHTML = `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" style="stop-color:var(--glyph-a)"/><stop offset="1" style="stop-color:var(--glyph-b)"/></linearGradient></defs>
+    <path d="M6 58 H96" stroke="var(--glyph-axis)" stroke-width="1.5"/><path d="M6 4 V58" stroke="var(--glyph-axis)" stroke-width="1.5"/>
     <path d="${GLYPHS[name]}" fill="none" stroke="url(#${id})" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`;
   return svg;
 }
@@ -507,5 +507,6 @@ function downloadXLSX(res, specs) {
 }
 
 renderTiles();
+window.addEventListener('themechange', () => { if (current?.mod && $('#results')) run(); }); // графики рисуются на холсте — перерисовываем в цветах новой темы
 window.addEventListener('hashchange', route);
 route();
