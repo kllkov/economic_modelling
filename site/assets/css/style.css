@@ -173,7 +173,7 @@ a.chip:hover { background: var(--lilac-100); border-color: var(--lilac-200); }
 .plan ol { margin: 0; padding: 0; list-style: none; counter-reset: n; display: grid; gap: 2px; }
 .plan ol.from-zero { counter-reset: n -1; }
 .plan.macro ol { counter-reset: n 7; }
-.plan li { counter-increment: n; display: flex; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.plan li { min-width: 0; counter-increment: n; display: flex; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .plan li:first-child { border-top: none; }
 .plan li::before { content: counter(n, decimal-leading-zero); font-weight: 800; color: var(--lilac-400); min-width: 24px; font-size: 14px; padding-top: 1px; }
 .plan.macro li::before { color: var(--teal-500); }
@@ -355,7 +355,7 @@ canvas.zoomable { cursor: crosshair; touch-action: pan-y !important; }
 
 /* ── адаптив ─────────────────────────────── */
 @media (max-width: 980px) {
-  .hero .wrap, .about-grid, .team-grid, .plan-grid, .ss-grid, .stub { grid-template-columns: 1fr; }
+  .hero .wrap, .about-grid, .team-grid, .plan-grid, .ss-grid, .stub { grid-template-columns: minmax(0, 1fr); }
   .outcomes { grid-template-columns: 1fr 1fr; }
   .ws-grid { grid-template-columns: 1fr; }
   .panel { position: static; max-height: none; }
@@ -369,7 +369,12 @@ canvas.zoomable { cursor: crosshair; touch-action: pan-y !important; }
   .outcomes { grid-template-columns: 1fr; }
   .sys-row { grid-template-columns: 1fr; gap: 4px; }
   .brand-text small { display: none; }
-  .nav a { padding: 8px 12px; }
+  .site-header .wrap { gap: 8px; }
+  .brand { min-width: 0; gap: 8px; }
+  .brand-text { font-size: 12.5px; min-width: 0; }
+  .nav { gap: 2px; flex: none; }
+  .nav a { padding: 8px 11px; font-size: 14px; }
+  .theme-toggle { width: 34px; height: 34px; margin-left: 2px; }
   .block { padding: 18px 16px; }
   .stub-list li { grid-template-columns: 1fr; gap: 2px; }
 }
@@ -435,4 +440,9 @@ input.range::-moz-range-thumb {
 @media (max-width: 640px) {
   .toggles .seg button { padding: 6px 9px; font-size: 13px; }
   .charts.diagram .chart-box { height: 340px; }
+}
+
+@media (max-width: 400px) {
+  .brand-mark { display: none; }
+  .nav a { padding: 7px 9px; font-size: 13.5px; }
 }
