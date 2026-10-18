@@ -74,7 +74,7 @@ function writeHash(id, state, defaults) {
 // ───────────────────────────── рабочая область ─────────────────────────────
 
 let current = null; // { model, mod, state, charts: [] }
-const view = { irfUnits: 'worker', levelUnits: 'worker', levelScale: 'linear' };
+const view = { irfUnits: 'worker', levelUnits: 'worker', levelScale: 'linear', convScale: 'log' };
 
 let routeToken = 0; // номер последнего перехода: устаревшая асинхронная загрузка модели не рисуется
 async function route() {
@@ -384,7 +384,10 @@ function run() {
         el('div', { class: 'chart-box' }, cv)));
       extraDraws.push(() => current.charts.push(drawDiagram(cv, C.series, C.opts)));
     }
-    return [X.subtitle ? el('h3', { class: 'sub-head' }, X.subtitle) : null, legend, grid];
+    const scaleSeg = X.scaleToggle ? el('div', { class: 'toggles pad-top' }, el('div', { class: 'seg' },
+      el('button', { type: 'button', class: view.convScale === 'linear' ? 'on' : '', onclick: () => { view.convScale = 'linear'; run(); } }, 'линейная'),
+      el('button', { type: 'button', class: view.convScale === 'log' ? 'on' : '', onclick: () => { view.convScale = 'log'; run(); } }, 'лог-шкала'))) : null;
+    return [X.subtitle ? el('h3', { class: 'sub-head' }, X.subtitle) : null, scaleSeg, legend, grid];
   };
   const addExtra = (X) => out.append(block(num++, X.title, null, ...(X.sections || [X]).map(section)));
   const extras = mod.extraBlocks ? mod.extraBlocks(state, res) : [];
@@ -394,7 +397,7 @@ function run() {
     : el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table));
   out.append(block(num++, F.ssTitle || 'Стационарное состояние', el('span', { class: 'note' }, F.ssNote ? F.ssNote(showAfter) : showAfter ? 'Перманентный шок сдвигает стационар'
       : res.permanentChange ? 'В единицах на эффективного работника стационар не меняется' : 'Шок не меняет стационар'),
-    ssBody, mod.ssCharts ? section(mod.ssCharts(state, res)) : null));
+    ssBody, mod.ssCharts ? section(mod.ssCharts(state, res, view.convScale)) : null));
 
   // 4. IRF и 5. уровни
   const specs = mod.chartSpecs(state);

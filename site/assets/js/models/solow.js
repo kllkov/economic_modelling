@@ -57,7 +57,7 @@ export const controls = [
   { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 1, step: 0.005,
     show: (st) => st.variant === 'tp' },
 
-  { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальный капитал`, type: 'number', min: 0.01, max: 100, step: 0.1 },
+  { id: 'k0', label: (st) => `$${st.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальная капиталовооружённость`, type: 'number', min: 0.01, max: 100, step: 0.1 },
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
@@ -588,7 +588,7 @@ function convergenceBlock(st) {
     curve(f, `f(${kt})`, { color: DC.f, width: 2 }),
     curve((k) => P.s * f(k), `s\\cdot f(${kt})`, { color: DC.sf0, width: 2.4 }),
     curve((k) => ss.dep * k, dep, { color: DC.dep0, width: 2.2 }),
-    { label: `путь экономики из ${label}`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
+    { label: `путь экономики из $${kt}_0$`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
   ];
   return {
     title: 'Сходимость к стационару',
@@ -603,7 +603,7 @@ function convergenceBlock(st) {
       { subtitle: 'Основная диаграмма модели', diagram: true,
         legend: dser.map((s) => ({ label: s.label, color: s.color, point: s.points })),
         charts: [{ series: dser, opts: { xLabel: kt, xmin: 0, xmax, ymin: 0, zoom: true, marksOnAxis: true,
-          vlines: [{ x: ss.k, color: DC.ss0, label: `${kt}^*`, yTo: P.s * f(ss.k) }] } }] },
+          vlines: [{ x: st.k0, color: color, label: `${kt}_0`, yTo: P.s * f(st.k0) }, { x: ss.k, color: DC.ss0, label: `${kt}^*`, yTo: P.s * f(ss.k) }] } }] },
     ],
   };
 }
@@ -616,7 +616,7 @@ function depLine(st, kS) {
 }
 
 // Графики под таблицей ТСР: величины на работника — теоретическая ТСР и путь из k̃0 к ней
-export function ssCharts(st) {
+export function ssCharts(st, res, scale = 'log') {
   const a = st.alpha;
   const { disc, h, N, P, ss, g0, sim, stride } = convPath(st);
   const G = (t) => (disc ? Math.pow(1 + g0, t) : Math.exp(g0 * t));
@@ -627,13 +627,14 @@ export function ssCharts(st) {
     bgp.k.push([t, ss.k * Gt]); bgp.y.push([t, ss.y * Gt]); bgp.c.push([t, ss.c * Gt]);
   }
   const color = tc('#3d8acb'), BG = tc('#7d7ca5');
-  const k0 = `${st.variant === 'tp' ? '\\tilde k' : 'k'}_0 = ${fmtTex(st.k0, 3)}`;
+  const k0 = `${st.variant === 'tp' ? '\\tilde k' : 'k'}_0`;
   const mk = (title, sym, key) => ({ title, sym, unit: '',
     series: [{ label: 'ТСР', data: bgp[key], color: BG, width: 2, dash: [6, 4] }, { label: `$${sym}$`, data: out[key], color, width: 2.6 }],
-    opts: { xLabel: 't', xmin: 0, xmax: st.horizon, ymin: 0, discrete: disc, marksOnAxis: true } });
+    opts: { xLabel: 't', xmin: 0, xmax: st.horizon, ymin: scale === 'log' ? undefined : 0, log: scale === 'log', discrete: disc, marksOnAxis: true } });
   return {
     subtitle: 'Сходимость к траектории сбалансированного роста',
-    legend: [{ label: 'траектория сбалансированного роста', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
+    scaleToggle: true,
+    legend: [{ label: 'ТСР', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
     charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c')],
   };
 }

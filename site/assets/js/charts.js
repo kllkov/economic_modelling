@@ -460,8 +460,9 @@ export function drawDiagram(canvas, series, opts) {
   const sc = axes(16);
   Object.assign(sc.x, { min: opts.xmin ?? 0, max: opts.xmax, ticks: { maxTicksLimit: 8, padding: 6, includeBounds: false, callback: tickFmt } });
   Object.assign(sc.y, {
-    type: 'linear', min: opts.ymin, max: opts.ymax,
-    ticks: { maxTicksLimit: 7, padding: 6, includeBounds: false, callback: tickFmt },
+    type: opts.log ? 'logarithmic' : 'linear', min: opts.ymin, max: opts.ymax,
+    // на логарифмической оси подписываются только 1, 2, 5 × 10^n — без хвостов вида 70.00
+    ticks: { maxTicksLimit: opts.log ? 12 : 7, padding: 6, includeBounds: false, callback: opts.log ? (v) => (/^[125]$/.test(String(+v).replace(/[.0e+-]/g, '').slice(0, 1)) && +v.toPrecision(1) === +v ? String(+v.toPrecision(2)) : '') : tickFmt },
     grace: opts.ymax == null ? '6%' : 0,
   });
   const vlines = opts.vlines || [];

@@ -143,7 +143,8 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
     near(p0[0][0], st.k0, 1e-12, 'диаграмма: старт из k̃0');
     for (const [k, v] of p0) near(v, defaults.s * Math.pow(k, 0.3), 1e-12, 'диаграмма: точка на s·f(k̃)');
     near(p0.at(-1)[0], r.ss0.k, 1e-2 * r.ss0.k, 'диаграмма: путь приходит в k̃*');
-    near(cd.opts.vlines[0].x, r.ss0.k, 1e-12, 'диаграмма: вертикаль k̃*');
+    near(cd.opts.vlines[0].x, st.k0, 1e-12, 'диаграмма: вертикаль k̃0 на оси');
+    near(cd.opts.vlines[1].x, r.ss0.k, 1e-12, 'диаграмма: вертикаль k̃*');
     // графики ТСР: на работника = на эфф. работника · E_t; путь из k̃0 стремится к ТСР
     const { ssCharts } = await import('../site/assets/js/models/solow.js');
     const sc = ssCharts(st);
