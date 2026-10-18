@@ -15,14 +15,14 @@ const SHOCK_TARGETS = {
   s:     { label: 'Норма сбережения $s$', kind: 'param', unit: 'Δ', def: 0.05, step: 0.01 },
   n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
   g:     { label: 'Темп роста технологии $g$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, variant: 'tp' },
-  delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
+  delta: { label: 'Норма выбытия капитала $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
 };
 
 export const defaults = {
   time: 'discrete', version: 'centralized', variant: 'tp', production: 'cd',
   alpha: 0.3, s: 0.6, delta: 0.05, n: 0.01, g: 0.02,
   shockTarget: 's', shockSize: 0.05, tHat: 10,
-  shockPersistence: 'permanent', rhoS: 0.8,
+  shockPersistence: 'permanent', rhoS: 0.8, tempMode: 'ar', shockDur: 5,
   horizon: 100, k0: 1.5,
 };
 
@@ -52,7 +52,7 @@ export const controls = [
   { section: 'Параметры' },
   { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
   { id: 's', label: '$s$ — норма сбережения', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
-  { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.99, step: 0.01 },
+  { id: 'delta', label: '$\\delta$ — выбытие капитала', type: 'number', min: 0, max: 0.99, step: 0.01 },
   { id: 'n', label: '$n$ — темп роста $L_t$', type: 'number', min: -0.05, max: 1, step: 0.005 },
   { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 1, step: 0.005,
     show: (st) => st.variant === 'tp' },
@@ -68,20 +68,30 @@ export const controls = [
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }],
     show: (st) => SHOCK_TARGETS[st.shockTarget]?.kind !== 'state' },
+  { id: 'tempMode', label: 'Временный шок', type: 'segmented',
+    options: [{ v: 'ar', l: 'Персистентность' }, { v: 'fixed', l: 'Число периодов' }],
+    show: (st) => SHOCK_TARGETS[st.shockTarget]?.kind !== 'state' && st.shockPersistence === 'temporary' },
   { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
-    show: (st) => SHOCK_TARGETS[st.shockTarget]?.kind !== 'state' && st.shockPersistence === 'temporary',
+    show: (st) => SHOCK_TARGETS[st.shockTarget]?.kind !== 'state' && st.shockPersistence === 'temporary' && st.tempMode !== 'fixed',
     hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
+  { id: 'shockDur', label: 'Число периодов $N$', type: 'number', min: 1, max: 200, step: 1,
+    show: (st) => SHOCK_TARGETS[st.shockTarget]?.kind !== 'state' && st.shockPersistence === 'temporary' && st.tempMode === 'fixed',
+    hint: (st) => (st.time === 'continuous' ? 'Шок действует на $[\\hat t,\\,\\hat t+N)$, затем сразу исчезает' : 'Шок действует в $t=\\hat t,\\dots,\\hat t+N-1$, затем сразу исчезает') },
 
   { section: 'Отображение' },
   { id: 'horizon', label: 'Горизонт графиков', type: 'number', min: 20, max: 200, step: 5 },
 ];
 
 export function normalize(st, changed) {
+  st.shockDur = Math.max(1, Math.round(+st.shockDur || 1));
   const allowed = shockTargetsFor(st).map((o) => o.v);
   if (!allowed.includes(st.shockTarget)) { st.shockTarget = 'k'; changed = 'shockTarget'; }
   if (changed === 'shockTarget') st.shockSize = SHOCK_TARGETS[st.shockTarget].def;
   return st;
 }
+
+// момент, когда временный шок на N периодов исчезает (для разметки графиков)
+const shockEnd = (x) => (x.shockPersistence === 'temporary' && x.tempMode === 'fixed' && SHOCK_TARGETS[x.shockTarget]?.kind !== 'state' ? x.tHat + x.shockDur : null);
 
 // ───────────────────────────── Решатель ─────────────────────────────
 
@@ -91,6 +101,7 @@ const isState = (st) => SHOCK_TARGETS[st.shockTarget]?.kind === 'state';
 function prof(st, t) {
   if (isState(st) || t < st.tHat - 1e-9) return 0;
   if (st.shockPersistence === 'permanent') return 1;
+  if (st.tempMode === 'fixed') return t < st.tHat + st.shockDur - 1e-9 ? 1 : 0;
   return Math.pow(st.rhoS, t - st.tHat);
 }
 // ∫_0^t prof(τ) dτ — нужен для уровня технологии при шоке g в непрерывном времени
@@ -98,6 +109,7 @@ function profInt(st, t) {
   if (isState(st) || t <= st.tHat) return 0;
   const u = t - st.tHat;
   if (st.shockPersistence === 'permanent') return u;
+  if (st.tempMode === 'fixed') return Math.min(u, st.shockDur);
   const r = st.rhoS;
   if (!(r > 0)) return 0;
   return (1 - Math.pow(r, u)) / -Math.log(r);
@@ -238,7 +250,7 @@ export function solve(st) {
     // непрерывное: g_{y/L} = α·ẋ/x + (1−α)·[(g(t) − g₀) + Ż/Z] + g₀ (правый предел)
     const xdot = P.s * Math.pow(x[j], a) * Math.pow(Ar[j], 1 - a) - (P.n + g0 + P.delta) * x[j];
     let zdot = 0;
-    if (st.shockTarget === 'tfp' && st.shockPersistence === 'temporary' && j * h >= st.tHat - 1e-9 && st.rhoS > 0)
+    if (st.shockTarget === 'tfp' && st.shockPersistence === 'temporary' && st.tempMode !== 'fixed' && j * h >= st.tHat - 1e-9 && st.rhoS > 0)
       zdot = ((st.shockSize / 100) * Math.log(st.rhoS) * Math.pow(st.rhoS, j * h - st.tHat)) / P.Z;
     return 100 * (a * (xdot / x[j]) + (1 - a) * (P.g - g0 + zdot) + g0);
   };
@@ -273,7 +285,7 @@ export function solve(st) {
     ok: true, t, irf, levels: lvl, baseLevels: baseLvl, eff, baseEff, agg, baseAgg,
     ss0, ssF, x, Ar, L, hGrid: h,
     permanentChange: Math.abs(ssF.k - ss0.k) / ss0.k > 1e-12 || st.shockTarget === 'tfp' || st.shockTarget === 'g',
-    marks: { tHat: st.tHat, t0: null },
+    marks: { tHat: st.tHat, tEnd: shockEnd(st), t0: null },
   };
 }
 
@@ -291,7 +303,7 @@ export function chartSpecs(st) {
     { id: 'y', title: 'Выпуск', sym: x('y'), aggSym: x('Y'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 'c', title: 'Потребление', sym: x('c'), aggSym: x('C'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 'i', title: 'Инвестиции', sym: x('i'), aggSym: x('I'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
-    { id: 'gy', title: 'Темп роста выпуска', sym: 'g_{y,t}', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
+    { id: 'gy', title: 'Темп роста выпуска', sym: 'g_{y,t}', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true, lagJump: true },
     cen ? { id: 'r', title: 'Отдача от капитала', sym: 'F^{\\prime}_K-\\delta', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true }
         : { id: 'r', title: 'Ставка процента', sym: x('r'), irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
     cen ? { id: 'w', title: 'Предельный продукт труда', sym: 'F^{\\prime}_L', irfUnit: '$\\Delta_{\\%}$ от s.s.' }
@@ -326,7 +338,7 @@ export function formulas(st) {
 
   const popLaw = D ? 'L_{t+1}=(1+n)L_t' : '\\dot L_t/L_t=n';
   const tpLaw = D ? 'E_{t+1}=(1+g)E_t' : '\\dot E_t/E_t=g';
-  const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
+  const lawLine = (tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw) + (tp ? `,\\qquad L_0=E_0=1` : `,\\qquad L_0=1`);
 
   // ── децентрализованная
   const [kk0, cc0, yy0, bb0, ww0] = tp ? ['\\tilde k', '\\tilde c', '\\tilde y', '\\tilde b', '\\tilde w'] : ['k', 'c', 'y', 'b', 'w'];
@@ -374,7 +386,7 @@ export function formulas(st) {
       num: `\\dot{${k}}_t=${n4(sv)}${k}_t^{${n4(a)}}-${n4(nn + g + d)}${k}_t` });
   }
   if (!cen) {
-    const kk = `${k}_t`, r = 'r_t', w = 'w_t', Et = tp ? 'E_t\\cdot ' : '';
+    const kk = `${k}_t`, r = 'r_t', w = 'w_t', Et = tp ? 'E_t' : '';
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
       tex: `${r}=\\alpha\\cdot ${kk}^{\\alpha-1}-\\delta,\\qquad ${w}=(1-\\alpha)${Et}${kk}^{\\alpha}`,
       num: `${r}=${n4(a)}${kk}^{${n4(a - 1)}}${pm(-d)},\\qquad ${w}=${n4(1 - a)}${Et}${kk}^{${n4(a)}}` });
@@ -389,7 +401,7 @@ export function formulas(st) {
   // ── шок
   const tg = st.shockTarget;
   const persistent = st.shockPersistence === 'temporary' && SHOCK_TARGETS[tg].kind !== 'state';
-  const prf = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
+  const prf = persistent && st.tempMode === 'fixed' ? '\\text{𝟙}\\{\\hat t\\le t<\\hat t+N\\}' : persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'tfp') {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
@@ -403,7 +415,7 @@ export function formulas(st) {
     shockNum = `\\Delta ${sym}=${n4(st.shockSize)}`;
   }
   shockNum += `,\\qquad \\hat t=${st.tHat}`;
-  if (persistent) shockNum += `,\\qquad \\rho_s=${n4(st.rhoS)}`;
+  if (persistent) shockNum += st.tempMode === 'fixed' ? `,\\qquad N=${st.shockDur}` : `,\\qquad \\rho_s=${n4(st.rhoS)}`;
   fs.shock.push({ tex: shockTex, num: shockNum });
   fs.flatNote = 'Шок не выводит экономику с траектории сбалансированного роста при текущих параметрах.';
 
@@ -437,24 +449,33 @@ export function formulas(st) {
 }
 
 export function steadyTable(st, res) {
-  const tp = st.variant === 'tp';
+  const tp = st.variant === 'tp', D = st.time === 'discrete';
   const cen = st.version === 'centralized';
   const e = tp ? 'на эфф. работника' : 'на работника';
   const k = tp ? '\\tilde k' : 'k';
+  const depTex = D ? (tp ? '(1+n)(1+g)-1+\\delta' : 'n+\\delta') : (tp ? 'n+g+\\delta' : 'n+\\delta');
+  const growthTex = D ? (tp ? '(1+n)(1+g)-1' : 'n') : (tp ? 'n+g' : 'n');
+  const K = `\\left(${k}^*\\right)`, KG = `\\left(${k}_{GR}\\right)`, rs = cen ? 'F^{\\prime}_K-\\delta' : 'r^*';
   const rows = [
-    { sym: `${k}^*`, name: `капиталовооружённость${tp ? ' на эфф. работника' : ''}`, key: 'k' },
-    { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
-    { sym: tp ? '\\tilde i^*' : 'i^*', name: `инвестиции ${e}`, key: 'i' },
-    { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
-    { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
-    { sym: `${k}_{GR}`, name: `капиталовооружённость${tp ? ' на эфф. работника' : ''} по золотому правилу`, key: 'kGR' },
-    { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: `потребление ${e} по золотому правилу`, key: 'cGR' },
+    { sym: `${k}^*`, name: `капиталовооружённость${tp ? ' на эфф. работника' : ''}`, key: 'k',
+      tex: `\\left(\\dfrac{s}{${depTex}}\\right)^{\\frac{1}{1-\\alpha}}` },
+    { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y', tex: `${K}^{\\alpha}` },
+    { sym: tp ? '\\tilde i^*' : 'i^*', name: `инвестиции ${e}`, key: 'i', tex: `s${K}^{\\alpha}` },
+    { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c', tex: `(1-s)${K}^{\\alpha}` },
+    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w',
+      tex: `(1-\\alpha)${K}^{\\alpha}` },
+    { sym: rs, name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true, tex: `\\alpha${K}^{\\alpha-1}-\\delta` },
+    { sym: `${k}_{GR}`, name: `капиталовооружённость${tp ? ' на эфф. работника' : ''} по золотому правилу`, key: 'kGR',
+      tex: `\\left(\\dfrac{\\alpha}{${depTex}}\\right)^{\\frac{1}{1-\\alpha}}` },
+    { sym: 's_{GR}', name: 'норма сбережения по золотому правилу', key: 'sGR', tex: '\\alpha' },
+    { sym: tp ? '\\tilde c_{GR}' : 'c_{GR}', name: `потребление ${e} по золотому правилу`, key: 'cGR', tex: `${KG}^{\\alpha}-${depTex.includes('(') ? `\\big[${depTex}\\big]` : `(${depTex})`}${k}_{GR}` },
   ];
-  const v = (ss, r) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key], 3));
-  const out = rows.map((r) => ({ ...r, before: v(res.ss0, r), after: v(res.ssF, r) }));
+  const val = (ss, key) => (key === 'sGR' ? st.alpha : ss[key]);
+  const v = (ss, r) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(val(ss, r.key), 3));
+  const out = rows.map((r) => ({ ...r, before: v(res.ss0, r), after: v(res.ssF, r), value: val(res.ss0, r.key) }));
   const verdict = (ss) => (Math.abs(ss.r - ss.growth) <= 1e-12 ? 'золотое правило' : ss.r > ss.growth ? 'эффективна' : 'неэффективна');
-  out.push({ sym: 's\\ \\text{vs}\\ s_{GR}', name: 'динамическая эффективность', before: verdict(res.ss0), after: verdict(res.ssF) });
+  out.push({ sym: 's\\ \\text{vs}\\ s_{GR}', name: 'динамическая эффективность', tex: `${rs}\\ \\text{vs}\\ ${growthTex}`,
+    before: verdict(res.ss0), after: verdict(res.ssF) });
   return out;
 }
 
@@ -525,15 +546,18 @@ function diagramBlock(st, res) {
   };
 }
 
-function convergenceBlock(st) {
-  const a = st.alpha, tp = st.variant === 'tp', disc = st.time === 'discrete';
-  const h = disc ? 1 : 0.02;
-  const N = Math.round(st.horizon / h) + 1;
+// траектория без шока из введённого k̃0 (общая для блока сходимости и графиков ТСР)
+function convPath(st) {
+  const tp = st.variant === 'tp', disc = st.time === 'discrete';
+  const h = disc ? 1 : 0.02, N = Math.round(st.horizon / h) + 1;
   const P = params(st, 0, 0);
-  const ss = steady(st, P);
-  const g0 = tp ? st.g : 0;
-  const sim = simulate({ ...st, shockSize: 0 }, h, N, 0, st.k0);
-  const stride = Math.max(1, Math.round(0.1 / h));
+  return { tp, disc, h, N, P, ss: steady(st, P), g0: tp ? st.g : 0,
+    sim: simulate({ ...st, shockSize: 0 }, h, N, 0, st.k0), stride: Math.max(1, Math.round(0.1 / h)) };
+}
+
+function convergenceBlock(st) {
+  const a = st.alpha;
+  const { tp, disc, h, N, P, ss, g0, sim, stride } = convPath(st);
   const out = { k: [], y: [], c: [], gy: [] };
   for (let j = 0; j <= N - 1; j += stride) {
     const t = +(j * h).toFixed(6), kj = sim.x[j], yj = Math.pow(kj, a);
@@ -546,19 +570,70 @@ function convergenceBlock(st) {
   const e = tp ? 'на эфф. работника' : 'на работника';
   const HL = tc('#7c62d8');
   const mk = (title, sym, key, hl, unit) => {
-    const h = halfLife(out[key], hl, disc);
+    const hh = halfLife(out[key], hl, disc);
     return { title, sym, unit, series: [{ label: `$${sym}$`, data: out[key], color, width: 2.6 }],
       opts: { xLabel: 't', xmin: 0, xmax: st.horizon, discrete: disc, hlines: [{ y: hl, color: tc('#7d7ca5') }], marksOnAxis: true,
-        vlines: h ? [{ x: h.x, yTo: h.y, color: HL, dots: true, label: `t_{1/2}=${fmtTex(h.x, disc ? 0 : 1)}` }] : [] } };
+        vlines: hh ? [{ x: hh.x, yTo: hh.y, color: HL, dots: true, label: `t_{1/2}=${fmtTex(hh.x, disc ? 0 : 1)}` }] : [] } };
   };
+
+  // основная диаграмма: путь экономики из k̃0 в стационар, точки (k̃_t, s·f(k̃_t)) раз в период
+  const f = (k) => Math.pow(k, a), stepJ = Math.max(1, Math.round(1 / h));
+  const path = [];
+  let kMax = Math.max(ss.k, st.k0);
+  for (let j = 0; j <= N - 1; j += stepJ) { const k = sim.x[j]; path.push([k, P.s * f(k)]); kMax = Math.max(kMax, k); }
+  const xmax = 1.35 * kMax;
+  const dep = depLine(st, kt);
+  const curve = (fn, tex, props) => ({ label: `$${tex}$`, ...props, fn, data: sample(fn, 0, xmax) });
+  const dser = [
+    curve(f, `f(${kt})`, { color: DC.f, width: 2 }),
+    curve((k) => P.s * f(k), `s\\cdot f(${kt})`, { color: DC.sf0, width: 2.4 }),
+    curve((k) => ss.dep * k, dep, { color: DC.dep0, width: 2.2 }),
+    { label: `путь экономики из ${label}`, data: path, color: DC.path, points: true, pointRadius: 2.6 },
+  ];
   return {
     title: 'Сходимость к стационару',
-    legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }, { label: 'период полусходимости', color: HL, dots: true }],
-    charts: [
-      mk(`Капиталовооружённость${tp ? ' на эфф. работника' : ''}`, x(kt), 'k', ss.k, ''),
-      mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),
-      mk(`Потребление ${e}`, x(ct), 'c', ss.c, ''),
-      mk('Темп роста выпуска на работника', 'g_{y,t}', 'gy', 100 * g0, '%'),
+    sections: [
+      { legend: [{ label: `траектория из ${label}`, color }, { label: 'стационарное значение', color: '#7d7ca5', dash: true }, { label: 'период полусходимости', color: HL, dots: true }],
+        charts: [
+          mk(`Капиталовооружённость${tp ? ' на эфф. работника' : ''}`, x(kt), 'k', ss.k, ''),
+          mk(`Выпуск ${e}`, x(yt), 'y', ss.y, ''),
+          mk(`Потребление ${e}`, x(ct), 'c', ss.c, ''),
+          mk('Темп роста выпуска на работника', 'g_{y,t}', 'gy', 100 * g0, '%'),
+        ] },
+      { subtitle: 'Основная диаграмма модели', diagram: true,
+        legend: dser.map((s) => ({ label: s.label, color: s.color, point: s.points })),
+        charts: [{ series: dser, opts: { xLabel: kt, xmin: 0, xmax, ymin: 0, zoom: true, marksOnAxis: true,
+          vlines: [{ x: ss.k, color: DC.ss0, label: `${kt}^*`, yTo: P.s * f(ss.k) }] } }] },
     ],
+  };
+}
+
+// подпись линии восстановительных инвестиций без шока
+function depLine(st, kS) {
+  const D = st.time === 'discrete', tp = st.variant === 'tp';
+  if (D && tp) return `\\big[(1+n)(1+g)-1+\\delta\\big]${kS}`;
+  return tp ? `(n+g+\\delta)${kS}` : `(n+\\delta)${kS}`;
+}
+
+// Графики под таблицей ТСР: величины на работника — теоретическая ТСР и путь из k̃0 к ней
+export function ssCharts(st) {
+  const a = st.alpha;
+  const { disc, h, N, P, ss, g0, sim, stride } = convPath(st);
+  const G = (t) => (disc ? Math.pow(1 + g0, t) : Math.exp(g0 * t));
+  const out = { k: [], y: [], c: [] }, bgp = { k: [], y: [], c: [] };
+  for (let j = 0; j <= N - 1; j += stride) {
+    const t = +(j * h).toFixed(6), kj = sim.x[j], yj = Math.pow(kj, a), Gt = G(t);
+    out.k.push([t, kj * Gt]); out.y.push([t, yj * Gt]); out.c.push([t, (1 - P.s) * yj * Gt]);
+    bgp.k.push([t, ss.k * Gt]); bgp.y.push([t, ss.y * Gt]); bgp.c.push([t, ss.c * Gt]);
+  }
+  const color = tc('#3d8acb'), BG = tc('#7d7ca5');
+  const k0 = `${st.variant === 'tp' ? '\\tilde k' : 'k'}_0 = ${fmtTex(st.k0, 3)}`;
+  const mk = (title, sym, key) => ({ title, sym, unit: '',
+    series: [{ label: 'ТСР', data: bgp[key], color: BG, width: 2, dash: [6, 4] }, { label: `$${sym}$`, data: out[key], color, width: 2.6 }],
+    opts: { xLabel: 't', xmin: 0, xmax: st.horizon, ymin: 0, discrete: disc, marksOnAxis: true } });
+  return {
+    subtitle: 'Сходимость к траектории сбалансированного роста',
+    legend: [{ label: 'траектория сбалансированного роста', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
+    charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c')],
   };
 }

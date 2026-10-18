@@ -23,7 +23,7 @@ export const defaults = {
   time: 'discrete', variant: 'const', utility: 'crra',
   beta: 0.96, rho: 0.04, sigma: 2, theta: 1, r: 0.05, w: 1, b0: 0, gw: 0.02,
   shockTarget: 'r', shockSize: 0.01, shockTiming: 'unexpected', tHat: 10, t0: 3,
-  shockPersistence: 'permanent', rhoS: 0.8,
+  shockPersistence: 'permanent', rhoS: 0.8, tempMode: 'ar', shockDur: 5,
   horizon: 40,
 };
 
@@ -78,15 +78,22 @@ export const controls = [
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }],
     show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
+  { id: 'tempMode', label: 'Временный шок', type: 'segmented',
+    options: [{ v: 'ar', l: 'Персистентность' }, { v: 'fixed', l: 'Число периодов' }],
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary' },
   { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
-    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary',
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary' && s.tempMode !== 'fixed',
     hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
+  { id: 'shockDur', label: 'Число периодов $N$', type: 'number', min: 1, max: 200, step: 1,
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary' && s.tempMode === 'fixed',
+    hint: (s) => (s.time === 'continuous' ? 'Шок действует на $[\\hat t,\\,\\hat t+N)$, затем сразу исчезает' : 'Шок действует в $t=\\hat t,\\dots,\\hat t+N-1$, затем сразу исчезает') },
 
   { section: 'Отображение' },
   { id: 'horizon', label: 'Горизонт графиков', type: 'number', min: 10, max: 200, step: 5 },
 ];
 
 export function normalize(s, changed) {
+  s.shockDur = Math.max(1, Math.round(+s.shockDur || 1));
   const allowed = shockTargetsFor(s).map((o) => o.v);
   if (!allowed.includes(s.shockTarget)) {
     if (s.shockTarget === 'beta' && allowed.includes('rho')) s.shockTarget = 'rho';
@@ -103,11 +110,15 @@ export function normalize(s, changed) {
   return s;
 }
 
+// момент, когда временный шок на N периодов исчезает (для разметки графиков)
+const shockEnd = (x) => (x.shockPersistence === 'temporary' && x.tempMode === 'fixed' && SHOCK_TARGETS[x.shockTarget]?.kind !== 'state' ? x.tHat + x.shockDur : null);
+
 // ───────────────────────────── Решатель ─────────────────────────────
 
 function shockProfile(s, t) {
   if (t < s.tHat - 1e-9) return 0;
   if (s.shockPersistence === 'permanent') return 1;
+  if (s.tempMode === 'fixed') return t < s.tHat + s.shockDur - 1e-9 ? 1 : 0;
   return Math.pow(s.rhoS, t - s.tHat);
 }
 
@@ -292,7 +303,7 @@ export function solve(s) {
   };
   return {
     ok: true, t, irf, levels: lv, baseLevels: bl, summary,
-    marks: { tHat: s.tHat, t0: expected ? s.t0 : null },
+    marks: { tHat: s.tHat, tEnd: shockEnd(s), t0: expected ? s.t0 : null },
   };
 }
 
@@ -335,18 +346,19 @@ export function formulas(s) {
   fs.ssNote = (changed) => (changed ? 'Значения в момент пересчёта плана' : 'Шок не меняет план');
   fs.flatNote = 'Шок не меняет оптимальный план: при текущих параметрах он не влияет ни на пожизненное богатство, ни на уравнение Эйлера.';
 
-  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}\\cdot e^{-\\theta ${c}}`);
+  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}e^{-\\theta ${c}}`);
+  const Uw = (c) => (ut === 'cara' ? `\\left(${U(c)}\\right)` : U(c));
   const cT = '{c_t}';
-  const wLaw = D ? (grow ? 'w_t=w_0(1+g_w)^t' : 'w_t=w') : (grow ? 'w_t=w_0\\cdot e^{g_w t}' : 'w_t=w');
+  const wLaw = D ? (grow ? 'w_t=w_0(1+g_w)^t' : 'w_t=w') : (grow ? 'w_t=w_0e^{g_w t}' : 'w_t=w');
 
   fs.problem.push({ agent: 'Домохозяйство', system: true, items: D ? [
-    `\\max_{\\{c_t\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t\\cdot ${U(cT)}`,
+    `\\max_{\\{c_t\\}_{t=0}^{\\infty}}\\; V_0=\\sum_{t=0}^{\\infty}\\beta^t${Uw(cT)}`,
     '\\text{s.t.}\\quad b_{t+1}=(1+r)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
     '\\text{TVC:}\\quad \\lim_{t\\to\\infty}\\dfrac{b_t}{(1+r)^t}=0',
   ] : [
-    `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}\\cdot ${U(cT)}\\,dt`,
+    `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=\\int_0^{\\infty}e^{-\\rho t}${Uw(cT)}\\,dt`,
     '\\text{s.t.}\\quad \\dot b_t=r\\cdot b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-    '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-rt}\\cdot b_t=0',
+    '\\text{TVC:}\\quad \\lim_{t\\to\\infty}e^{-rt}b_t=0',
   ], notes: [`${wLaw},\\qquad r\\ \\text{— экзогенна}`] });
 
   // уравнение Эйлера
@@ -389,7 +401,7 @@ export function formulas(s) {
   // шок
   const tg = s.shockTarget;
   const persistent = s.shockPersistence === 'temporary' && SHOCK_TARGETS[tg].kind !== 'state';
-  const prof = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
+  const prof = persistent && s.tempMode === 'fixed' ? '\\text{𝟙}\\{\\hat t\\le t<\\hat t+N\\}' : persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'b') {
     shockTex = 'b_{\\hat t}=b_{\\hat t}^{-}+\\Delta b';
@@ -403,7 +415,7 @@ export function formulas(s) {
     shockNum = `\\Delta ${sym}=${n4(s.shockSize)}`;
   }
   shockNum += `,\\qquad \\hat t=${s.tHat}`;
-  if (persistent) shockNum += `,\\qquad \\rho_s=${n4(s.rhoS)}`;
+  if (persistent) shockNum += s.tempMode === 'fixed' ? `,\\qquad N=${s.shockDur}` : `,\\qquad \\rho_s=${n4(s.rhoS)}`;
   fs.shock.push({ tex: shockTex, num: shockNum });
 
   // функция потребления

@@ -309,6 +309,11 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .ss td.v { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
 .ss th.v { text-align: right; }
 .ss td.v.chg { color: var(--teal-600); }
+.ss td.f { white-space: nowrap; }
+.ss.ss-full th, .ss.ss-full td { padding: 8px 7px; }
+.ss.ss-full td.name { min-width: 130px; }
+.ss.ss-full td.f .katex { font-size: 1.02em; }
+.sub-head { margin: 26px 0 12px; font-size: 17px; font-weight: 700; color: var(--ink); }
 .ss td.name { color: var(--ink-2); }
 
 .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--ink-2); margin-bottom: 12px; }
@@ -334,7 +339,6 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .chart-tip .tt { font-weight: 700; }
 .charts.diagram { grid-template-columns: 1fr; }
 .charts.diagram .chart-box { height: 460px; }
-.zoom-tools { display: flex; gap: 6px; }
 canvas.zoomable { cursor: crosshair; touch-action: pan-y !important; }
 .chart-legend i.pt { width: 7px; height: 7px; border: none; border-radius: 50%; }
 .toggles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }

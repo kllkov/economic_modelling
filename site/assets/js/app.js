@@ -1,5 +1,5 @@
 import { MODELS, GLYPHS } from './models/registry.js';
-import { drawChart, drawDiagram, zoomBy, zoomReset, COLORS } from './charts.js';
+import { drawChart, drawDiagram, COLORS } from './charts.js';
 import { tex, texInline, rich } from './tex.js';
 import { xlsxBlob } from './xlsx.js';
 
@@ -359,42 +359,42 @@ function run() {
   // 3. стационар
   const rows = mod.steadyTable(state, res);
   const showAfter = rows.some((r) => r.after !== r.before);
-  const table = el('table', { class: 'ss' },
-    el('thead', {}, el('tr', {}, el('th', {}, 'Величина'), el('th', {}, 'Смысл'),
+  const withTex = rows.some((r) => r.tex);   // единая таблица: величина, смысл, формула, значение
+  const table = el('table', { class: `ss${withTex ? ' ss-full' : ''}` },
+    el('thead', {}, el('tr', {}, el('th', {}, 'Величина'), el('th', {}, 'Смысл'), withTex ? el('th', {}, 'Формула') : null,
       el('th', { class: 'v' }, showAfter ? (F.ssCols?.[0] || 'до шока') : 'значение'), showAfter ? el('th', { class: 'v' }, F.ssCols?.[1] || 'после шока') : null)),
     el('tbody', {}, rows.map((r) => el('tr', {},
       el('td', {}, texInline(r.sym)), rich(r.name, 'td', { class: 'name' }),
+      withTex ? el('td', { class: 'f' }, r.tex ? texInline(r.tex) : null) : null,
       el('td', { class: 'v' }, r.before),
       showAfter ? el('td', { class: `v${r.after !== r.before ? ' chg' : ''}` }, r.after) : null))));
   let num = 3;
   const extraDraws = [];
-  const addExtra = (X) => {
+  // группа графиков: легенда + сетка (у блока их может быть несколько, у каждой — свой подзаголовок)
+  const section = (X) => {
     const grid = el('div', { class: `charts${X.diagram ? ' diagram' : ''}` });
     const legend = el('div', { class: 'chart-legend' }, X.legend.map((L) => el('span', {},
       L.point ? el('i', { class: 'chev', style: `background:${L.color}` })
         : el('i', { class: L.dots ? 'dots' : L.dash ? 'dash' : '', style: `border-color:${L.color}` }),
       rich(L.label))));
-    // кнопки масштаба — у диаграмм с приближением (колесо, щипок и перетаскивание тоже работают)
-    const ref = {};
-    const zoomable = X.charts.some((C) => C.opts.zoom);
-    const tool = (label, title, fn) => el('button', { class: 'btn btn-ghost btn-sm', type: 'button', title, onclick: () => fn(ref.chart) }, label);
-    out.append(block(num++, X.title,
-      zoomable ? el('div', { class: 'zoom-tools' }, tool('+', 'Приблизить', (c) => zoomBy(c, 1.5)), tool('−', 'Отдалить', (c) => zoomBy(c, 1 / 1.5)), tool('Сбросить вид', 'Показать всю диаграмму', zoomReset)) : null,
-      legend, grid));
     for (const C of X.charts) {
       const cv = el('canvas');
       grid.append(el('div', { class: 'chart-card' },
         C.title ? el('div', { class: 'ct' }, el('span', {}, C.sym ? `${C.title}, ` : C.title, C.sym ? texInline(C.sym) : null), el('span', { class: 'u' }, C.unit || '')) : null,
         el('div', { class: 'chart-box' }, cv)));
-      extraDraws.push(() => current.charts.push(ref.chart = drawDiagram(cv, C.series, C.opts)));
+      extraDraws.push(() => current.charts.push(drawDiagram(cv, C.series, C.opts)));
     }
+    return [X.subtitle ? el('h3', { class: 'sub-head' }, X.subtitle) : null, legend, grid];
   };
+  const addExtra = (X) => out.append(block(num++, X.title, null, ...(X.sections || [X]).map(section)));
   const extras = mod.extraBlocks ? mod.extraBlocks(state, res) : [];
   extras.filter((X) => X.beforeSS).forEach(addExtra);
 
+  const ssBody = withTex ? el('div', { style: 'overflow-x:auto' }, table)
+    : el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table));
   out.append(block(num++, F.ssTitle || 'Стационарное состояние', el('span', { class: 'note' }, F.ssNote ? F.ssNote(showAfter) : showAfter ? 'Перманентный шок сдвигает стационар'
       : res.permanentChange ? 'В единицах на эффективного работника стационар не меняется' : 'Шок не меняет стационар'),
-    el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table))));
+    ssBody, mod.ssCharts ? section(mod.ssCharts(state, res)) : null));
 
   // 4. IRF и 5. уровни
   const specs = mod.chartSpecs(state);
@@ -403,6 +403,8 @@ function run() {
   const DASH_INFO = [9, 3, 2, 3], DASH_SHOCK = [5, 4];   // объявление — штрихпунктир, шок — пунктир
   if (res.marks.t0 != null) lines.push({ x: res.marks.t0, color: COLORS.announce, dash: DASH_INFO });
   lines.push({ x: res.marks.tHat, color: COLORS.shock, dash: DASH_SHOCK });
+  const DASH_END = [2, 3];   // окончание временного шока на N периодов — точки
+  if (res.marks.tEnd != null) lines.push({ x: res.marks.tEnd, color: COLORS.shock, dash: DASH_END });
   const vMark = (color, dash) => {
     const sp = document.createElement('span'); sp.className = 'vmark';
     sp.innerHTML = `<svg width="4" height="16" viewBox="0 0 4 16" aria-hidden="true"><line x1="2" x2="2" y1="0" y2="16" stroke="${color}" stroke-width="2" stroke-dasharray="${dash.map((d) => d * 0.75).join(' ')}"/></svg>`;
@@ -412,7 +414,8 @@ function run() {
     el('span', {}, el('i', { style: `border-color:${COLORS.path}` }), withBase ? 'траектория после шока' : 'отклик'),
     withBase ? el('span', {}, el('i', { class: 'dot', style: `border-color:${COLORS.base}` }), 'базовый путь без шока') : null,
     res.marks.t0 != null ? el('span', {}, vMark(COLORS.announce, DASH_INFO), rich(`объявление $t_0 = ${res.marks.t0}$`)) : null,
-    el('span', {}, vMark(COLORS.shock, DASH_SHOCK), rich(`шок $\\hat t = ${res.marks.tHat}$`)));
+    el('span', {}, vMark(COLORS.shock, DASH_SHOCK), rich(`шок $\\hat t = ${res.marks.tHat}$`)),
+    res.marks.tEnd != null ? el('span', {}, vMark(COLORS.shock, DASH_END), rich(`конец шока $\\hat t+N = ${res.marks.tEnd}$`)) : null);
 
   const flat = specs.filter((sp) => !sp.noIrf).every((sp) => res.irf[sp.id].every((v) => Math.abs(v) < 1e-7));
   const irfGrid = el('div', { class: 'charts' });
@@ -457,7 +460,7 @@ function run() {
         el('div', { class: 'ct' }, el('span', {}, `${titleOf(uI)}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
         el('div', { class: 'chart-box' }, c1)));
       current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('%') ? '$\\Delta_{\\%}$' : '$\\Delta$', data: pairs(irfY) }],
-        { discrete, zero: true, lines, xmax }));
+        { discrete, zero: true, lines, xmax, lagJump: sp.lagJump }));
     }
 
     if (!shownIn(view.levelUnits, sp)) continue;
@@ -473,7 +476,7 @@ function run() {
     current.charts.push(drawChart(c2, [
       { label: 'базовый путь', kind: 'base', data: pairs(b) },
       { label: 'после шока', data: pairs(y) },
-    ], { discrete, lines, xmax, log: view.levelScale === 'log' && positive && !sp.lvlUnit }));
+    ], { discrete, lines, xmax, lagJump: sp.lagJump, log: view.levelScale === 'log' && positive && !sp.lvlUnit }));
   }
 }
 

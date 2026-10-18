@@ -124,7 +124,8 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
   for (const time of ['discrete', 'continuous']) {
     const st = { ...defaults, time, shockTarget: 's', shockSize: 0.05, tHat: 10, horizon: 150 };
     const r = solve(st);
-    const [cv, dg] = extraBlocks(st, r);
+    const [cvb, dg] = extraBlocks(st, r);
+    const cv = cvb.sections[0], cd = cvb.sections[1].charts[0];
     const full = dg.charts[0];
     const pathS = full.series.find((x) => x.points);
     for (const [k, v] of pathS.data) near(v, (defaults.s + 0.05) * Math.pow(k, 0.3), 1e-12, 'точка пути на s′·f(k̃)');
@@ -137,6 +138,23 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
     near(cv.charts[0].series[0].data[0][1], st.k0, 1e-12, 'старт из k̃0');
     const gy = cv.charts[3].series[0].data; // k̃0 < k̃*: темп роста выше g и убывает
     assert.ok(gy[1][1] > 2 && gy[1][1] > gy[20][1], 'условная конвергенция: рост выше g и замедляется');
+    // диаграмма в блоке сходимости: путь из k̃0 по s·f(k̃) приходит в исходный стационар
+    const p0 = cd.series.find((x) => x.points).data;
+    near(p0[0][0], st.k0, 1e-12, 'диаграмма: старт из k̃0');
+    for (const [k, v] of p0) near(v, defaults.s * Math.pow(k, 0.3), 1e-12, 'диаграмма: точка на s·f(k̃)');
+    near(p0.at(-1)[0], r.ss0.k, 1e-2 * r.ss0.k, 'диаграмма: путь приходит в k̃*');
+    near(cd.opts.vlines[0].x, r.ss0.k, 1e-12, 'диаграмма: вертикаль k̃*');
+    // графики ТСР: на работника = на эфф. работника · E_t; путь из k̃0 стремится к ТСР
+    const { ssCharts } = await import('../site/assets/js/models/solow.js');
+    const sc = ssCharts(st);
+    const E = (t) => (time === 'discrete' ? Math.pow(1 + defaults.g, t) : Math.exp(defaults.g * t));
+    const [bk, pk] = sc.charts[0].series;
+    near(bk.data[0][1], r.ss0.k, 1e-12, 'ТСР: k_0 = k̃*·E_0');
+    const last = bk.data.at(-1);
+    near(last[1], r.ss0.k * E(last[0]), 1e-9 * last[1], 'ТСР: k_t = k̃*·E_t');
+    near(pk.data[0][1], st.k0, 1e-12, 'путь: k_0 = k̃_0 (E_0 = 1)');
+    near(pk.data.at(-1)[1] / last[1], 1, 1e-2, 'путь сходится к ТСР');
+    for (const [i, key] of [[1, 'y'], [2, 'c']]) near(sc.charts[i].series[0].data.at(-1)[1], r.ss0[key] * E(last[0]), 1e-9 * r.ss0[key] * E(last[0]), `ТСР ${key}`);
   }
 }
 // 12. Непрерывное время: шаг перед шоком считается со старыми параметрами, поэтому
@@ -150,5 +168,16 @@ const idx = (r, t) => r.t.findIndex((x) => Math.abs(x - t) < 1e-9);
     near(a.levels.k[at(a, 10)], a.baseLevels.k[at(a, 10)], 1e-12, `k в момент шока ещё на базовом пути (${sh.shockTarget})`);
     for (const t of [10.1, 20, 60]) near(a.levels.k[at(a, t)] / b.levels.k[at(b, t)], 1, 1e-9, `k(${t}) не зависит от шага (${sh.shockTarget})`);
   }
+}
+// 13. Временный шок на N периодов: до t̂+N путь совпадает с перманентным шоком,
+//     в t̂+N параметр возвращается — дальше k̃ подчиняется исходному закону движения
+for (const time of ['discrete', 'continuous']) {
+  const base = { ...defaults, time, shockTarget: 's', shockSize: 0.05, tHat: 10, horizon: 40, shockPersistence: 'temporary', tempMode: 'fixed', shockDur: 5 };
+  const f = run(base), p = run({ ...base, shockPersistence: 'permanent' });
+  assert.equal(f.marks.tEnd, 15, 'конец шока');
+  for (const t of [10, 12, 15]) near(f.levels.k[idx(f, t)], p.levels.k[idx(p, t)], 1e-9, `k(${t}) как при перманентном шоке (${time})`);
+  near(f.levels.c[idx(f, 14)], p.levels.c[idx(p, 14)], 1e-9, `c до конца шока (${time})`);
+  const j = idx(f, 15), k = f.eff.k[j], y = Math.pow(k, defaults.alpha);
+  near(f.eff.c[j], (1 - defaults.s) * y, 1e-9, `в t̂+N норма сбережения снова s (${time})`);
 }
 console.log('Модель Солоу: все проверки пройдены');

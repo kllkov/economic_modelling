@@ -27,7 +27,7 @@ export const MODELS = [
         ] },
         { title: 'Оптимальное потребление', eqs: [
           { label: 'Уравнение Эйлера', tex: '\\dfrac{u\'(c_t)}{u\'(c_{t+1})}=\\beta(1+r)' },
-          { label: 'CRRA', tex: 'c_{t+s}=c_t\\big[\\beta(1+r)\\big]^{s/\\sigma},\\qquad c_t=\\dfrac{(1+r)-\\big[\\beta(1+r)\\big]^{1/\\sigma}}{1+r}\\cdot W_t' },
+          { label: 'CRRA', tex: 'c_{t+s}=c_t\\big[\\beta(1+r)\\big]^{s/\\sigma},\\qquad c_t=\\dfrac{(1+r)-\\big[\\beta(1+r)\\big]^{1/\\sigma}}{1+r}W_t' },
           { label: 'Богатство в момент $t$', tex: 'W_t=(1+r)b_t+\\sum_{s=0}^{\\infty}\\dfrac{w_{t+s}}{(1+r)^s}' },
         ] },
         { title: 'Непрерывное время', eqs: [
@@ -133,7 +133,7 @@ export const MODELS = [
       sections: [
         { title: 'Децентрализованная экономика (дискретное время)', eqs: [
           { label: 'Домохозяйства (Милль)', tex: '\\max_{\\{c_t,\\,b_{t+1}\\}}\\ \\sum_{t=0}^{\\infty}\\beta^t u(c_t)\\quad\\text{s.t.}\\quad (1+n)b_{t+1}=(1+r_t)b_t+w_t-c_t' },
-          { label: 'Домохозяйства (Бентам)', tex: '\\max_{\\{c_t,\\,b_{t+1}\\}}\\ \\sum_{t=0}^{\\infty}\\beta^t L_t\\cdot u(c_t),\\qquad L_{t+1}=(1+n)L_t' },
+          { label: 'Домохозяйства (Бентам)', tex: '\\max_{\\{c_t,\\,b_{t+1}\\}}\\ \\sum_{t=0}^{\\infty}\\beta^t L_t u(c_t),\\qquad L_{t+1}=(1+n)L_t' },
           { label: 'Фирмы', tex: '\\max_{K_t,L_t}\\ \\pi_t=F(K_t,L_t)-w_tL_t-(r_t+\\delta)K_t' },
           { label: 'Цены факторов', tex: 'r_t=f\'(k_t)-\\delta,\\qquad w_t=f(k_t)-f\'(k_t)k_t' },
           { label: 'Рынок капитала', tex: 'b_t=k_t' },
@@ -200,13 +200,13 @@ export const MODELS = [
         ] },
         { title: 'Фирмы', eqs: [
           { label: 'Технология', tex: 'Y_{it}=A_tN_{it}^{1-\\alpha}' },
-          { label: 'Выбор цены', tex: '\\max_{P_t^*}\\ \\sum_{k=0}^{\\infty}\\theta^k\\cdot \\mathbb E_t\\Big\\{\\Lambda_{t,t+k}\\big(P_t^*Y_{i,t+k|t}-TC_{i,t+k|t}(Y_{i,t+k|t})\\big)\\Big\\}' },
+          { label: 'Выбор цены', tex: '\\max_{P_t^*}\\ \\sum_{k=0}^{\\infty}\\theta^k\\mathbb E_t\\Big\\{\\Lambda_{t,t+k}\\big(P_t^*Y_{i,t+k|t}-TC_{i,t+k|t}(Y_{i,t+k|t})\\big)\\Big\\}' },
           { label: 'Спрос', tex: 'Y_{i,t+k|t}=\\Big(\\dfrac{P_t^*}{P_{t+k}}\\Big)^{-\\varepsilon}C_{t+k}' },
         ] },
         { title: 'Три уравнения', eqs: [
           { label: 'Dynamic IS', tex: '\\tilde y_t=E^*_t\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-E^*_t\\pi_{t+1}-r^n_t\\big)' },
           { label: 'PC', tex: '\\pi_t=\\beta\\cdot E^*_t\\pi_{t+1}+\\kappa\\cdot \\tilde y_t+u_t,\\qquad \\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big)' },
-          { label: 'MPR', tex: 'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\cdot \\tilde y_t+v_t' },
+          { label: 'MPR', tex: 'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\tilde y_t+v_t' },
           { label: 'Принцип Тейлора', tex: '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\phi_y>0' },
         ] },
         { title: 'Ожидания', eqs: [

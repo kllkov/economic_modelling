@@ -23,7 +23,7 @@ export const defaults = {
   beta: 0.99, sigma: 1, varphi: 1, alpha: 0.33, epsilon: 6, theta: 0.67,
   phiPi: 1.5, phiY: 0.125, gamma: 0.2, pie0: 4,
   shockTarget: 'v', shockSize: 1, shockTiming: 'unexpected', tHat: 5, t0: 2,
-  shockPersistence: 'temporary', rhoS: 0.5,
+  shockPersistence: 'temporary', rhoS: 0.5, tempMode: 'ar', shockDur: 5,
   horizon: 40,
 };
 
@@ -61,14 +61,21 @@ export const controls = [
     show: (s) => s.expectations === 'rational' && s.shockTiming === 'expected', hint: 'Должно быть меньше $\\hat t$' },
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }] },
+  { id: 'tempMode', label: 'Временный шок', type: 'segmented',
+    options: [{ v: 'ar', l: 'Персистентность' }, { v: 'fixed', l: 'Число периодов' }],
+    show: (s) => s.shockPersistence === 'temporary' },
   { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
-    show: (s) => s.shockPersistence === 'temporary', hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
+    show: (s) => s.shockPersistence === 'temporary' && s.tempMode !== 'fixed', hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
+  { id: 'shockDur', label: 'Число периодов $N$', type: 'number', min: 1, max: 200, step: 1,
+    show: (s) => s.shockPersistence === 'temporary' && s.tempMode === 'fixed',
+    hint: (s) => (s.time === 'continuous' ? 'Шок действует на $[\\hat t,\\,\\hat t+N)$, затем сразу исчезает' : 'Шок действует в $t=\\hat t,\\dots,\\hat t+N-1$, затем сразу исчезает') },
 
   { section: 'Отображение' },
   { id: 'horizon', label: 'Горизонт графиков', type: 'number', min: 10, max: 200, step: 5 },
 ];
 
 export function normalize(st, changed) {
+  st.shockDur = Math.max(1, Math.round(+st.shockDur || 1));
   if (!SHOCK_TARGETS[st.shockTarget]) { st.shockTarget = 'v'; changed = 'shockTarget'; }
   if (changed === 'shockTarget') st.shockSize = SHOCK_TARGETS[st.shockTarget].def;
   if (st.expectations !== 'rational') st.shockTiming = 'unexpected';
@@ -89,11 +96,16 @@ export function coefs(st) {
   return { Theta, lambda, kappa, psi, rho, det };
 }
 
+// момент, когда временный шок на N периодов исчезает (для разметки графиков)
+const shockEnd = (x) => (x.shockPersistence === 'temporary' && x.tempMode === 'fixed' && SHOCK_TARGETS[x.shockTarget]?.kind !== 'state' ? x.tHat + x.shockDur : null);
+
 // ───────────────────────────── Решатель ─────────────────────────────
 
 function prof(st, t) {
   if (t < st.tHat - 1e-9) return 0;
-  return st.shockPersistence === 'permanent' ? 1 : Math.pow(st.rhoS, t - st.tHat);
+  if (st.shockPersistence === 'permanent') return 1;
+  if (st.tempMode === 'fixed') return t < st.tHat + st.shockDur - 1e-9 ? 1 : 0;
+  return Math.pow(st.rhoS, t - st.tHat);
 }
 
 // экзогенные величины в период t (scale = 0 — базовый путь)
@@ -237,7 +249,7 @@ export function solve(st) {
   return {
     ok: true, t, irf, levels: lvl, baseLevels: base,
     ss0, ssF, sim, C, permanentChange: moved,
-    marks: { tHat: st.tHat, t0: st.expectations === 'rational' && st.shockTiming === 'expected' ? st.t0 : null },
+    marks: { tHat: st.tHat, tEnd: shockEnd(st), t0: st.expectations === 'rational' && st.shockTiming === 'expected' ? st.t0 : null },
   };
 }
 
@@ -340,13 +352,13 @@ export function formulas(st) {
   // ── шок
   const tg = st.shockTarget;
   const temp = st.shockPersistence === 'temporary';
-  const prf = temp ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
+  const prf = temp && st.tempMode === 'fixed' ? '\\text{𝟙}\\{\\hat t\\le t<\\hat t+N\\}' : temp ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   const sym = { d: 'd', u: 'u', v: 'v', a: 'a' }[tg];
   let shockTex, shockNum;
   { shockTex = `${sym}_t=\\Delta ${sym}\\cdot ${prf}`; shockNum = `\\Delta ${sym}=${n4(st.shockSize)}`; }
   shockNum += `,\\qquad \\hat t=${st.tHat}`;
   if (rat && st.shockTiming === 'expected') shockNum += `,\\qquad t_0=${st.t0}`;
-  if (temp) shockNum += `,\\qquad \\rho_s=${n4(st.rhoS)}`;
+  if (temp) shockNum += st.tempMode === 'fixed' ? `,\\qquad N=${st.shockDur}` : `,\\qquad \\rho_s=${n4(st.rhoS)}`;
   fs.shock.push({ tex: shockTex, num: shockNum });
   fs.flatNote = 'Шок не выводит экономику из стационара при текущих параметрах.';
 

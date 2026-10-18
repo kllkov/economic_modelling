@@ -21,7 +21,7 @@ const SHOCK_TARGETS = {
            note: MIT_NOTE },
   theta: { label: 'Неприятие риска $\\theta$', kind: 'param', unit: 'Δ', def: 0.5, step: 0.1, utility: 'cara', onlyMIT: true,
            note: MIT_NOTE },
-  delta: { label: 'Норма амортизации $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
+  delta: { label: 'Норма выбытия капитала $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
 };
 
 export const defaults = {
@@ -29,7 +29,7 @@ export const defaults = {
   utility: 'crra', production: 'cd',
   alpha: 0.3, beta: 0.96, rho: 0.04, delta: 0.1, sigma: 2, theta: 1, g: 0.02, n: 0.01,
   shockTarget: 'k', shockSize: -20, shockTiming: 'unexpected', tHat: 15, t0: 5,
-  shockPersistence: 'permanent', rhoS: 0.8,
+  shockPersistence: 'permanent', rhoS: 0.8, tempMode: 'ar', shockDur: 5,
   horizon: 60,
 };
 
@@ -55,8 +55,8 @@ export const controls = [
     ] },
   { id: 'objective', label: 'Целевая функция', type: 'segmented',
     options: (s) => (s.time === 'discrete'
-      ? [{ v: 'mill', l: '$\\sum\\beta^t u(c_t)$' }, { v: 'bentham', l: '$\\sum\\beta^t L_t\\cdot  u(c_t)$' }]
-      : [{ v: 'mill', l: '$\\int e^{-\\rho t}u(c)\\,dt$' }, { v: 'bentham', l: '$\\int e^{-\\rho t}L\\cdot u(c)\\,dt$' }]),
+      ? [{ v: 'mill', l: '$\\sum\\beta^t u(c_t)$' }, { v: 'bentham', l: '$\\sum\\beta^t L_t u(c_t)$' }]
+      : [{ v: 'mill', l: '$\\int e^{-\\rho t}u(c)\\,dt$' }, { v: 'bentham', l: '$\\int e^{-\\rho t}L u(c)\\,dt$' }]),
     hint: (s) => (s.objective === 'mill'
       ? 'Милль: максимизируется полезность на душу населения'
       : 'Бентам: максимизируется сумма полезностей всех членов домохозяйства') },
@@ -77,7 +77,7 @@ export const controls = [
     show: (s) => s.time === 'discrete' },
   { id: 'rho', label: '$\\rho$ — ставка дисконтирования', type: 'number', min: 0.001, max: 0.5, step: 0.005,
     show: (s) => s.time === 'continuous' },
-  { id: 'delta', label: '$\\delta$ — амортизация', type: 'number', min: 0, max: 0.99, step: 0.01 },
+  { id: 'delta', label: '$\\delta$ — выбытие капитала', type: 'number', min: 0, max: 0.99, step: 0.01 },
   { id: 'n', label: '$n$ — темп роста $L_t$', type: 'number', min: -0.05, max: 1, step: 0.005 },
   { id: 'sigma', label: '$\\sigma$ — неприятие риска', type: 'number', min: 0.1, max: 10, step: 0.1,
     show: (s) => s.utility === 'crra' },
@@ -101,9 +101,15 @@ export const controls = [
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }],
     show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT },
+  { id: 'tempMode', label: 'Временный шок', type: 'segmented',
+    options: [{ v: 'ar', l: 'Персистентность' }, { v: 'fixed', l: 'Число периодов' }],
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary' },
   { id: 'rhoS', label: 'Персистентность $\\rho_s$', type: 'number', slider: true, min: 0, max: 0.99, step: 0.01,
-    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary',
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary' && s.tempMode !== 'fixed',
     hint: 'Отклонение затухает как $\\rho_s^{\\,t-\\hat t}$' },
+  { id: 'shockDur', label: 'Число периодов $N$', type: 'number', min: 1, max: 200, step: 1,
+    show: (s) => SHOCK_TARGETS[s.shockTarget]?.kind !== 'state' && !SHOCK_TARGETS[s.shockTarget]?.onlyMIT && s.shockPersistence === 'temporary' && s.tempMode === 'fixed',
+    hint: (s) => (s.time === 'continuous' ? 'Шок действует на $[\\hat t,\\,\\hat t+N)$, затем сразу исчезает' : 'Шок действует в $t=\\hat t,\\dots,\\hat t+N-1$, затем сразу исчезает') },
 
   { section: 'Отображение' },
   { id: 'horizon', label: 'Горизонт графиков', type: 'number', min: 20, max: 200, step: 5 },
@@ -111,6 +117,7 @@ export const controls = [
 
 // Согласование настроек при изменении (вызывается UI после каждого изменения)
 export function normalize(s, changed) {
+  s.shockDur = Math.max(1, Math.round(+s.shockDur || 1));
   if (!s.objective) s.objective = 'mill';
   const allowed = shockTargetsFor(s).map((o) => o.v);
   if (!allowed.includes(s.shockTarget)) {
@@ -129,11 +136,15 @@ export function normalize(s, changed) {
   return s;
 }
 
+// момент, когда временный шок на N периодов исчезает (для разметки графиков)
+const shockEnd = (x) => (x.shockPersistence === 'temporary' && x.tempMode === 'fixed' && SHOCK_TARGETS[x.shockTarget]?.kind !== 'state' ? x.tHat + x.shockDur : null);
+
 // ───────────────────────────── Решатель ─────────────────────────────
 
 function shockProfile(s, t) {
   if (t < s.tHat - 1e-9) return 0;
   if (s.shockPersistence === 'permanent') return 1;
+  if (s.tempMode === 'fixed') return t < s.tHat + s.shockDur - 1e-9 ? 1 : 0;
   return Math.pow(s.rhoS, t - s.tHat);
 }
 
@@ -365,7 +376,7 @@ export function solve(s) {
     ok: true, t, irf: series, levels: lvl, eff, baseLevels: baseLvl, baseEff, agg, baseAgg,
     ss0: exact0, ssF: exactF, ZF: P.Z[N + 1],
     permanentChange: Math.abs(exactF.k - exact0.k) / exact0.k > 1e-9 || Math.abs(exactF.r - exact0.r) > 1e-12,
-    marks: { tHat: s.tHat, t0: sol.expected ? s.t0 : null },
+    marks: { tHat: s.tHat, tEnd: shockEnd(s), t0: sol.expected ? s.t0 : null },
   };
 }
 
@@ -419,18 +430,19 @@ export function formulas(s) {
   const fs = { dec: [], cen: [], system: [], shock: [], ss: [] };
 
   // полезность и предельная полезность от аргумента
-  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}\\cdot e^{-\\theta ${c}}`);
+  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}e^{-\\theta ${c}}`);
   const Up = (c) => (ut === 'crra' ? `${c}^{-\\sigma}` : ut === 'log' ? `\\dfrac{1}{${c}}` : `e^{-\\theta ${c}}`);
+  const Uw = (c) => (ut === 'cara' ? `\\left(${U(c)}\\right)` : U(c));
   const cT = '{c_t}';
   const growthD = tp ? '(1+n)(1+g)' : '(1+n)';
   const growthC = tp ? '(n+g+\\delta)' : '(n+\\delta)';
   const popLaw = D ? 'L_{t+1}=(1+n)L_t' : '\\dot L_t/L_t=n';
   const tpLaw = D ? 'E_{t+1}=(1+g)E_t' : '\\dot E_t/E_t=g';
-  const lawLine = tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw;
+  const lawLine = (tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw) + (tp ? `,\\qquad L_0=E_0=1` : `,\\qquad L_0=1`);
 
   // целевая функция и дисконтирование в TVC
-  const objD = mill ? `\\sum_{t=0}^{\\infty}\\beta^t\\cdot ${U(cT)}` : `\\sum_{t=0}^{\\infty}\\beta^t L_t\\cdot ${U(cT)}`;
-  const objC = mill ? `\\int_0^{\\infty}e^{-\\rho t}\\cdot ${U(cT)}\\,dt` : `\\int_0^{\\infty}e^{-\\rho t}L_t\\cdot ${U(cT)}\\,dt`;
+  const objD = mill ? `\\sum_{t=0}^{\\infty}\\beta^t${Uw(cT)}` : `\\sum_{t=0}^{\\infty}\\beta^t L_t${Uw(cT)}`;
+  const objC = mill ? `\\int_0^{\\infty}e^{-\\rho t}${Uw(cT)}\\,dt` : `\\int_0^{\\infty}e^{-\\rho t}L_t${Uw(cT)}\\,dt`;
   const tvcW = D ? (mill ? '\\beta^t' : '\\beta^t L_t') : (mill ? 'e^{-\\rho t}' : 'e^{-(\\rho-n)t}');
   // с ТП задачи записываются в единицах на эффективного работника: c = c̃·E
   const cE = '(\\tilde c_tE_t)';
@@ -444,11 +456,11 @@ export function formulas(s) {
       ...(tp ? [
         `\\max_{\\{\\tilde c_t,\\,\\tilde b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`,
         '\\text{s.t.}\\quad (1+n)(1+g)\\tilde b_{t+1}=(1+r_t)\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde b_t=0`,
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_t\\tilde b_t=0`,
       ] : [
         `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
         '\\text{s.t.}\\quad (1+n)b_{t+1}=(1+r_t)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}b_t=0`,
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}b_t=0`,
       ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -464,11 +476,11 @@ export function formulas(s) {
       ...(tp ? [
         `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}`,
         '\\text{s.t.}\\quad \\dot{\\tilde b}_t=(r_t-n-g)\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde b_t=0`,
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_t\\tilde b_t=0`,
       ] : [
         `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
         '\\text{s.t.}\\quad \\dot b_t=(r_t-n)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}b_t=0`,
+        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}b_t=0`,
       ]),
     ] });
     fs.dec.push({ agent: 'Фирмы', items: [
@@ -488,8 +500,8 @@ export function formulas(s) {
          : `\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
       tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\tilde k_{t+1}=(1-\\delta)\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
          : '\\text{s.t.}\\quad (1+n)k_{t+1}=(1-\\delta)k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
-      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_{t+1}\\cdot \\tilde k_{t+1}=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}k_{t+1}=0`,
+      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_{t+1}\\tilde k_{t+1}=0`
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}k_{t+1}=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   } else {
@@ -497,8 +509,8 @@ export function formulas(s) {
       tp ? `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}` : `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
       tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}_t=\\tilde k_t^{\\alpha}-\\tilde c_t-(n+g+\\delta)\\tilde k_t,\\qquad \\tilde k_0\\ \\text{задано}'
          : '\\text{s.t.}\\quad \\dot k_t=k_t^{\\alpha}-c_t-(n+\\delta)k_t,\\qquad k_0>0\\ \\text{задано}',
-      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${UpE}\\cdot E_t\\cdot \\tilde k_t=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}\\cdot ${Up(cT)}k_t=0`,
+      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_t\\tilde k_t=0`
+         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}k_t=0`,
     ] });
     fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
   }
@@ -546,8 +558,8 @@ export function formulas(s) {
 
   if (!cen) {
     const k = `${tl('k')}_t`, r = 'r_t', w = 'w_t';
-    const wl = tp ? 'w_t=(1-\\alpha)E_t\\cdot ' : `${w}=(1-\\alpha)`;
-    const wlN = tp ? `w_t=${n4(1 - a)}E_t\\cdot ` : `${w}=${n4(1 - a)}`;
+    const wl = tp ? 'w_t=(1-\\alpha)E_t' : `${w}=(1-\\alpha)`;
+    const wlN = tp ? `w_t=${n4(1 - a)}E_t` : `${w}=${n4(1 - a)}`;
     fs.system.push({ label: 'Цены факторов (FOC фирмы)',
       tex: `${r}=\\alpha\\cdot ${k}^{\\alpha-1}-\\delta,\\qquad ${wl}${k}^{\\alpha}`,
       num: `${r}=${n4(a)}${k}^{${n4(a - 1)}}${pm(-d)},\\qquad ${wlN}${k}^{${n4(a)}}`,
@@ -570,7 +582,7 @@ export function formulas(s) {
   // ── шок
   const tg = s.shockTarget;
   const persistent = s.shockPersistence === 'temporary' && SHOCK_TARGETS[tg].kind !== 'state';
-  const prof = persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
+  const prof = persistent && s.tempMode === 'fixed' ? '\\text{𝟙}\\{\\hat t\\le t<\\hat t+N\\}' : persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'tfp') {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prof}\\big)`;
@@ -584,7 +596,7 @@ export function formulas(s) {
     shockNum = `\\Delta ${sym}=${n4(s.shockSize)}`;
   }
   shockNum += `,\\qquad \\hat t=${s.tHat}`;
-  if (persistent) shockNum += `,\\qquad \\rho_s=${n4(s.rhoS)}`;
+  if (persistent) shockNum += s.tempMode === 'fixed' ? `,\\qquad N=${s.shockDur}` : `,\\qquad \\rho_s=${n4(s.rhoS)}`;
   fs.shock.push({ tex: shockTex, num: shockNum });
 
   // ── стационар (с подстановкой и в числах)

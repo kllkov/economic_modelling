@@ -135,13 +135,35 @@ const jumpDots = {
 
 // Разбивает траекторию на куски в моментах событий (шок, объявление), где значение скачет:
 // слева кривая доходит до предела слева (базовый путь, если он есть), справа начинается с нового значения
-function splitJumps(data, events, base, step = 0) {
-  const ys = data.map((d) => d[1]), tol = Math.max(0.015 * (Math.max(...ys) - Math.min(...ys)), 1e-12);
+function splitJumps(data, events, base, step = 0, lag = false) {
+  const ys = data.map((d) => d[1]), span = (a) => Math.max(...a) - Math.min(...a), R = span(ys);
+  // порог скачка — от размаха ряда рядом с событием (у растущих уровней общий размах слишком велик)
+  const tolAt = (i) => Math.max(0.015 * span(ys.slice(Math.max(0, i - 20), i + 21)), 1e-4 * R, 1e-12);
   const pts = [], jumps = [];
   data.forEach(([x, y], i) => {
     const d0 = i ? y - data[i - 1][1] : 0, d1 = i < data.length - 1 ? data[i + 1][1] - y : 0;
-    if (i && !jumps.some((j) => j.i === i - 1) && events.some((e) => Math.abs(x - e) < 1e-6 || (step && Math.abs(x - e - step) < 1e-6)) && Math.abs(d0) > tol && Math.abs(d0) > 2.5 * Math.abs(d1)) {
-      const yL = base?.[i]?.[1] ?? data[i - 1][1];
+    // темп роста в дискретном времени отражает скачок уровня шагом позже (g_y в t̂+1)
+    const late = lag && step && events.some((e) => Math.abs(x - e - step) < 1e-6) && !events.some((e) => Math.abs(x - e) < 1e-6);
+    // база: базовый путь (уровни) или ноль (отклонения); «на базе» — до события траектория с ней совпадала
+    const bAt = (j) => base?.[j]?.[1] ?? 0, near = (j) => Math.abs(data[j][1] - bAt(j)) <= 1e-9 * Math.max(1, Math.abs(bAt(j)));
+    const onBase = i > 0 && near(i - 1) && (i < 2 || near(i - 2));
+    const atEvent = events.some((e) => Math.abs(x - e) < 1e-6);
+    let hit;
+    if (lag) hit = (atEvent || late) && Math.abs(d0) > tolAt(i) && Math.abs(d0) > 2.5 * Math.abs(d1);
+    // до события траектория совпадала с базой: всё, что отличается от базы уже в момент события, — скачок
+    // (состояние, которое не прыгает, в момент события ещё равно базовому значению)
+    else if (onBase) hit = atEvent && Math.abs(y - bAt(i)) > tolAt(i);
+    else {
+      // траектория уже ушла от базы (объявленный шок, конец шока): скачок — шаг d0 выбивается из соседних,
+      // J = d0 − d₋₁ и K = d₁ − d0 противоположны по знаку и сравнимы (у излома K ≈ 0 или J ≈ 0)
+      const dPrev = i > 1 ? data[i - 1][1] - data[i - 2][1] : d1, J = d0 - dPrev, K = d1 - d0;
+      hit = atEvent && Math.abs(J) > tolAt(i) && J * K < 0 && Math.abs(K) >= 0.7 * Math.abs(J) && Math.abs(J) > 0.5 * Math.abs(K) && Math.abs(J) > 0.5 * Math.abs(d0);
+    }
+    if (i && !jumps.some((j) => j.i === i - 1) && hit) {
+      // предел слева: базовый путь, пока траектория с ним совпадает (до шока); иначе — продолжение траектории
+      // у запаздывающего скачка темпа роста — базовое значение, если шок начался шагом раньше (иначе — предыдущее значение)
+      const yL = onBase ? bAt(i) : late ? (i > 1 && near(i - 2) ? base?.[i]?.[1] ?? data[i - 1][1] : data[i - 1][1])
+        : step && i > 1 ? 2 * data[i - 1][1] - data[i - 2][1] : data[i - 1][1];
       jumps.push({ i, x, yL, yR: y, xPrev: data[i - 1][0], yPrev: data[i - 1][1] });
     }
     pts.push({ x, y });
@@ -242,7 +264,7 @@ export function drawChart(canvas, series, opts) {
   const datasets = series.map((s) => {
     const isBase = s.kind === 'base';
     let data = s.data.map(([x, y]) => ({ x, y })), cut = null;
-    if (!isBase) { const sp = splitJumps(s.data, events, series.find((q) => q.kind === 'base')?.data, opts.discrete ? s.data[1][0] - s.data[0][0] : 0); data = sp.pts; jumps.push(...sp.jumps); cut = new Set(sp.jumps.map((j) => j.i)); }
+    if (!isBase) { const sp = splitJumps(s.data, events, series.find((q) => q.kind === 'base')?.data, opts.discrete ? s.data[1][0] - s.data[0][0] : 0, opts.lagJump); data = sp.pts; jumps.push(...sp.jumps); cut = new Set(sp.jumps.map((j) => j.i)); }
     return {
       label: s.label,
       data,

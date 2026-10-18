@@ -70,7 +70,7 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
     formulas(st); steadyTable(st, r); extraBlocks(st, r);
     for (const sp of chartSpecs(st)) assert.ok(r.irf[sp.id].every(Number.isFinite), `${sp.id} конечен`);
   }
-  console.log(`комбинаций: ${combos.length}`);
+console.log(`комбинаций: ${combos.length}`);
 }
 
 // 4. Адаптивные ожидания с γ = 1: E*_t π_{t+1} = π_{t−1}
@@ -134,5 +134,14 @@ const run = (o) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSO
     const pc0 = p1.series.find((q) => q.curveLabel === nm('PC'));
     near(at(pc0, 0), 0, 1e-9, 'PC до шока проходит через (0, 0)');
   }
+}
+// 9. Временный шок на N периодов при рациональных ожиданиях: после t̂+N отклонений нет
+{
+  const st = { ...defaults, expectations: 'rational', shockTarget: 'v', shockSize: 1, shockPersistence: 'temporary', tempMode: 'fixed', shockDur: 4, tHat: 3, horizon: 30 };
+  const r = solve(st);
+  assert.ok(r.ok);
+  assert.equal(r.marks.tEnd, 7);
+  for (let t = 7; t <= 30; t++) { near(r.irf.x[t], 0, 1e-9, `x_${t}`); near(r.irf.pi[t], 0, 1e-9, `π_${t}`); }
+  assert.ok(Math.abs(r.irf.x[3]) > 1e-3 && Math.abs(r.irf.x[6]) > 1e-4, 'шок действует в t̂…t̂+N−1');
 }
 console.log('Модель IS–PC–MPR: все проверки пройдены');
