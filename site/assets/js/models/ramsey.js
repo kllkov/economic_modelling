@@ -653,6 +653,17 @@ function locusLabels(s) {
   return { kS, cS, lk: D ? `\\Delta ${kS}_{t+1}=0` : `\\dot{${kS}}_t=0`, lc: D ? `\\Delta ${cS}_{t+1}=0` : `\\dot{${cS}}_t=0` };
 }
 
+// Локус Δc̃ = 0. В непрерывном времени — вертикаль k̃ = k̃*. В дискретном в уравнение Эйлера входит k̃_{t+1},
+// поэтому Δc̃_{t+1} = 0 ⇔ k̃_{t+1} = k̃*, и в осях (k̃_t, c̃_t) это кривая c̃ = (1−δ)k̃ + k̃^α − (1+n)(1+g)k̃*.
+function consLocus(s, ss, xmax, ymax) {
+  if (s.time !== 'discrete') return { data: [[ss.k, 0], [ss.k, ymax]] };
+  const a = s.alpha, G = 1 + ss.dep - s.delta;
+  const f = (x) => (1 - s.delta) * x + Math.pow(x, a) - G * ss.k;
+  const root = (y, lo, hi) => { for (let i = 0; i < 80; i++) { const m = (lo + hi) / 2; if (f(m) < y) lo = m; else hi = m; } return (lo + hi) / 2; }; // f возрастает
+  const x0 = root(0, 0, ss.k), x1 = f(xmax) > ymax ? root(ymax, ss.k, xmax) : xmax;
+  return { fn: f, data: sample(f, x0, x1) };
+}
+
 // линии фазовой диаграммы системы s: локусы и (по желанию) седловая траектория
 function systemSeries(s, xmax, ymax, style) {
   const a = s.alpha, ss = ssOf(s);
@@ -661,7 +672,7 @@ function systemSeries(s, xmax, ymax, style) {
   const sfx = style.suffix ? `\\ \\text{${style.suffix}}` : '';
   const out = [
     { label: `$${lk}${sfx}$`, color: style.kColor, width: style.width ?? 2.2, dash: style.dash, fn: locus, data: sample(locus, 0, xmax) },
-    { label: `$${lc}${sfx}$`, color: style.cColor, width: style.width ?? 2.2, dash: style.dash, data: [[ss.k, 0], [ss.k, ymax]] },
+    { label: `$${lc}${sfx}$`, color: style.cColor, width: style.width ?? 2.2, dash: style.dash, ...consLocus(s, ss, xmax, ymax) },
   ];
   if (style.saddle) out.push({ label: 'седловая траектория', color: PC.saddle, width: 2.4, data: style.saddle.filter(([x]) => x <= xmax) });
   return out;

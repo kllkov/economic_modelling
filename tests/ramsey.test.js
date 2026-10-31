@@ -97,7 +97,13 @@ near(r.levels.L[11] / r.levels.L[10], 1.03, 1e-12, 'L после шока рас
   for (const p of path.slice(0, 15)) near(onSaddle(p), p[1], 2e-3, 'точка пути на седловой траектории');
   const kStar = steadyTable(st, solve(st)).find((r) => r.key === 'k').value;
   near(ph.opts.vlines[1].x, kStar, 1e-12, 'k̃* на оси');
-  near(ph.series[1].data[0][0], kStar, 1e-12, 'локус Δc̃ = 0 — вертикаль k̃ = k̃*');
+  // дискретное время: Δc̃_{t+1} = 0 ⇔ k̃_{t+1} = k̃*, локус — возрастающая кривая через (k̃*, c̃*), а не вертикаль
+  const lc = ph.series[1].data, G = (1 + 0.01) * (1 + 0.02), a = st.alpha;
+  assert.ok(lc[0][0] < lc[lc.length - 1][0] && lc[0][1] >= -1e-9, 'локус Δc̃ = 0 возрастает и начинается на оси');
+  for (const [x, y] of lc.filter((_, i) => i % 100 === 0)) near(((1 - st.delta) * x + x ** a - y) / G, kStar, 1e-9, 'на локусе k̃_{t+1} = k̃*');
+  near(lc.reduce((m, p) => (Math.abs(p[0] - kStar) < Math.abs(m[0] - kStar) ? p : m))[1], steadyTable(st, solve(st)).find((r) => r.key === 'c').value, 2e-3, 'локус проходит через c̃*');
+  const sc0 = { ...st, time: 'continuous' }, lcc = extraBlocks(sc0, solve(sc0))[0].sections[1].charts[0].series[1].data;
+  near(lcc[0][0], lcc[1][0], 1e-12, 'непрерывное время: Δc̃ = 0 — вертикаль k̃ = k̃*');
   // графики ТСР: k_t = k̃_t E_t, ТСР = k̃* E_t
   const sc = ssCharts(st);
   const [bgp, pk] = sc.charts[0].series;
@@ -107,9 +113,9 @@ near(r.levels.L[11] / r.levels.L[10], 1.03, 1e-12, 'L после шока рас
   assert.ok(dg.charts[0].series.some((x) => x.points), 'путь экономики на диаграмме');
   const sd = { ...defaults, shockTarget: 'delta', shockSize: 0.03, tHat: 5 };
   const dd = extraBlocks(sd, solve(sd))[1].charts[0];
-  const vert = dd.series.filter((x) => x.data.length === 2 && x.data[0][0] === x.data[1][0] && !x.points).map((x) => x.data[0][0]);
   const ssNew = solve(sd).ssF.k;
-  assert.ok(vert.some((v) => Math.abs(v - ssNew) < 1e-9), 'новый локус Δc̃ = 0 после перманентного шока δ');
+  const cross = dd.series.filter((x) => x.fn && x.data.length > 2 && /=0/.test(x.label)).some((x) => x.data.some(([k0, c0]) => Math.abs(k0 - ssNew) < 0.02 && Math.abs(c0 - solve(sd).ssF.c) < 0.02));
+  assert.ok(cross, 'новый локус Δc̃ = 0 проходит через новый стационар после перманентного шока δ');
 }
 // 11. Децентрализованная версия — без активов b: домохозяйства владеют капиталом
 {
