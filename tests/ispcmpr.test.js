@@ -144,4 +144,19 @@ console.log(`комбинаций: ${combos.length}`);
   for (let t = 7; t <= 30; t++) { near(r.irf.x[t], 0, 1e-9, `x_${t}`); near(r.irf.pi[t], 0, 1e-9, `π_${t}`); }
   assert.ok(Math.abs(r.irf.x[3]) > 1e-3 && Math.abs(r.irf.x[6]) > 1e-4, 'шок действует в t̂…t̂+N−1');
 }
+// 10. Спрос на деньги: l = (σ/ν)y − η(i − ρ), η = β/(ν(1−β)); рост денежной массы Δm = π + Δl
+{
+  const st = { ...defaults, expectations: 'rational', shockTarget: 'v', shockSize: 1, tHat: 5, horizon: 40 };
+  const r = run(st), C = r.C;
+  near(C.eta, st.beta / (st.nu * (1 - st.beta)), 1e-9, 'η');
+  near(C.eta, 1 / (st.nu * (Math.exp(C.rho / 100) - 1)), 1e-9 * C.eta, 'η = 1/(ν(e^ρ − 1))');
+  for (const j of [0, 4, 5, 6, 12, 40]) {
+    near(r.levels.l[j], (st.sigma / st.nu) * r.levels.y[j] - C.eta * (r.levels.i[j] - r.ss0.i), 1e-9, `l_${j}`);
+    near(r.levels.dm[j], r.levels.pi[j] + r.levels.l[j] - (j ? r.levels.l[j - 1] : 0), 1e-9, `Δm_${j}`);
+  }
+  assert.ok(r.irf.l[5] < 0, 'монетарное ужесточение снижает реальные остатки');
+  near(run({ ...st, shockTarget: 'v', shockSize: 0 }).irf.l[10], 0, 1e-12, 'без шока остатки в стационаре');
+  assert.equal(r.irf.dm.length, st.horizon + 1);
+}
+
 console.log('Модель IS–PC–MPR: все проверки пройдены');

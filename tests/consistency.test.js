@@ -234,7 +234,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
         const F = ispcmpr.formulas(st), C = res.C, S = res.sim;
         const Ex = expectations === 'rational' ? '\\mathbb E_t' : 'E^*_t';
         const P = { '\\beta': st.beta, '\\sigma': st.sigma, '\\chi': st.chi, '\\alpha': st.alpha, '\\varepsilon': st.epsilon,
-          '\\theta': st.theta, '\\phi_\\pi': st.phiPi, '\\phi_y': st.phiY, '\\gamma': st.gamma,
+          '\\theta': st.theta, '\\nu': st.nu, '\\eta': C.eta, '\\phi_\\pi': st.phiPi, '\\phi_y': st.phiY, '\\gamma': st.gamma,
           '\\kappa': C.kappa, '\\lambda': C.lambda, '\\psi_{ya}': C.psi };
         const where = `IS–PC–MPR ${expectations} ${shockTarget} ${shockPersistence} ${shockTiming}`;
         const vars = (t, q) => {
@@ -245,7 +245,8 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
             '\\tilde y_{t-1}': S.x[t - 1] / q, '\\pi_{t-1}': S.pi[t - 1] / q,
             '\\tilde y_t': S.x[t] / q, '\\pi_t': S.pi[t] / q, i_t: S.i[t] / q, r_t: S.r[t] / q, 'r^N_t': S.rn[t] / q,
             u_t: E.u / q, v_t: E.v / q, d_t: E.d / q, a_t: E.a / q,
-            'y^N_t': C.psi * E.a / q, y_t: (C.psi * E.a + S.x[t]) / q };
+            'y^N_t': C.psi * E.a / q, y_t: (C.psi * E.a + S.x[t]) / q,
+            l_t: res.levels.l[t] / q, m_t: res.levels.l[t] / q, p_t: 0, 'l_{t-1}': res.levels.l[t - 1] / q, '\\Delta m_t': res.levels.dm[t] / q };
         };
         const tol = { abs: 1e-10, rel: 1e-10 }, tolN = { abs: 2e-4, rel: 2e-4 };
         const groups = F.problem.filter((g) => g.agent === 'Центральный банк');

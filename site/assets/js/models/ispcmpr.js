@@ -20,7 +20,7 @@ const SHOCK_TARGETS = {
 
 export const defaults = {
   time: 'discrete', expectations: 'rational',
-  beta: 0.99, sigma: 1, chi: 1, alpha: 0.33, epsilon: 6, theta: 0.67,
+  beta: 0.99, sigma: 1, nu: 1, chi: 1, alpha: 0.33, epsilon: 6, theta: 0.67,
   phiPi: 1.5, phiY: 0.125, gamma: 0.2, pie0: 4,
   shockTarget: 'v', shockSize: 1, shockTiming: 'unexpected', tHat: 5, t0: 2,
   shockPersistence: 'temporary', rhoS: 0.5, tempMode: 'ar', shockDur: 5,
@@ -38,6 +38,7 @@ export const controls = [
   { id: 'beta', label: '$\\beta$ — дисконт-фактор', type: 'number', min: 0.5, max: 0.999, step: 0.005 },
   { id: 'sigma', label: '$\\sigma$ — неприятие риска', type: 'number', min: 0.1, max: 10, step: 0.1 },
   { id: 'chi', label: '$\\chi$ — обратная эластичность Фриша', type: 'number', min: 0, max: 10, step: 0.1 },
+  { id: 'nu', label: '$\\nu$ — эластичность полезности по реальным остаткам', type: 'number', min: 0.1, max: 10, step: 0.1 },
   { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0, max: 0.9, step: 0.01 },
   { id: 'epsilon', label: '$\\varepsilon$ — эластичность замещения товаров', type: 'number', min: 1.1, max: 50, step: 0.5 },
   { id: 'theta', label: '$\\theta$ — доля фирм без пересмотра цены', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
@@ -92,8 +93,9 @@ export function coefs(st) {
   const kappa = lambda * (s + (ph + a) / (1 - a));
   const psi = (1 + ph) / (s * (1 - a) + ph + a);
   const rho = -100 * Math.log(b);               // ρ = −ln β, в процентах
+  const eta = b / (st.nu * (1 - b));            // полуэластичность спроса на деньги: 1/(ν(e^ρ − 1))
   const det = (1 - b) * st.phiY + kappa * (st.phiPi - 1); // принцип Тейлора: det > 0
-  return { Theta, lambda, kappa, psi, rho, det };
+  return { Theta, lambda, kappa, psi, rho, det, eta };
 }
 
 // момент, когда временный шок на N периодов исчезает (для разметки графиков)
@@ -156,6 +158,7 @@ function validate(st) {
   const errs = [];
   if (!(st.beta > 0 && st.beta < 1)) errs.push('$\\beta$ должна лежать в $(0,1)$.');
   if (!(st.sigma > 0)) errs.push('$\\sigma$ должна быть положительной.');
+  if (!(st.nu > 0)) errs.push('$\\nu$ должна быть положительной.');
   if (!(st.chi >= 0)) errs.push('$\\chi$ не может быть отрицательной.');
   if (!(st.alpha >= 0 && st.alpha < 1)) errs.push('$\\alpha$ должна лежать в $[0,1)$.');
   if (!(st.epsilon > 1)) errs.push('$\\varepsilon$ должна быть больше 1.');
@@ -233,15 +236,17 @@ export function solve(st) {
   const ss0 = steady(st, exo(st, 0, 0), C);
   const ssF = steady(st, exo(st, Infinity, 1), C);
 
-  const keys = ['pi', 'x', 'i', 'r', 'epi', 'rn', 'u', 'v', 'a', 'yn', 'y'];
+  const keys = ['pi', 'x', 'i', 'r', 'epi', 'rn', 'u', 'v', 'a', 'yn', 'y', 'l', 'dm'];
   const irf = {}, lvl = {}, base = {};
   keys.forEach((k) => { irf[k] = []; lvl[k] = []; base[k] = []; });
   const t = [];
-  const b0 = { pi: ss0.pi, x: 0, i: ss0.i, r: ss0.r, epi: ss0.epi, rn: ss0.rn, u: 0, v: 0, a: 0, yn: 0, y: 0 };
+  const b0 = { pi: ss0.pi, x: 0, i: ss0.i, r: ss0.r, epi: ss0.epi, rn: ss0.rn, u: 0, v: 0, a: 0, yn: 0, y: 0, l: 0, dm: ss0.pi };
+  // спрос на деньги: l_t = (σ/ν)y_t − η(i_t − ρ), рост денежной массы Δm_t = π_t + l_t − l_{t−1} (до шока l = 0)
+  const lOf = (j) => (st.sigma / st.nu) * (C.psi * sim.E[j].a + sim.x[j]) - C.eta * (sim.i[j] - ss0.i);
   for (let j = 0; j <= st.horizon; j++) {
     const E = sim.E[j];
     const L = { pi: sim.pi[j], x: sim.x[j], i: sim.i[j], r: sim.r[j], epi: sim.epi[j], rn: sim.rn[j],
-      u: E.u, v: E.v, a: E.a, yn: C.psi * E.a, y: C.psi * E.a + sim.x[j] };
+      u: E.u, v: E.v, a: E.a, yn: C.psi * E.a, y: C.psi * E.a + sim.x[j], l: lOf(j), dm: sim.pi[j] + lOf(j) - (j ? lOf(j - 1) : 0) };
     t.push(j);
     for (const k of keys) { lvl[k].push(L[k]); base[k].push(b0[k]); irf[k].push(L[k] - b0[k]); }
   }
@@ -265,6 +270,8 @@ export function chartSpecs(st) {
     { id: 'i', title: 'Номинальная ставка', sym: 'i_t', irfUnit: pp, lvlUnit: '%' },
     { id: 'r', title: 'Реальная ставка', sym: 'r_t', irfUnit: pp, lvlUnit: '%' },
     { id: 'epi', title: 'Инфляционные ожидания', sym: `${Ex}\\pi_{t+1}`, irfUnit: pp, lvlUnit: '%' },
+    { id: 'l', title: 'Реальные денежные остатки', sym: 'l_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
+    { id: 'dm', title: 'Рост денежной массы', sym: '\\Delta m_t', irfUnit: pp, lvlUnit: '%' },
   ];
   if (tg === 'd' || tg === 'a') specs.push({ id: 'rn', title: 'Естественная ставка', sym: 'r^N_t', irfUnit: pp, lvlUnit: '%' });
   if (tg === 'u') specs.push({ id: 'u', title: 'Шок издержек', sym: 'u_t', irfUnit: pp, lvlUnit: 'п.п.' });
@@ -332,6 +339,10 @@ export function formulas(st) {
   fs.system.push({ label: 'Выпуск',
     tex: 'y_t=y^N_t+\\tilde y_t,\\qquad y^N_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\chi}{\\sigma(1-\\alpha)+\\chi+\\alpha}',
     num: `\\psi_{ya}=${n4(C.psi)}` });
+  fs.system.push({ label: 'Спрос на деньги',
+    tex: 'l_t=\\dfrac{\\sigma}{\\nu}\\,y_t-\\eta\\,(i_t-\\rho),\\qquad l_t\\equiv m_t-p_t,\\qquad \\eta=\\dfrac{\\beta}{\\nu(1-\\beta)}',
+    num: `l_t=${n4(s / st.nu)}\\,y_t-${n4(C.eta)}\\,(i_t-${fmtTex(C.rho, 6)}),\\qquad \\eta=${n4(C.eta)}` });
+  fs.system.push({ label: 'Рост денежной массы', tex: '\\Delta m_t=\\pi_t+l_t-l_{t-1}' });
   if (st.expectations === 'naive')
     fs.system.push({ label: 'Ожидания', tex: 'E^*_t\\pi_{t+1}=0,\\qquad E^*_t\\tilde y_{t+1}=0' });
   else if (st.expectations === 'adaptive')
