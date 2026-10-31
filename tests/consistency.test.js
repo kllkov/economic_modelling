@@ -271,57 +271,71 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
 // ─────────────── модель RBC ───────────────
 {
   let n = 0;
-  for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
-    const where = `RBC ${version} ${variant} ${shockTarget}`;
-    const tp = variant === 'tp';
-    const base = { ...rbc.defaults, version, variant, shockTarget, shockSize: shockTarget === 'tfp' ? 1 : -10, tHat: 3, horizon: 40 };
-    const P = { '\\alpha': base.alpha, '\\beta': base.beta, '\\delta': base.delta, '\\theta': base.theta, '\\chi': base.chi, '\\rho': base.rho,
-      n: tp ? base.n : 0, g: tp ? base.g : 0 };
-    // нелинейное решение: точные уравнения (блоки 1–2) и таблица стационара
-    {
-      const st = { ...base, method: 'nonlinear' };
-      const res = rbc.solve(st);
-      assert.ok(res.ok, where + res.errors);
-      const F = rbc.formulas(st), L = res.levels, E = res.eff, A = res.agg;
-      for (const i of [4, 5, 10, 20]) {
-        const V = { ...P, r_t: L.r[i] / 100, 'r_{t+1}': L.r[i + 1] / 100, N_t: L.N[i], 'N_{t+1}': L.N[i + 1], A_t: L.A[i], 'A_{t+1}': L.A[i + 1],
-          'A^*': 1, '\\varepsilon_{t+1}': 0, '\\Pi_t': 0, '\\tilde\\Pi_t': 0, w_t: L.w[i] };
-        if (tp) Object.assign(V, { '\\tilde c_{t+1}': E.c[i + 1], '\\tilde c_t': E.c[i], '\\tilde k_{t+1}': E.k[i + 1], '\\tilde k_t': E.k[i],
-          '\\tilde y_t': E.y[i], '\\tilde i_t': E.i[i], '\\tilde w_t': E.w[i], E_t: L.E[i], 'E_{t+1}': L.E[i + 1], L_t: L.L[i], 'L_{t+1}': L.L[i + 1],
-          E_0: 1, L_0: 1, K_t: A.k[i], Y_t: A.y[i], C_t: A.c[i], I_t: A.i[i] });
-        else Object.assign(V, { 'C_{t+1}': L.c[i + 1], C_t: L.c[i], 'K_{t+1}': L.k[i + 1], K_t: L.k[i], Y_t: L.y[i], I_t: L.i[i], L_t: 1 });
-        const tol = { abs: 1e-9, rel: 1e-9 }, tolN = { abs: 2e-4, rel: 2e-4 };
-        for (const g of version === 'centralized' ? F.cen : F.dec) for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${i}`);
-        for (const r of F.system) { check(r.tex, V, tol, `${where}, «${r.label}», t=${i}`); check(r.num, V, tolN, `${where}, «${r.label}» (числа), t=${i}`); }
-      }
-      const S = res.ss0, X = (L0, lo) => (tp ? `\\tilde ${lo}^*` : `${L0}^*`);
-      const VS = { ...P, 'r^*': S.r, 'N^*': S.N, [X('K', 'k')]: S.k, [X('Y', 'y')]: S.y, [X('C', 'c')]: S.c, [X('I', 'i')]: S.i, [tp ? '\\tilde w^*' : 'w^*']: S.w };
-      for (const r of rbc.steadyTable(st, res)) {
-        check(`${r.sym}=${r.tex}`, VS, { abs: 1e-10, rel: 1e-10 }, `${where}, таблица стационара (${r.name})`);
-        check(`${r.sym}=${r.value}`, VS, { abs: 1e-12, rel: 1e-12 }, `${where}, таблица стационара: значение (${r.name})`);
-      }
-    }
-    // лог-линейное решение: лог-линейная система и функции политики (блок 3)
-    {
-      const st = { ...base, method: 'linear' };
-      const res = rbc.solve(st);
-      assert.ok(res.ok, where);
-      const [X] = rbc.systemBlocks(st), I = res.irf, S = res.ss0, pol = res.pol;
-      const h = (L0, lo) => (tp ? `\\hat{\\tilde ${lo}}` : `\\hat ${L0}`);
-      for (const i of [3, 4, 10, 25]) {
-        const V = { ...P, 'r^*': S.r, '\\Delta r_t': I.r[i] / 100, '\\Delta r_{t+1}': I.r[i + 1] / 100, '\\hat N_t': I.N[i] / 100, '\\hat A_t': I.A[i] / 100, '\\hat A_{t+1}': I.A[i + 1] / 100,
-          [`${h('C', 'c')}_t`]: I.c[i] / 100, [`${h('C', 'c')}_{t+1}`]: I.c[i + 1] / 100, [`${h('K', 'k')}_t`]: I.k[i] / 100, [`${h('K', 'k')}_{t+1}`]: I.k[i + 1] / 100,
-          [`${h('Y', 'y')}_t`]: I.y[i] / 100, [`${h('I', 'i')}_t`]: I.i[i] / 100, [`${tp ? '\\hat{\\tilde w}' : '\\hat w'}_t`]: I.w[i] / 100,
-          [tp ? '\\tilde y^*' : 'Y^*']: S.y, [tp ? '\\tilde c^*' : 'C^*']: S.c, [tp ? '\\tilde i^*' : 'I^*']: S.i,
-          '\\eta_{CK}': pol.cK, '\\eta_{CA}': pol.cA, '\\eta_{KK}': pol.KK, '\\eta_{KA}': pol.KA, '\\eta_{NK}': pol.NK, '\\eta_{NA}': pol.NA };
-        for (const G of X.groups) for (const r of G.rows) {
-          check(r.tex, V, { abs: 1e-10, rel: 1e-10 }, `${where}, лог-лин. «${r.label}», t=${i}`, true);
-          check(r.num, V, { abs: 2e-4, rel: 2e-4, floor: 1e-1 }, `${where}, лог-лин. «${r.label}» (числа), t=${i}`, true);
+  const SH = { tfp: 1, k: -10, beta: 0.002, theta: 0.4, chi: 0.5, delta: 0.005 };
+  for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'n', 'tp', 'both'])
+    for (const shockTarget of Object.keys(SH)) for (const shockPersistence of ['temporary', 'permanent']) {
+      const isPar = !['tfp', 'k'].includes(shockTarget);
+      if (!isPar && shockPersistence === 'permanent') continue;
+      const where = `RBC ${version} ${variant} ${shockTarget} ${shockPersistence}`;
+      const hasN = variant === 'n' || variant === 'both', hasG = variant === 'tp' || variant === 'both';
+      const mode = hasG ? 'eff' : hasN ? 'pc' : 'agg';
+      const base = { ...rbc.defaults, version, variant, shockTarget, shockSize: SH[shockTarget], shockPersistence, tHat: 3, horizon: 40 };
+      const P = { '\\alpha': base.alpha, '\\beta': base.beta, '\\delta': base.delta, '\\theta': base.theta, '\\chi': base.chi, '\\rho': base.rho,
+        n: hasN ? base.n : 0, g: hasG ? base.g : 0 };
+      const X = (L0, lo) => (mode === 'eff' ? `\\tilde ${lo}` : mode === 'pc' ? lo : L0);
+      // нелинейное решение: точные уравнения (блоки 1–2) и таблица стационара
+      {
+        const st = { ...base, method: 'nonlinear' };
+        const res = rbc.solve(st);
+        assert.ok(res.ok, where + res.errors);
+        const F = rbc.formulas(st), L = res.levels, E = res.eff, A = res.agg;
+        for (const i of [4, 5, 10, 20]) {
+          const V = { ...P, r_t: L.r[i] / 100, 'r_{t+1}': L.r[i + 1] / 100, N_t: L.N[i], 'N_{t+1}': L.N[i + 1], A_t: L.A[i], 'A_{t+1}': L.A[i + 1],
+            'A^*': 1, '\\varepsilon_{t+1}': 0, '\\Pi_t': 0, '\\pi_t': 0, '\\tilde\\pi_t': 0, w_t: L.w[i], L_t: L.L[i], 'L_{t+1}': L.L[i + 1], E_t: L.E[i], 'E_{t+1}': L.E[i + 1],
+            E_0: 1, L_0: 1, K_t: A.k[i], Y_t: A.y[i], C_t: A.c[i], I_t: A.i[i], 'K_t^D': A.k[i], 'K_t^S': A.k[i], 'N_t^D': L.N[i], 'N_t^S': L.N[i],
+            [`${X('C', 'c')}_{t+1}`]: E.c[i + 1], [`${X('C', 'c')}_t`]: E.c[i], [`${X('K', 'k')}_{t+1}`]: E.k[i + 1], [`${X('K', 'k')}_t`]: E.k[i],
+            [`${X('Y', 'y')}_t`]: E.y[i], [`${X('I', 'i')}_t`]: E.i[i], [hasG ? '\\tilde w_t' : 'w_t']: E.w[i] };
+          if (isPar) { const sym = { beta: '\\beta', theta: '\\theta', chi: '\\chi', delta: '\\delta' }[shockTarget]; V[`${sym}_t`] = L.par[i]; V[`${sym}_{t+1}`] = L.par[i + 1]; }
+          const tol = { abs: 1e-9, rel: 1e-9 }, tolN = { abs: 2e-4, rel: 2e-4 };
+          for (const g of version === 'centralized' ? F.cen : F.dec) for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${i}`);
+          for (const r of F.system) { check(r.tex, V, tol, `${where}, «${r.label}», t=${i}`); check(r.num, V, tolN, `${where}, «${r.label}» (числа), t=${i}`); }
+        }
+        const S = res.ss0, Y = (L0, lo) => (mode === 'eff' ? `\\tilde ${lo}^*` : mode === 'pc' ? `${lo}^*` : `${L0}^*`);
+        const VS = { ...P, 'r^*': S.r, 'N^*': S.N, [Y('K', 'k')]: S.k, [Y('Y', 'y')]: S.y, [Y('C', 'c')]: S.c, [Y('I', 'i')]: S.i, [hasG ? '\\tilde w^*' : 'w^*']: S.w };
+        for (const r of rbc.steadyTable(st, res)) {
+          check(`${r.sym}=${r.tex}`, VS, { abs: 1e-10, rel: 1e-10 }, `${where}, таблица стационара (${r.name})`);
+          check(`${r.sym}=${r.value}`, VS, { abs: 1e-12, rel: 1e-12 }, `${where}, таблица стационара: значение (${r.name})`);
         }
       }
+      // лог-линейное решение: лог-линейная система и функции политики (блок 3)
+      {
+        const st = { ...base, method: 'linear' };
+        const res = rbc.solve(st);
+        assert.ok(res.ok, where);
+        const [B] = rbc.systemBlocks(st), I = res.irf, S = res.ss0, pol = res.pol, Lv = res.levels;
+        const h = (L0, lo) => (mode === 'eff' ? `\\hat{\\tilde ${lo}}` : mode === 'pc' ? `\\hat ${lo}` : `\\hat ${L0}`);
+        const Y = (L0, lo) => (mode === 'eff' ? `\\tilde ${lo}^*` : mode === 'pc' ? `${lo}^*` : `${L0}^*`);
+        for (const i of [3, 4, 10, 25]) {
+          const V = { ...P, 'r^*': S.r, 'N^*': S.N, '\\Delta r_t': I.r[i] / 100, '\\Delta r_{t+1}': I.r[i + 1] / 100, '\\hat N_t': I.N[i] / 100, '\\hat A_t': I.A[i] / 100, '\\hat A_{t+1}': I.A[i + 1] / 100,
+            [`${h('C', 'c')}_t`]: I.c[i] / 100, [`${h('C', 'c')}_{t+1}`]: I.c[i + 1] / 100, [`${h('K', 'k')}_t`]: I.k[i] / 100, [`${h('K', 'k')}_{t+1}`]: I.k[i + 1] / 100,
+            [`${h('Y', 'y')}_t`]: I.y[i] / 100, [`${h('I', 'i')}_t`]: I.i[i] / 100, [`${hasG ? '\\hat{\\tilde w}' : '\\hat w'}_t`]: I.w[i] / 100,
+            [Y('Y', 'y')]: S.y, [Y('C', 'c')]: S.c, [Y('I', 'i')]: S.i,
+            '\\eta_{CK}': pol.cK, '\\eta_{CA}': pol.cA, '\\eta_{KK}': pol.KK, '\\eta_{KA}': pol.KA, '\\eta_{NK}': pol.NK, '\\eta_{NA}': pol.NA };
+          if (isPar) {
+            const p = Lv.par[i], p0 = st[shockTarget];
+            Object.assign(V, { '\\hat\\beta_t': Math.log(p / p0), '\\hat\\theta_t': Math.log(p / p0), '\\Delta\\chi_t': p - p0, '\\Delta\\delta_t': p - p0,
+              '\\beta_t': p, '\\theta_t': p, '\\chi_t': p, '\\delta_t': p });
+          }
+          const rows = B.groups.flatMap((G) => G.rows);
+          // функции политики (K̂, Â) верны только без шока параметров; шок параметров — вне состояния (k̂, Â)
+          for (const r of isPar ? B.groups[0].rows : rows) {
+            check(r.tex, V, { abs: 1e-10, rel: 1e-10 }, `${where}, лог-лин. «${r.label}», t=${i}`, true);
+            if (r.num) check(r.num, V, { abs: 2e-4, rel: 2e-4, floor: 1e-1 }, `${where}, лог-лин. «${r.label}» (числа), t=${i}`, true);
+          }
+        }
+      }
+      n++;
     }
-    n++;
-  }
   console.log(`RBC: ${n} конфигураций`);
 }
 

@@ -68,7 +68,7 @@ for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
 {
   const n = 0.0025, g = 0.0055;
   const b = run().irf;
-  const t = run({ variant: 'tp', n, g, beta: 0.99 * (1 + n) * (1 + g) }).irf;
+  const t = run({ variant: 'both', n, g, beta: 0.99 * (1 + n) * (1 + g) }).irf;
   let dmax = 0;
   for (const v of ['c', 'N', 'y']) for (let j = 0; j <= 40; j++) dmax = Math.max(dmax, Math.abs(t[v][j] - b[v][j]));
   assert.ok(dmax < 0.02, `тренды почти не меняют отклики: ${dmax}`);
@@ -86,11 +86,11 @@ for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
   near(k[0][1], defaults.k0, 1e-12, 'путь начинается в K_0');
   assert.ok(k[40][1] > k[0][1] && k[40][1] < steady(defaults).k, 'капитал растёт к K*');
   assert.equal(ssCharts(defaults), null, 'без трендов ТСР — стационар, графиков сходимости к ТСР нет');
-  const sc = ssCharts({ ...defaults, variant: 'tp' });
+  const sc = ssCharts({ ...defaults, variant: 'both' });
   assert.equal(sc.charts.length, 4, 'сходимость к ТСР: k, y, c, w');
-  const ssT = steady({ ...defaults, variant: 'tp' });
+  const ssT = steady({ ...defaults, variant: 'both' });
   near(sc.charts[0].series[0].data[10][1], ssT.k * 1.0055 ** 10, 1e-9, 'ТСР: k̃* E_t');
-  const rows = steadyTable({ ...defaults, variant: 'tp' });
+  const rows = steadyTable({ ...defaults, variant: 'both' });
   near(rows.find((r) => r.key === 'r').value, (1.0025 * 1.0055) / 0.99 - 1, 1e-12, 'r* с трендами — точный множитель (1+n)(1+g)');
   const specs = chartSpecs(defaults).map((x) => x.id);
   assert.deepEqual(specs, ['A', 'y', 'c', 'i', 'N', 'k', 'w', 'r'], 'порядок графиков как в лекции');
@@ -100,5 +100,55 @@ for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
 {
   const r = solve({ ...defaults, shockTarget: 'tfp', shockSize: 300, method: 'linear' });
   assert.ok(!r.ok && /N_t/.test(r.errors[0]), 'часы выше 1 — понятная ошибка');
+}
+
+// 9. Тренды по отдельности: рост населения, трудосберегающий ТП, оба
+{
+  near(steady({ ...defaults, variant: 'n' }).r, 1.0025 / 0.99 - 1, 1e-12, 'r* с ростом населения');
+  near(steady({ ...defaults, variant: 'tp' }).r, 1.0055 / 0.99 - 1, 1e-12, 'r* с ТП');
+  const scN = ssCharts({ ...defaults, variant: 'n' });
+  assert.deepEqual(scN.charts.map((c) => c.sym), ['K_t', 'Y_t', 'C_t', 'I_t'], 'только рост населения: ТСР агрегатов');
+  near(scN.charts[0].series[0].data[10][1], steady({ ...defaults, variant: 'n' }).k * 1.0025 ** 10, 1e-9, 'ТСР: k* L_t');
+  const scG = ssCharts({ ...defaults, variant: 'tp' });
+  near(scG.charts[0].series[0].data[10][1], steady({ ...defaults, variant: 'tp' }).k * 1.0055 ** 10, 1e-9, 'ТСР: k̃* E_t');
+  const F = formulas({ ...defaults, variant: 'n' });
+  assert.ok(F.system[0].tex.startsWith('(1+n)c_{t+1}'), 'на душу: Эйлер с (1+n) и строчными буквами');
+  assert.ok(/\(1\+g\)\\tilde c_\{t\+1\}/.test(formulas({ ...defaults, variant: 'tp' }).system[0].tex), 'с ТП: (1+g) и тильда');
+  assert.deepEqual(formulas(defaults).dec.find((g) => g.agent === 'Рынки').items, ['K_t^D=K_t^S', 'N_t^D=N_t^S', 'Y_t=C_t+I_t'], 'рынки: спрос D и предложение S');
+  for (const variant of ['n', 'tp', 'both']) run({ variant, method: 'nonlinear' });
+}
+
+// 10. Шоки параметров: точные уравнения с параметрами во времени, новый стационар при перманентном шоке
+for (const tg of ['beta', 'theta', 'chi', 'delta']) for (const per of ['permanent', 'temporary']) for (const tempMode of ['ar', 'fixed']) {
+  if (per === 'permanent' && tempMode === 'fixed') continue;
+  const size = { beta: 0.002, theta: 0.4, chi: 0.5, delta: 0.005 }[tg];
+  const o = { shockTarget: tg, shockSize: size, shockPersistence: per, tempMode, tHat: 2, horizon: 200 };
+  const nl = run({ ...o, method: 'nonlinear' }), li = run({ ...o, method: 'linear' });
+  const s = { ...defaults, ...o }, E = nl.eff, Lv = nl.levels;
+  const pAt = (j) => Lv.par[j];
+  const par = (j, key) => (key === tg ? pAt(j) : s[key]);
+  for (let j = 2; j < 60; j++) {
+    near(s.theta === par(j, 'theta') ? s.theta * Lv.N[j] ** par(j, 'chi') : par(j, 'theta') * Lv.N[j] ** par(j, 'chi'), E.w[j] / E.c[j], 1e-9, `${tg}: «труд — досуг»`);
+    near(E.k[j + 1], E.i[j] + (1 - par(j, 'delta')) * E.k[j], 1e-10, `${tg}: накопление`);
+    near(E.c[j + 1], par(j, 'beta') * (1 + Lv.r[j + 1] / 100) * E.c[j], 1e-9, `${tg}: Эйлер с β_t и δ_{t+1}`);
+    near(Lv.r[j] / 100 + par(j, 'delta'), (s.alpha * E.y[j]) / E.k[j], 1e-10, `${tg}: спрос на капитал`);
+  }
+  if (per === 'permanent') {
+    near(E.k[200] / nl.ssF.k, 1, 2e-3, `${tg}: нелинейное решение приходит в новый стационар`);
+    // лог-линейное решение — в стационар лог-линейной системы ≈ ln(k*_new/k*)
+    near(li.irf.k[200] / 100, Math.log(nl.ssF.k / nl.ss0.k), 0.3 * Math.abs(Math.log(nl.ssF.k / nl.ss0.k)) + 1e-4, `${tg}: лог-линейное → новый стационар`);
+  } else {
+    // при малом шоке нелинейное и лог-линейное решения совпадают с точностью до второго порядка
+    const sm = { ...o, shockSize: size / 100 }, a1 = run({ ...sm, method: 'nonlinear' }).irf, b1 = run({ ...sm, method: 'linear' }).irf;
+    const m = Math.max(...b1.c.map(Math.abs), ...b1.N.map(Math.abs));
+    for (const v of ['c', 'N', 'k']) for (let j = 0; j <= 60; j++) near(a1[v][j], b1[v][j], 0.01 * m, `${tg} ${tempMode}: нелинейное ≈ лог-линейное (${v}, t=${j})`);
+  }
+  assert.ok(chartSpecs(s)[0].id === 'par', `${tg}: график пути параметра`);
+}
+// малый перманентный шок: стационар лог-линейной системы совпадает с производной точного стационара
+for (const tg of ['beta', 'theta', 'chi', 'delta']) {
+  const h = { beta: 1e-6, theta: 1e-5, chi: 1e-5, delta: 1e-6 }[tg];
+  const r = run({ shockTarget: tg, shockSize: h, shockPersistence: 'permanent', horizon: 200 });
+  for (const v of ['k', 'c']) near(r.irf[v][200] / 100, Math.log(r.ssF[v] / r.ss0[v]), 2e-3 * Math.abs(Math.log(r.ssF[v] / r.ss0[v])) + 1e-12, `${tg}: стационар лог-линейной системы (${v})`);
 }
 console.log('Модель RBC: все проверки пройдены');
