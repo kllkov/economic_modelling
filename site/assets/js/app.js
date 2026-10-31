@@ -458,7 +458,7 @@ function run() {
   out.append(block(num++, 'Траектории переменных', null, toggles, legendItems(true), lvlGrid));
 
   // дополнительные блоки модели (например, основная диаграмма и сходимость у Солоу)
-  extras.filter((X) => !X.beforeSS).forEach(addExtra);
+  extras.filter((X) => !X.beforeSS && !X.inSS).forEach(addExtra);
   extraDraws.forEach((f) => f());
 
 
