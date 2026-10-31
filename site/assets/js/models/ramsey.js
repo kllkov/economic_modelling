@@ -442,7 +442,7 @@ export function formulas(s) {
   const a = s.alpha, d = s.delta, nn = s.n;
   const tl = (v) => (tp ? `\\tilde ${v}` : v);
   const k = tl('k'), c = tl('c'), w = tl('w'), pi = tp ? '\\tilde\\pi' : '\\pi';
-  const fs = { dec: [], cen: [], system: [], shock: [], ssTitle: 'Траектория сбалансированного роста' };
+  const fs = { dec: [], cen: [], system: [], shock: [] };
 
   // полезность и предельная полезность от аргумента
   const U = (x) => (ut === 'crra' ? `\\dfrac{${x}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${x}` : `-\\dfrac{1}{\\theta}e^{-\\theta ${x}}`);
@@ -686,7 +686,7 @@ function locusTop(s, xmax) {
 }
 
 export function extraBlocks(s, res) {
-  return [{ ...convergenceBlock(s), beforeSS: true }, diagramBlock(s, res)];
+  return [{ ...convergenceBlock(s), inSS: true }, diagramBlock(s, res)];
 }
 
 function convergenceBlock(s) {
@@ -744,7 +744,7 @@ function convergenceBlock(s) {
   };
 }
 
-// Графики под таблицей ТСР: величины на работника — теоретическая ТСР и путь из k̃0 к ней
+// Блок ТСР: величины на работника — теоретическая ТСР и путь из k̃0 к ней
 export function ssCharts(s, res, scale = 'log') {
   const disc = s.time === 'discrete';
   const r = pathFrom(s, s.k0, s.horizon, 0.02);
@@ -755,7 +755,6 @@ export function ssCharts(s, res, scale = 'log') {
     series: [{ label: 'ТСР', data: pick(r?.baseLevels ?? {}, key), color: BG, width: 2, dash: [6, 4] }, { label: `$${sym}$`, data: pick(r?.levels ?? {}, key), color, width: 2.6 }],
     opts: { xLabel: 't', xmin: 0, xmax: s.horizon, ymin: scale === 'log' ? undefined : 0, log: scale === 'log', discrete: disc, marksOnAxis: true } });
   return {
-    subtitle: 'Сходимость к траектории сбалансированного роста',
     scaleToggle: true,
     legend: [{ label: 'ТСР', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
     charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c'), mk(s.version === 'centralized' ? 'Предельный продукт труда' : 'Зарплата', s.version === 'centralized' ? 'F^{\\prime}_L' : 'w_t', 'w')],

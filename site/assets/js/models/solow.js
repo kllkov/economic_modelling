@@ -334,7 +334,6 @@ export function formulas(st) {
   const fs = { dec: [], cen: [], system: [], shock: [], ss: [] };
   fs.problemTitle = 'Модель';
   fs.systemTitle = 'Уравнения динамики';
-  fs.ssTitle = 'Траектория сбалансированного роста';
 
   const popLaw = D ? 'L_{t+1}=(1+n)L_t' : '\\dot L_t/L_t=n';
   const tpLaw = D ? 'E_{t+1}=(1+g)E_t' : '\\dot E_t/E_t=g';
@@ -487,7 +486,7 @@ const DC = tcMap({
 });
 
 export function extraBlocks(st, res) {
-  return [{ ...convergenceBlock(st), beforeSS: true }, diagramBlock(st, res)];
+  return [{ ...convergenceBlock(st), inSS: true }, diagramBlock(st, res)];
 }
 
 function diagramBlock(st, res) {
@@ -615,7 +614,7 @@ function depLine(st, kS) {
   return tp ? `(n+g+\\delta)${kS}` : `(n+\\delta)${kS}`;
 }
 
-// Графики под таблицей ТСР: величины на работника — теоретическая ТСР и путь из k̃0 к ней
+// Блок ТСР: величины на работника — теоретическая ТСР и путь из k̃0 к ней
 export function ssCharts(st, res, scale = 'log') {
   const a = st.alpha;
   const { disc, h, N, P, ss, g0, sim, stride } = convPath(st);
@@ -632,7 +631,6 @@ export function ssCharts(st, res, scale = 'log') {
     series: [{ label: 'ТСР', data: bgp[key], color: BG, width: 2, dash: [6, 4] }, { label: `$${sym}$`, data: out[key], color, width: 2.6 }],
     opts: { xLabel: 't', xmin: 0, xmax: st.horizon, ymin: scale === 'log' ? undefined : 0, log: scale === 'log', discrete: disc, marksOnAxis: true } });
   return {
-    subtitle: 'Сходимость к траектории сбалансированного роста',
     scaleToggle: true,
     legend: [{ label: 'ТСР', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
     charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c'), mk(st.version === 'centralized' ? 'Предельный продукт труда' : 'Зарплата', st.version === 'centralized' ? 'F^{\\prime}_L' : 'w_t', 'w')],

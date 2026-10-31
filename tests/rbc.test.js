@@ -84,7 +84,7 @@ for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
   assert.equal(formulas(defaults).system.length, 8, 'уравнения динамики — 8 уравнений');
   assert.equal(formulas({ ...defaults, version: 'centralized' }).system.length, 6, 'у планировщика — 6 уравнений');
   const [cv] = extraBlocks(defaults);
-  assert.ok(cv.beforeSS && cv.charts.length === 6, 'сходимость к стационару: 6 графиков');
+  assert.ok(cv.inSS && cv.charts.length === 6, 'сходимость к стационару: 6 графиков');
   const k = cv.charts[0].series[0].data;
   near(k[0][1], defaults.k0, 1e-12, 'путь начинается в K_0');
   assert.ok(k[40][1] > k[0][1] && k[40][1] < steady(defaults).k, 'капитал растёт к K*');

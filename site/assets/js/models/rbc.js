@@ -50,10 +50,7 @@ export const controls = [
     options: [{ v: 'base', l: 'Без трендов' }, { v: 'n', l: 'Рост населения' }, { v: 'tp', l: 'Трудосберегающий ТП' },
       { v: 'both', l: 'Рост населения и трудосберегающий ТП' }] },
   { id: 'method', label: 'Solver', type: 'segmented',
-    options: [{ v: 'linear', l: 'Лог-линейный' }, { v: 'nonlinear', l: 'Нелинейный' }],
-    hint: (s) => (s.method === 'linear'
-      ? 'Как в лекции: решение лог-линеаризованной системы'
-      : 'Точное решение нелинейной системы при совершенном предвидении') },
+    options: [{ v: 'linear', l: 'Лог-линейный' }, { v: 'nonlinear', l: 'Нелинейный' }] },
 
   { section: 'Функции' },
   { id: 'utility', label: 'Полезность домохозяйств', type: 'select', rich: true,
@@ -486,8 +483,7 @@ export function formulas(s) {
   const { hasN, hasG, mode, C, K, Y, I, W, Pi, G } = names(s);
   const cen = s.version === 'centralized', tg = s.shockTarget;
   const a = s.alpha, d = s.delta, Gv = steady(s).G;
-  const fs = { dec: [], cen: [], system: [], shock: [], problemTitle: 'Модель', systemTitle: 'Уравнения динамики',
-    ssTitle: mode === 'agg' ? 'Стационарное состояние' : 'Траектория сбалансированного роста' };
+  const fs = { dec: [], cen: [], system: [], shock: [], problemTitle: 'Модель', systemTitle: 'Уравнения динамики' };
   const t = (v, i = 't') => `${v}_{${i}}`;
 
   // параметр, на который пришёлся шок, меняется во времени: β_t, θ_t, χ_t, δ_t
@@ -627,7 +623,7 @@ export function steadyTable(s, res) {
 // ───────────────────────────── Сходимость и ТСР ─────────────────────────────
 
 export function extraBlocks(s) {
-  return [{ ...convergenceBlock(s), beforeSS: true }];
+  return [{ ...convergenceBlock(s), inSS: true }];
 }
 
 function convergenceBlock(s) {
@@ -657,7 +653,7 @@ function convergenceBlock(s) {
   };
 }
 
-// Графики под таблицей ТСР: с ТП — величины на работника, только с ростом населения — агрегаты
+// Блок ТСР: с ТП — величины на работника, только с ростом населения — агрегаты
 export function ssCharts(s, res, scale = 'log') {
   const { mode, hasG, K } = names(s);
   if (mode === 'agg' || validate(s).length) return null;
@@ -675,7 +671,6 @@ export function ssCharts(s, res, scale = 'log') {
       mk(cen ? 'Предельный продукт труда' : 'Зарплата', cen ? 'A_tF^{\\prime}_N' : 'w_t', 'w')]
     : [mk('Капитал', 'K_t', 'k'), mk('Выпуск', 'Y_t', 'y'), mk('Потребление', 'C_t', 'c'), mk('Инвестиции', 'I_t', 'i')];
   return {
-    subtitle: 'Сходимость к траектории сбалансированного роста',
     scaleToggle: true,
     legend: [{ label: 'ТСР', color: BG, dash: true }, { label: `путь из $${K}_0$`, color }],
     charts,
