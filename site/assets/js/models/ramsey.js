@@ -468,8 +468,8 @@ export function formulas(s) {
   const maxC = `\\max_{\\{${c}_t\\}_{t\\ge0}}\\; V_0=${obj}`;
   const firm = tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
     : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t';
-  const markets = [`${k}_t\\ \\text{(спрос фирм)}=${k}_t\\ \\text{(предложение домохозяйств)}`,
-    'L_t\\ \\text{(спрос фирм)}=L_t\\ \\text{(предложение домохозяйств)}'];
+  const markets = [`${k}_t^D=${k}_t^S`,
+    'L_t^D=L_t^S'];
 
   // ── децентрализованная
   fs.dec.push({ agent: 'Домохозяйства', system: true, items: D ? [

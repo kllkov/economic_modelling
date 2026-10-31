@@ -121,6 +121,8 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
           else Object.assign(V, { '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i], '\\dot k_t': deriv(L.k, i, h), k_t: L.k[i], '\\pi_t': 0 });
           if (utility === 'cara') Object.assign(V, { '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i] });
         }
+        const kv = tp ? E.k[i] : L.k[i];
+        Object.assign(V, { [tp ? '\\tilde k_t^D' : 'k_t^D']: kv, [tp ? '\\tilde k_t^S' : 'k_t^S']: kv, 'L_t^D': L.L[i], 'L_t^S': L.L[i] });
         const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 3e-4, rel: 2e-3 };
         const tolN = D ? { abs: 2e-4, rel: 2e-4 } : { abs: 5e-4, rel: 3e-3 };
         for (const g of version === 'centralized' ? F.cen : F.dec) for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${res.t[i]}`);

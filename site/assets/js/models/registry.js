@@ -136,8 +136,8 @@ export const MODELS = [
           { label: 'Домохозяйства (Бентам)', tex: '\\max_{\\{c_t,\\,k_{t+1}\\}}\\ \\sum_{t=0}^{\\infty}\\beta^t L_t u(c_t),\\qquad L_{t+1}=(1+n)L_t' },
           { label: 'Фирмы', tex: '\\max_{K_t,L_t}\\ \\pi_t=F(K_t,L_t)-w_tL_t-(r_t+\\delta)K_t' },
           { label: 'Спрос на капитал и труд', tex: 'r_t=f\'(k_t)-\\delta,\\qquad w_t=f(k_t)-f\'(k_t)k_t,\\qquad \\pi_t=0' },
-          { label: 'Рынок капитала', tex: 'k_t\\ \\text{(спрос фирм)}=k_t\\ \\text{(предложение домохозяйств)}' },
-          { label: 'Рынок труда', tex: 'L_t\\ \\text{(спрос фирм)}=L_t\\ \\text{(предложение домохозяйств)}' },
+          { label: 'Рынок капитала', tex: 'k_t^D=k_t^S' },
+          { label: 'Рынок труда', tex: 'L_t^D=L_t^S' },
         ] },
         { title: 'Централизованная экономика', eqs: [
           { label: 'Планировщик', tex: '\\max_{\\{c_t,\\,k_{t+1}\\}}\\ \\sum_{t=0}^{\\infty}\\beta^t u(c_t)\\quad\\text{s.t.}\\quad (1+n)k_{t+1}=(1-\\delta)k_t+f(k_t)-c_t' },
