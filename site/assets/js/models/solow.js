@@ -537,7 +537,7 @@ function diagramBlock(st, res) {
   if (moved) vlines.push({ x: ss1.k, color: DC.ss1, label: `${kS}^{*\\prime}${permanent ? '' : '\\ \\text{(в момент шока)}'}`, yTo: P1.s * f(ss1.k) });
 
   return {
-    title: 'Основная диаграмма модели', diagram: true,
+    title: 'Шок на основной диаграмме модели', diagram: true,
     legend: series.map((s) => ({ label: s.label, color: s.color, dash: s.dash, point: s.points })),
     charts: [
       { series, opts: { xLabel: kS, xmin: 0, xmax, ymin: 0, vlines, zoom: true, marksOnAxis: true } },

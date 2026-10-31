@@ -822,7 +822,7 @@ function diagramBlock(s, res) {
   if (res.marks.tEnd != null) mark(res.marks.tEnd, `\\hat t+${s.shockDur}`);
 
   return {
-    title: 'Основная диаграмма модели', diagram: true,
+    title: 'Шок на основной диаграмме модели', diagram: true,
     legend,
     charts: [{ series, opts: { xLabel: `${kS}_t`, yLabel: `${cS}_t`, xmin: 0, xmax, ymin: 0, ymax, vlines, zoom: true, marksOnAxis: true } }],
   };

@@ -400,15 +400,13 @@ function run() {
   const extras = mod.extraBlocks ? mod.extraBlocks(state, res) : [];
   extras.filter((X) => X.beforeSS).forEach(addExtra);
 
-  // в блоке стационара после таблицы — графики сходимости к стационару и основная диаграмма (inSS);
-  // у первой группы графиков подзаголовок — название блока модели
-  const inSS = extras.filter((X) => X.inSS).flatMap((X) => (X.sections || [X]).map((S, i) => (i === 0 && !S.subtitle ? { ...S, subtitle: X.title } : S)));
   const ssc = mod.ssCharts ? mod.ssCharts(state, res, view.convScale) : null;
   const ssBody = withTex ? el('div', { style: 'overflow-x:auto' }, table)
     : el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table));
   out.append(block(num++, F.ssTitle || 'Стационарное состояние', el('span', { class: 'note' }, F.ssNote ? F.ssNote(showAfter) : showAfter ? 'Перманентный шок сдвигает стационар'
       : res.permanentChange ? 'В единицах на эффективного работника стационар не меняется' : 'Шок не меняет стационар'),
-    ssBody, ...inSS.flatMap(section)));
+    ssBody));
+  extras.filter((X) => X.inSS).forEach(addExtra);   // сходимость к стационару (графики и основная диаграмма) — следом за таблицей
   if (ssc) out.append(block(num++, 'Траектория сбалансированного роста', null, ...section(ssc)));
 
   // 4. IRF и 5. уровни
