@@ -1,6 +1,6 @@
 // Трёхуравненная новокейнсианская модель IS–PC–MPR (Galí, гл. 3) в дискретном времени.
 // ỹ_t (в коде x) — разрыв выпуска, π_t — инфляция, i_t — номинальная ставка, r_t = i_t − E*_t π_{t+1} — реальная ставка,
-// r^n_t — естественная ставка. Модель лог-линеаризована вокруг стационара с нулевой инфляцией (цель ЦБ = 0).
+// r^N_t — естественная ставка (естественные величины — с индексом N, стационарные — с индексом SS). Модель лог-линеаризована вокруг стационара с нулевой инфляцией (цель ЦБ = 0).
 // Все ставки и инфляция — в процентах за период.
 //
 // Кривая Филлипса: π_t = β E*_t π_{t+1} + κ ỹ_t + u_t; правило: i_t = ρ + φ_π π_t + φ_y ỹ_t + v_t (Galí).
@@ -38,7 +38,7 @@ export const controls = [
   { id: 'beta', label: '$\\beta$ — дисконт-фактор', type: 'number', min: 0.5, max: 0.999, step: 0.005 },
   { id: 'sigma', label: '$\\sigma$ — неприятие риска', type: 'number', min: 0.1, max: 10, step: 0.1 },
   { id: 'varphi', label: '$\\varphi$ — обратная эластичность Фриша', type: 'number', min: 0, max: 10, step: 0.1 },
-  { id: 'alpha', label: '$\\alpha$ — в $Y=AN^{1-\\alpha}$', type: 'number', min: 0, max: 0.9, step: 0.01 },
+  { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0, max: 0.9, step: 0.01 },
   { id: 'epsilon', label: '$\\varepsilon$ — эластичность замещения товаров', type: 'number', min: 1.1, max: 50, step: 0.5 },
   { id: 'theta', label: '$\\theta$ — доля фирм без пересмотра цены', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
   { id: 'phiPi', label: '$\\phi_\\pi$ — реакция на инфляцию', type: 'number', min: 0, max: 10, step: 0.05 },
@@ -180,7 +180,7 @@ export function simulate(st, N, scale = 1, init = null) {
   const E = []; for (let t = 0; t <= N + 1; t++) E.push(exo(st, t, scale));
   const ex = st.expectations;
   const t0 = ex === 'rational' && st.shockTiming === 'expected' && scale ? Math.min(st.t0, st.tHat) : st.tHat;
-  // естественная ставка: r^n_t = ρ + σψ(E_t a_{t+1} − a_t) + d_t, будущая технология известна с t₀
+  // естественная ставка: r^N_t = ρ + σψ(E_t a_{t+1} − a_t) + d_t, будущая технология известна с t₀
   const rnAt = (t) => C.rho + st.sigma * C.psi * ((t >= t0 ? E[t + 1].a : E[t].a) - E[t].a) + E[t].d;
   const out = { pi: [], x: [], i: [], r: [], epi: [], ex: [], rn: [], E, t0, C };
   const ss0 = steady(st, exo(st, 0, 0), C);
@@ -266,12 +266,12 @@ export function chartSpecs(st) {
     { id: 'r', title: 'Реальная ставка', sym: 'r_t', irfUnit: pp, lvlUnit: '%' },
     { id: 'epi', title: 'Инфляционные ожидания', sym: `${Ex}\\pi_{t+1}`, irfUnit: pp, lvlUnit: '%' },
   ];
-  if (tg === 'd' || tg === 'a') specs.push({ id: 'rn', title: 'Естественная ставка', sym: 'r^n_t', irfUnit: pp, lvlUnit: '%' });
+  if (tg === 'd' || tg === 'a') specs.push({ id: 'rn', title: 'Естественная ставка', sym: 'r^N_t', irfUnit: pp, lvlUnit: '%' });
   if (tg === 'u') specs.push({ id: 'u', title: 'Шок издержек', sym: 'u_t', irfUnit: pp, lvlUnit: 'п.п.' });
   if (tg === 'v') specs.push({ id: 'v', title: 'Монетарный шок', sym: 'v_t', irfUnit: pp, lvlUnit: 'п.п.' });
   if (tg === 'a') specs.push(
     { id: 'a', title: 'Технология', sym: 'a_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
-    { id: 'yn', title: 'Естественный выпуск', sym: 'y^n_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
+    { id: 'yn', title: 'Естественный выпуск', sym: 'y^N_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
     { id: 'y', title: 'Выпуск', sym: 'y_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' });
   return specs;
 }
@@ -291,10 +291,9 @@ export function formulas(st) {
   const C = coefs(st);
   const rat = st.expectations === 'rational';
   const Ex = rat ? '\\mathbb E_t' : 'E^*_t';
-  const fs = { problem: [], system: [], shock: [], ss: [] };
+  const fs = { problem: [], system: [], shock: [] };
   fs.problemTitle = 'Модель';
   fs.systemTitle = 'Уравнения динамики';
-  fs.ssTitle = 'Стационарное состояние';
 
   // ── 1. постановка
   fs.problem.push({ agent: 'Домохозяйства', items: [
@@ -310,21 +309,12 @@ export function formulas(st) {
   fs.problem.push({ agent: 'Центральный банк', items: [
     'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\,\\tilde y_t+v_t',
   ] });
-  const expItems = {
-    naive: ['E^*_t\\pi_{t+1}=0,\\qquad E^*_t\\tilde y_{t+1}=0'],
-    adaptive: [
-      'E^*_t\\pi_{t+1}=E^*_{t-1}\\pi_t+\\gamma\\,\\big(\\pi_{t-1}-E^*_{t-1}\\pi_t\\big)',
-      'E^*_t\\tilde y_{t+1}=E^*_{t-1}\\tilde y_t+\\gamma\\,\\big(\\tilde y_{t-1}-E^*_{t-1}\\tilde y_t\\big)',
-    ],
-    rational: ['\\mathbb E_t\\pi_{t+1},\\ \\mathbb E_t\\tilde y_{t+1}\\ \\text{— рациональные ожидания}'],
-  }[st.expectations];
-  fs.problem.push({ agent: 'Ожидания', items: expItems });
 
   // ── 2. уравнения динамики
   const s = st.sigma, b = st.beta;
   fs.system.push({ label: 'Dynamic IS',
-    tex: `\\tilde y_t=${Ex}\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)`,
-    num: `\\tilde y_t=${Ex}\\tilde y_{t+1}-${n4(1 / s)}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)` });
+    tex: `\\tilde y_t=${Ex}\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-${Ex}\\pi_{t+1}-r^N_t\\big)`,
+    num: `\\tilde y_t=${Ex}\\tilde y_{t+1}-${n4(1 / s)}\\big(i_t-${Ex}\\pi_{t+1}-r^N_t\\big)` });
   fs.system.push({ label: 'Кривая Филлипса',
     tex: `\\pi_t=\\beta\\,${Ex}\\pi_{t+1}+\\kappa\\,\\tilde y_t+u_t`,
     num: `\\pi_t=${n4(b)}\\,${Ex}\\pi_{t+1}+${n4(C.kappa)}\\,\\tilde y_t+u_t` });
@@ -337,10 +327,10 @@ export function formulas(st) {
   fs.system.push({ label: 'Реальная ставка',
     tex: `r_t=i_t-${Ex}\\pi_{t+1}` });
   fs.system.push({ label: 'Естественная ставка',
-    tex: `r^n_t=\\rho+\\sigma\\psi_{ya}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=-\\ln\\beta`,
-    num: `r^n_t=${n4(C.rho)}+${n4(s * C.psi)}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=${n4(C.rho)}\\%` });
+    tex: `r^N_t=\\rho+\\sigma\\psi_{ya}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=-\\ln\\beta`,
+    num: `r^N_t=${n4(C.rho)}+${n4(s * C.psi)}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=${n4(C.rho)}\\%` });
   fs.system.push({ label: 'Выпуск',
-    tex: 'y_t=y^n_t+\\tilde y_t,\\qquad y^n_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\varphi}{\\sigma(1-\\alpha)+\\varphi+\\alpha}',
+    tex: 'y_t=y^N_t+\\tilde y_t,\\qquad y^N_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\varphi}{\\sigma(1-\\alpha)+\\varphi+\\alpha}',
     num: `\\psi_{ya}=${n4(C.psi)}` });
   if (st.expectations === 'naive')
     fs.system.push({ label: 'Ожидания', tex: 'E^*_t\\pi_{t+1}=0,\\qquad E^*_t\\tilde y_{t+1}=0' });
@@ -362,35 +352,31 @@ export function formulas(st) {
   fs.shock.push({ tex: shockTex, num: shockNum });
   fs.flatNote = 'Шок не выводит экономику из стационара при текущих параметрах.';
 
-  // ── 3. стационар
-  fs.ss = [
-    { tex: '\\pi=0,\\qquad \\tilde y=0' },
-    { tex: 'i=r=\\rho=-\\ln\\beta', num: `i=r=${n4(C.rho)}` },
-    { tex: `${Ex}\\pi_{t+1}=0` },
-  ];
-  if (st.expectations !== 'naive') {
-    fs.ss.push({ tex: '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\,\\phi_y>0', num: `${n4(C.det)}\\ ${C.det > 0 ? '>' : '\\le'}\\ 0` });
-  }
   fs.ssNote = (changed) => (changed ? 'Перманентный шок сдвигает стационар' : 'Шок не меняет стационар');
   return fs;
 }
 
+// Стационар при постоянных u, v, d, a (до шока они нулевые): одна таблица «величина — смысл — формула — значение»
 export function steadyTable(st, res) {
-  const Ex = st.expectations === 'rational' ? '\\mathbb E\\pi' : 'E^*\\pi';
+  const naive = st.expectations === 'naive', SS = (x) => `${x}_{SS}`;
+  const [pi, y, i, r] = [SS('\\pi'), SS('\\tilde y'), SS('i'), SS('r')];
+  const det = '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\phi_y';
   const rows = [
-    { sym: '\\pi', name: 'инфляция', key: 'pi', pct: true },
-    { sym: '\\tilde y', name: 'разрыв выпуска', key: 'x', pct: true },
-    { sym: 'i', name: 'номинальная ставка', key: 'i', pct: true },
-    { sym: 'r', name: 'реальная ставка', key: 'r', pct: true },
-    { sym: Ex, name: 'инфляционные ожидания', key: 'epi', pct: true },
-    { sym: 'r^n', name: 'естественная ставка', key: 'rn', pct: true },
+    { sym: pi, name: 'инфляция', key: 'pi', tex: naive ? `\\kappa ${y}+u` : `\\dfrac{\\phi_y u+\\kappa(d-v)}{${det}}` },
+    { sym: y, name: 'разрыв выпуска', key: 'x', tex: naive ? '\\dfrac{d-v-\\phi_\\pi u}{\\sigma+\\phi_y+\\phi_\\pi\\kappa}' : `\\dfrac{(1-\\beta)(d-v)-(\\phi_\\pi-1)u}{${det}}` },
+    { sym: i, name: 'номинальная ставка', key: 'i', tex: `\\rho+\\phi_\\pi${pi}+\\phi_y${y}+v` },
+    { sym: r, name: 'реальная ставка', key: 'r', tex: naive ? i : `${i}-${pi}` },
+    { sym: SS(naive ? 'E^*\\pi' : '\\mathbb E\\pi'), name: 'инфляционные ожидания', key: 'epi', tex: naive ? '0' : pi },
+    { sym: SS('r^N'), name: 'естественная ставка', key: 'rn', tex: '\\rho+d' },
   ];
-  const v = (ss, r) => (r.pct ? `${fmt(ss[r.key], 3)}%` : fmt(ss[r.key], 3));
+  if (st.shockTarget === 'a') rows.push({ sym: SS('y^N'), name: 'естественный выпуск', key: 'yn', tex: '\\psi_{ya}a' });
+  const v = (ss, r) => `${fmt(ss[r.key], 3)}%`;
   const out = rows.map((r) => ({ ...r, before: v(res.ss0, r), after: v(res.ssF, r) }));
-  out.push({ sym: '\\kappa', name: 'наклон кривой Филлипса', before: fmt(res.C.kappa, 4), after: fmt(res.C.kappa, 4) });
-  if (st.expectations !== 'naive') {
+  out.push({ sym: '\\rho', name: 'ставка дисконтирования', tex: '-\\ln\\beta', before: `${fmt(res.C.rho, 3)}%`, after: `${fmt(res.C.rho, 3)}%` });
+  out.push({ sym: '\\kappa', name: 'наклон кривой Филлипса', tex: '\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big)', before: fmt(res.C.kappa, 4), after: fmt(res.C.kappa, 4) });
+  if (!naive) {
     const ok = res.C.det > 0 ? 'выполнен' : 'нарушен';
-    out.push({ sym: '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\phi_y>0', name: 'принцип Тейлора', before: ok, after: ok });
+    out.push({ sym: `${det}>0`, name: 'принцип Тейлора', tex: '', before: ok, after: ok });
   }
   return out;
 }
@@ -401,7 +387,7 @@ const DC = tcMap({ pc0: '#3d8acb', pc1: '#86c2f0', ad0: '#7c62d8', ad1: '#c2b2f7
 
 export function extraBlocks(st, res) {
   const out = [];
-  if (st.expectations === 'adaptive') out.push({ ...convergenceBlock(st), beforeSS: true });
+  if (st.expectations === 'adaptive') out.push({ ...convergenceBlock(st), inSS: true });
   out.push(diagramBlock(st, res));
   return out;
 }
@@ -458,7 +444,7 @@ function diagramBlock(st, res) {
     { label: `$${nm('AD', 1)}$, $${nm('MPR', 1)}$ — в момент шока`, color: DC.ad1, dash: true },
     { label: 'путь экономики (по периодам)', color: DC.path, point: true },
   ];
-  return { title: 'Основная диаграмма модели', diagram: true, legend, charts: [p1, p2] };
+  return { title: 'Шок на основной диаграмме модели', diagram: true, legend, charts: [p1, p2] };
 }
 
 function convergenceBlock(st) {

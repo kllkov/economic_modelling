@@ -255,8 +255,8 @@ export const MODELS = [
           { label: 'Спрос', tex: 'Y_{i,t+k|t}=\\Big(\\dfrac{P_t^*}{P_{t+k}}\\Big)^{-\\varepsilon}C_{t+k}' },
         ] },
         { title: 'Три уравнения', eqs: [
-          { label: 'Dynamic IS', tex: '\\tilde y_t=E^*_t\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-E^*_t\\pi_{t+1}-r^n_t\\big)' },
-          { label: 'PC', tex: '\\pi_t=\\beta\\cdot E^*_t\\pi_{t+1}+\\kappa\\cdot \\tilde y_t+u_t,\\qquad \\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big)' },
+          { label: 'Dynamic IS', tex: '\\tilde y_t=E^*_t\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-E^*_t\\pi_{t+1}-r^N_t\\big)' },
+          { label: 'PC', tex: '\\pi_t=\\beta E^*_t\\pi_{t+1}+\\kappa\\tilde y_t+u_t,\\qquad \\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big)' },
           { label: 'MPR', tex: 'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\tilde y_t+v_t' },
           { label: 'Принцип Тейлора', tex: '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\phi_y>0' },
         ] },

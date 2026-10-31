@@ -243,12 +243,12 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
             [`${Ex}\\tilde y_{t+1}`]: S.ex[t] / q, [`${Ex}\\pi_{t+1}`]: S.epi[t] / q, [`${Ex}a_{t+1}`]: aE / q,
             'E^*_{t-1}\\tilde y_t': S.ex[t - 1] / q, 'E^*_{t-1}\\pi_t': S.epi[t - 1] / q,
             '\\tilde y_{t-1}': S.x[t - 1] / q, '\\pi_{t-1}': S.pi[t - 1] / q,
-            '\\tilde y_t': S.x[t] / q, '\\pi_t': S.pi[t] / q, i_t: S.i[t] / q, r_t: S.r[t] / q, 'r^n_t': S.rn[t] / q,
+            '\\tilde y_t': S.x[t] / q, '\\pi_t': S.pi[t] / q, i_t: S.i[t] / q, r_t: S.r[t] / q, 'r^N_t': S.rn[t] / q,
             u_t: E.u / q, v_t: E.v / q, d_t: E.d / q, a_t: E.a / q,
-            'y^n_t': C.psi * E.a / q, y_t: (C.psi * E.a + S.x[t]) / q };
+            'y^N_t': C.psi * E.a / q, y_t: (C.psi * E.a + S.x[t]) / q };
         };
         const tol = { abs: 1e-10, rel: 1e-10 }, tolN = { abs: 2e-4, rel: 2e-4 };
-        const groups = F.problem.filter((g) => g.agent === 'Центральный банк' || g.agent === 'Ожидания');
+        const groups = F.problem.filter((g) => g.agent === 'Центральный банк');
         for (const t of [1, 2, 4, 5, 6, 10, 39]) {
           const Vf = vars(t, 100), Vp = vars(t, 1);
           for (const g of groups) for (const it of g.items) check(it, Vf, tol, `${where}, блок «${g.agent}», t=${t}`);
@@ -257,13 +257,12 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
             if (r.num) check(r.num, Vp, tolN, `${where}, «${r.label}» (числа), t=${t}`);
           }
         }
-        // стационар до шока
-        const s0 = res.ss0;
-        const VS = (q) => ({ ...P, '\\rho': q === 1 ? C.rho : C.rho / 100, '\\pi': s0.pi / q, '\\tilde y': s0.x / q, i: s0.i / q, r: s0.r / q,
-          [`${Ex}\\pi_{t+1}`]: s0.epi / q });
-        for (const r of F.ss) {
-          check(r.tex, VS(100), tol, `${where}, стационар`);
-          if (r.num) check(r.num, VS(1), tolN, `${where}, стационар (числа)`);
+        // таблица стационара: формулы при u, v, d, a до и после шока
+        for (const S0 of [res.ss0, res.ssF]) {
+          const SS = { ...P, '\\rho': C.rho / 100, u: S0.u / 100, v: S0.v / 100, d: S0.d / 100, a: S0.a / 100,
+            '\\pi_{SS}': S0.pi / 100, '\\tilde y_{SS}': S0.x / 100, 'i_{SS}': S0.i / 100, 'r_{SS}': S0.r / 100,
+            'E^*\\pi_{SS}': S0.epi / 100, '\\mathbb E\\pi_{SS}': S0.epi / 100, 'r^N_{SS}': S0.rn / 100, 'y^N_{SS}': S0.yn / 100 };
+          for (const r of ispcmpr.steadyTable(st, res)) if (r.tex) check(`${r.sym}=${r.tex}`, SS, { abs: 1e-6, rel: 1e-6 }, `${where}, стационар (${r.name})`);
         }
         n++;
       }

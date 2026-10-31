@@ -398,7 +398,6 @@ function run() {
   };
   const addExtra = (X) => out.append(block(num++, X.title, null, ...(X.sections || [X]).map(section)));
   const extras = mod.extraBlocks ? mod.extraBlocks(state, res) : [];
-  extras.filter((X) => X.beforeSS).forEach(addExtra);
 
   const ssc = mod.ssCharts ? mod.ssCharts(state, res, view.convScale) : null;
   const ssBody = withTex ? el('div', { style: 'overflow-x:auto' }, table)
@@ -456,7 +455,7 @@ function run() {
   out.append(block(num++, 'Траектории переменных', null, toggles, legendItems(true), lvlGrid));
 
   // дополнительные блоки модели (например, основная диаграмма и сходимость у Солоу)
-  extras.filter((X) => !X.beforeSS && !X.inSS).forEach(addExtra);
+  extras.filter((X) => !X.inSS).forEach(addExtra);
   extraDraws.forEach((f) => f());
 
 
