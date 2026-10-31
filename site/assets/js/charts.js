@@ -11,7 +11,7 @@ const DARK = { path: '#a9abd6', base: '#7e7fa8', shock: '#f4acc4', announce: '#f
 export const COLORS = new Proxy({}, { get: (_, k) => (isDark() ? DARK : LIGHT)[k] });
 // светлые цвета моделей (кривые, подписи) → их аналоги в тёмной теме
 const DARK_MAP = { '#3d8acb': '#a9abd6', '#2a6aa3': '#a9abd6', '#3f8fd6': '#a9abd6', '#86c2f0': '#cfd0ea', '#86cdf5': '#cfd0ea', '#5aa9e6': '#9a9cc9',
-  '#7c62d8': '#f4acc4', '#c2b2f7': '#f9d2e0', '#b09cf5': '#f29fbb', '#463687': '#f6c77d', '#7d7ca5': '#8d8cab', '#23214a': '#f0edf5', '#e4e6f7': '#212337' };
+  '#7c62d8': '#f4acc4', '#c2b2f7': '#f9d2e0', '#b09cf5': '#f29fbb', '#463687': '#f6c77d', '#7d7ca5': '#8d8cab', '#23214a': '#f0edf5', '#e4e6f7': '#212337', '#d9638f': '#f6c77d' };
 export const tc = (c) => (isDark() ? DARK_MAP[c] || c : c);
 export const tcMap = (o) => new Proxy(o, { get: (t, k) => (typeof t[k] === 'string' ? tc(t[k]) : t[k]) });
 
@@ -61,6 +61,7 @@ const texLayer = {
   },
   afterDraw(chart, _args, opts) {
     if (opts.xLabel) axisLabel(chart, opts.xLabel);
+    if (opts.yLabel) { const n = texItem(chart, 'y-axis', opts.yLabel, 'axis'); place(n, chart.chartArea.left + 6, chart.chartArea.top + 2); }
     opts.draw?.(chart);
     if (!chart.$tex) return;
     for (const [k, it] of chart.$tex.items) if (!it.used) { it.node.remove(); chart.$tex.items.delete(k); }
@@ -434,7 +435,7 @@ export function zoomReset(chart) { chart.resetZoom(); resample(chart); }
  * series: [{ data: [[x,y]...], label, color, width, dash, points, pointRadius, curveLabel, fn }]
  *   fn — функция кривой: при приближении (opts.zoom) кривая пересчитывается на видимом отрезке
  *   label — текст с формулами $…$ (для подсказки), curveLabel — формула TeX у кривой
- * opts: { xLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], discrete, zoom, marksOnAxis }
+ * opts: { xLabel, yLabel, xmin, xmax, ymin, ymax, vlines: [{x, color, dash, label, yTo}], hlines: [{y, color, dash}], discrete, zoom, marksOnAxis }
  *   xLabel и label отметок — формулы TeX
  */
 export function drawDiagram(canvas, series, opts) {
@@ -479,7 +480,7 @@ export function drawDiagram(canvas, series, opts) {
         legend: { display: false },
         tooltip: tooltipOpts((items) => `$${xLabel} = ${(+items[0].parsed.x).toFixed(opts.discrete ? 0 : 2)}$`),
         curveLines: { vlines, hlines: opts.hlines || [] },
-        texLayer: { xLabel, prepare: (chart) => prepareMarks(chart, vlines, !!opts.marksOnAxis), draw: curveLabels },
+        texLayer: { xLabel, yLabel: opts.yLabel, prepare: (chart) => prepareMarks(chart, vlines, !!opts.marksOnAxis), draw: curveLabels },
         zoom: opts.zoom ? {
           limits: { x: { min: opts.xmin ?? 0, max: opts.xmax, minRange: (opts.xmax - (opts.xmin ?? 0)) * 1e-3 }, y: { min: opts.ymin ?? 'original', max: 'original' } },
           // как в Plotly: рамка мышью увеличивает область, колесо и щипок масштабируют, Shift + перетаскивание сдвигает

@@ -109,15 +109,15 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
         if (D) {
           V = { ...P, r_t: L.r[i] / 100, 'r_{t+1}': L.r[i + 1] / 100, w_t: L.w[i], E_t: L.E[i], E_0: L.E[0], L_0: L.L[0], 'E_{t+1}': L.E[i + 1], L_t: L.L[i], 'L_{t+1}': L.L[i + 1] };
           if (tp) Object.assign(V, { '\\tilde c_{t+1}': E.c[i + 1], '\\tilde c_t': E.c[i], '\\tilde k_{t+1}': E.k[i + 1], '\\tilde k_t': E.k[i],
-            '\\tilde b_{t+1}': E.k[i + 1], '\\tilde b_t': E.k[i], '\\tilde w_t': L.w[i] / L.E[i] });
-          else Object.assign(V, { 'c_{t+1}': L.c[i + 1], c_t: L.c[i], 'k_{t+1}': L.k[i + 1], k_t: L.k[i], 'b_{t+1}': L.k[i + 1], b_t: L.k[i] });
+            '\\tilde w_t': L.w[i] / L.E[i], '\\tilde\\pi_t': 0 });
+          else Object.assign(V, { 'c_{t+1}': L.c[i + 1], c_t: L.c[i], 'k_{t+1}': L.k[i + 1], k_t: L.k[i], '\\pi_t': 0 });
           if (utility === 'cara') Object.assign(V, { 'c_{t+1}': L.c[i + 1], c_t: L.c[i] });
         } else {
           // непрерывное время записано с индексом t, как и дискретное
           V = { ...P, r_t: L.r[i] / 100, w_t: L.w[i], E_t: L.E[i], E_0: L.E[0], L_0: L.L[0], L_t: L.L[i], '\\dot L_t': deriv(L.L, i, h), '\\dot E_t': deriv(L.E, i, h) };
           if (tp) Object.assign(V, { '\\dot{\\tilde c}_t': deriv(E.c, i, h), '\\tilde c_t': E.c[i], '\\dot{\\tilde k}_t': deriv(E.k, i, h), '\\tilde k_t': E.k[i],
-            '\\dot{\\tilde b}_t': deriv(E.k, i, h), '\\tilde b_t': E.k[i], '\\tilde w_t': L.w[i] / L.E[i] });
-          else Object.assign(V, { '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i], '\\dot k_t': deriv(L.k, i, h), k_t: L.k[i], '\\dot b_t': deriv(L.k, i, h), b_t: L.k[i] });
+            '\\tilde w_t': L.w[i] / L.E[i], '\\tilde\\pi_t': 0 });
+          else Object.assign(V, { '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i], '\\dot k_t': deriv(L.k, i, h), k_t: L.k[i], '\\pi_t': 0 });
           if (utility === 'cara') Object.assign(V, { '\\dot c_t': deriv(L.c, i, h), c_t: L.c[i] });
         }
         const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 3e-4, rel: 2e-3 };
@@ -127,8 +127,13 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
       }
       // стационар
       const S = res.ss0;
-      const VS = { ...P, '\\tilde k^*': S.k, 'k^*': S.k, '\\tilde c^*': S.c, 'c^*': S.c, 'r^*': S.r, '\\tilde w^*': S.w, 'w^*': S.w, 'F^{\\prime}_K': S.r + st.delta, 'F^{\\prime}_L': S.w, '\\tilde F^{\\prime}_L': S.w };
-      for (const r of F.ss) { check(r.tex, VS, { abs: 1e-10, rel: 1e-10 }, `${where}, стационар`); check(r.num, VS, { abs: 1e-4, rel: 1e-4 }, `${where}, стационар (числа)`); }
+      const VS = { ...P, '\\tilde k^*': S.k, 'k^*': S.k, '\\tilde y^*': S.y, 'y^*': S.y, '\\tilde i^*': S.i, 'i^*': S.i, '\\tilde c^*': S.c, 'c^*': S.c,
+        'r^*': S.r, 's^*': S.s, '\\tilde w^*': S.w, 'w^*': S.w, 'F^{\\prime}_K': S.r + st.delta, 'F^{\\prime}_L': S.w, '\\tilde F^{\\prime}_L': S.w };
+      // таблица ТСР: «величина = формула» и «величина = значение»
+      for (const r of ramsey.steadyTable(st, res)) {
+        check(`${r.sym}=${r.tex}`, VS, { abs: 1e-10, rel: 1e-10 }, `${where}, таблица ТСР (${r.name})`);
+        check(`${r.sym}=${r.value}`, VS, { abs: 1e-12, rel: 1e-12 }, `${where}, таблица ТСР: значение (${r.name})`);
+      }
       n++;
     }
   console.log(`Рамсей: ${n} конфигураций`);

@@ -479,7 +479,7 @@ function run() {
     current.charts.push(drawChart(c2, [
       { label: 'базовый путь', kind: 'base', data: pairs(b) },
       { label: 'после шока', data: pairs(y) },
-    ], { discrete, lines, xmax, lagJump: sp.lagJump, log: view.levelScale === 'log' && positive && !sp.lvlUnit }));
+    ], { discrete, lines, xmax, lagJump: sp.lagJump, log: view.levelScale === 'log' && positive && !sp.lvlUnit && !sp.noLog }));
   }
 }
 

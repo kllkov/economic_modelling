@@ -1,11 +1,13 @@
 // Модель Рамсея (Ramsey–Cass–Koopmans) с ростом населения: настройки, решатель, формулы.
-// Обозначения следуют материалам курса: b_t — активы на душу, r_t — ставка процента,
-// w_t — зарплата, k_t — капитал на работника, f(k) = k^α, L_t — население (= занятые),
+// Обозначения следуют материалам курса: домохозяйства владеют капиталом и сдают его фирмам,
+// r_t — ставка процента (аренда r_t + δ), w_t — зарплата, π_t — прибыль фирм,
+// k_t — капиталовооружённость, f(k) = k^α, L_t — население (= занятые),
 // L_{t+1} = (1+n)L_t, E_t — эффективность труда, тильда — величины на эффективного работника.
 // Законы движения записаны в точной форме: (1+n)(1+g)k̃_{t+1} = (1−δ)k̃_t + f(k̃_t) − c̃_t.
 // В подписях интерфейса фрагменты между $…$ рендерятся KaTeX.
 
 import { newtonTridiagonal } from '../solver.js';
+import { sample, halfLife, tc, tcMap } from '../charts.js';
 
 // ───────────────────────────── Настройки ─────────────────────────────
 
@@ -24,13 +26,17 @@ const SHOCK_TARGETS = {
   delta: { label: 'Норма выбытия капитала $\\delta$', kind: 'param', unit: 'Δ', def: 0.02, step: 0.005 },
 };
 
+// параметр, путь которого показывается отдельным графиком при его шоке (как δ_t в материалах курса)
+const PAR_CHART = { delta: ['Норма выбытия капитала', '\\delta_t'], beta: ['Дисконт-фактор', '\\beta_t'], rho: ['Ставка дисконтирования', '\\rho_t'],
+  sigma: ['Неприятие риска', '\\sigma_t'], theta: ['Неприятие риска', '\\theta_t'] };
+
 export const defaults = {
-  time: 'discrete', version: 'centralized', variant: 'base', objective: 'mill',
+  time: 'discrete', version: 'centralized', variant: 'tp', objective: 'mill',
   utility: 'crra', production: 'cd',
   alpha: 0.3, beta: 0.96, rho: 0.04, delta: 0.1, sigma: 2, theta: 1, g: 0.02, n: 0.01,
   shockTarget: 'k', shockSize: -20, shockTiming: 'unexpected', tHat: 15, t0: 5,
   shockPersistence: 'permanent', rhoS: 0.8, tempMode: 'ar', shockDur: 5,
-  horizon: 60,
+  horizon: 60, k0: 0.928,
 };
 
 function shockTargetsFor(s) {
@@ -85,6 +91,7 @@ export const controls = [
     show: (s) => s.utility === 'cara' },
   { id: 'g', label: '$g$ — темп роста $E_t$', type: 'number', min: 0, max: 1, step: 0.005,
     show: (s) => s.variant === 'tp' },
+  { id: 'k0', label: (s) => `$${s.variant === 'tp' ? '\\tilde k_0' : 'k_0'}$ — начальная капиталовооружённость`, type: 'number', min: 0.01, max: 100, step: 0.1 },
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
@@ -224,6 +231,7 @@ function validate(s) {
   if (s.shockTiming === 'expected' && !(s.t0 < s.tHat))
     errors.push('Для ожидаемого шока момент объявления $t_0$ должен быть раньше $\\hat t$.');
   if (s.shockTarget === 'tfp' && s.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
+  if (!(s.k0 > 0)) errors.push('Начальная капиталовооружённость должна быть положительной.');
   if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капиталовооружённость не может упасть больше чем на 100%.');
   if (s.shockTarget === 'tfp' && s.shockSize <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
   return errors;
@@ -331,10 +339,11 @@ export function solve(s) {
   const a = s.alpha;
   const Np = Math.round(s.horizon / h);
   const lnG1 = Math.log(1 + g * h);
-  const t = [], series = { c: [], k: [], y: [], i: [], r: [], w: [], s: [], E: [], L: [] };
+  const t = [], series = { c: [], k: [], y: [], i: [], r: [], w: [], s: [], E: [], L: [], par: [] };
   const eff = { c: [], k: [], y: [], i: [], w: [] };
-  const lvl = { c: [], k: [], y: [], i: [], w: [], r: [], s: [], E: [], L: [] };
-  const baseLvl = { c: [], k: [], y: [], i: [], w: [], E: [], L: [] };
+  const lvl = { c: [], k: [], y: [], i: [], w: [], r: [], s: [], E: [], L: [], par: [] };
+  const baseLvl = { c: [], k: [], y: [], i: [], w: [], E: [], L: [], par: [] };
+  const parKey = PAR_CHART[s.shockTarget] ? s.shockTarget : null;
   const agg = { c: [], k: [], y: [], i: [] }, baseAgg = { c: [], k: [], y: [], i: [] };
   // население: L_0 = 1, L_{j+1} = (1 + n_j h) L_j
   const Lp = new Float64Array(Np + 1), Lb = new Float64Array(Np + 1);
@@ -364,6 +373,7 @@ export function solve(s) {
     lvl.s.push((100 * ih) / yh);
     lvl.E.push(G * Z); baseLvl.E.push(G); series.E.push(100 * (Z - 1));
     lvl.L.push(Lp[j]); baseLvl.L.push(Lb[j]); series.L.push(100 * (Lp[j] / Lb[j] - 1));
+    if (parKey) { lvl.par.push(P[parKey][j]); baseLvl.par.push(base[parKey][j]); series.par.push(P[parKey][j] - base[parKey][j]); }
   }
   baseLvl.r = t.map(() => 100 * ss0.r);
   baseLvl.s = t.map(() => 100 * ss0.s);
@@ -400,6 +410,8 @@ export function chartSpecs(s) {
         : { id: 'w', title: 'Зарплата', sym: x('w'), irfUnit: '$\\Delta_{\\%}$ от s.s.' },
     { id: 's', title: 'Норма сбережения', sym: 's_t = i_t/y_t', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
   ];
+  const par = PAR_CHART[s.shockTarget];
+  if (par) specs.unshift({ id: 'par', title: par[0], sym: par[1], irfUnit: '$\\Delta$ от s.s.', noEff: true, noLog: true });
   return specs.map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }
 
@@ -417,6 +429,8 @@ const n4 = (x) => fmtTex(x, 4);
 const pm = (x) => (x < 0 ? `-${n4(-x)}` : `+${n4(x)}`);
 
 // Все формулы — уже с подставленными функциями (Кобб–Дуглас, выбранная полезность).
+// Децентрализованная версия — как в курсе: домохозяйства владеют капиталом (активов b нет),
+// получают аренду (r_t + δ)k_t, зарплату и прибыль фирм.
 export function formulas(s) {
   const D = s.time === 'discrete';
   const tp = s.variant === 'tp';
@@ -427,157 +441,113 @@ export function formulas(s) {
   const g = tp ? s.g : 0;
   const a = s.alpha, d = s.delta, nn = s.n;
   const tl = (v) => (tp ? `\\tilde ${v}` : v);
-  const fs = { dec: [], cen: [], system: [], shock: [], ss: [] };
+  const k = tl('k'), c = tl('c'), w = tl('w'), pi = tp ? '\\tilde\\pi' : '\\pi';
+  const fs = { dec: [], cen: [], system: [], shock: [], ssTitle: 'Траектория сбалансированного роста' };
 
   // полезность и предельная полезность от аргумента
-  const U = (c) => (ut === 'crra' ? `\\dfrac{${c}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${c}` : `-\\dfrac{1}{\\theta}e^{-\\theta ${c}}`);
-  const Up = (c) => (ut === 'crra' ? `${c}^{-\\sigma}` : ut === 'log' ? `\\dfrac{1}{${c}}` : `e^{-\\theta ${c}}`);
-  const Uw = (c) => (ut === 'cara' ? `\\left(${U(c)}\\right)` : U(c));
+  const U = (x) => (ut === 'crra' ? `\\dfrac{${x}^{\\,1-\\sigma}-1}{1-\\sigma}` : ut === 'log' ? `\\ln ${x}` : `-\\dfrac{1}{\\theta}e^{-\\theta ${x}}`);
+  const Up = (x) => (ut === 'crra' ? `${x}^{-\\sigma}` : ut === 'log' ? `\\dfrac{1}{${x}}` : `e^{-\\theta ${x}}`);
+  const Uw = (x) => (ut === 'cara' ? `\\left(${U(x)}\\right)` : U(x));
   const cT = '{c_t}';
   const growthD = tp ? '(1+n)(1+g)' : '(1+n)';
   const growthC = tp ? '(n+g+\\delta)' : '(n+\\delta)';
   const popLaw = D ? 'L_{t+1}=(1+n)L_t' : '\\dot L_t/L_t=n';
   const tpLaw = D ? 'E_{t+1}=(1+g)E_t' : '\\dot E_t/E_t=g';
-  const lawLine = (tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw) + (tp ? `,\\qquad L_0=E_0=1` : `,\\qquad L_0=1`);
+  const lawLine = (tp ? `${popLaw},\\qquad ${tpLaw}` : popLaw) + (tp ? ',\\qquad L_0=E_0=1' : ',\\qquad L_0=1');
 
-  // целевая функция и дисконтирование в TVC
+  // целевая функция и TVC: λ_t = β^t u′(c_t)E_t — теневая цена единицы k̃_{t+1}
   const objD = mill ? `\\sum_{t=0}^{\\infty}\\beta^t${Uw(cT)}` : `\\sum_{t=0}^{\\infty}\\beta^t L_t${Uw(cT)}`;
   const objC = mill ? `\\int_0^{\\infty}e^{-\\rho t}${Uw(cT)}\\,dt` : `\\int_0^{\\infty}e^{-\\rho t}L_t${Uw(cT)}\\,dt`;
   const tvcW = D ? (mill ? '\\beta^t' : '\\beta^t L_t') : (mill ? 'e^{-\\rho t}' : 'e^{-(\\rho-n)t}');
   // с ТП задачи записываются в единицах на эффективного работника: c = c̃·E
   const cE = '(\\tilde c_tE_t)';
-  const objDe = tp ? objD.replace(cT, cE) : objD;
-  const objCe = tp ? objC.replace(cT, cE) : objC;
-  const UpE = tp ? Up(cE) : Up(cT);
+  const obj = tp ? (D ? objD : objC).replace(cT, cE) : (D ? objD : objC);
+  const lam = tp ? `${tvcW}${Up(cE)}E_t` : `${tvcW}${Up(cT)}`;
+  const tvc = `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${lam}${k}_{${D ? 't+1' : 't'}}=0,\\qquad ${k}_0\\ \\text{задано}`;
+  const maxD = `\\max_{\\{${c}_t,\\,${k}_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${obj}`;
+  const maxC = `\\max_{\\{${c}_t\\}_{t\\ge0}}\\; V_0=${obj}`;
+  const firm = tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
+    : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t';
+  const markets = [`${k}_t\\ \\text{(спрос фирм)}=${k}_t\\ \\text{(предложение домохозяйств)}`,
+    'L_t\\ \\text{(спрос фирм)}=L_t\\ \\text{(предложение домохозяйств)}'];
 
   // ── децентрализованная
-  if (D) {
-    fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      ...(tp ? [
-        `\\max_{\\{\\tilde c_t,\\,\\tilde b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`,
-        '\\text{s.t.}\\quad (1+n)(1+g)\\tilde b_{t+1}=(1+r_t)\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_t\\tilde b_t=0`,
-      ] : [
-        `\\max_{\\{c_t,\\,b_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
-        '\\text{s.t.}\\quad (1+n)b_{t+1}=(1+r_t)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}b_t=0`,
-      ]),
-    ] });
-    fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
-         : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
-    ] });
-    fs.dec.push({ agent: 'Рынки', items: [
-      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
-    ] });
-    fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
-  } else {
-    fs.dec.push({ agent: 'Домохозяйства', system: true, items: [
-      ...(tp ? [
-        `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}`,
-        '\\text{s.t.}\\quad \\dot{\\tilde b}_t=(r_t-n-g)\\tilde b_t+\\tilde w_t-\\tilde c_t,\\qquad \\tilde b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_t\\tilde b_t=0`,
-      ] : [
-        `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
-        '\\text{s.t.}\\quad \\dot b_t=(r_t-n)b_t+w_t-c_t,\\qquad b_0\\ \\text{задано}',
-        `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}b_t=0`,
-      ]),
-    ] });
-    fs.dec.push({ agent: 'Фирмы', items: [
-      tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
-         : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t',
-    ] });
-    fs.dec.push({ agent: 'Рынки', items: [
-      tp ? '\\tilde b_t=\\tilde k_t\\quad\\text{(рынок капитала)}' : 'b_t=k_t\\quad\\text{(рынок капитала)}',
-    ] });
-    fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
-  }
+  fs.dec.push({ agent: 'Домохозяйства', system: true, items: D ? [
+    maxD,
+    `\\text{s.t.}\\quad ${growthD}${k}_{t+1}=(1-\\delta)${k}_t+(r_t+\\delta)${k}_t+${w}_t+${pi}_t-${c}_t`,
+    tvc,
+  ] : [
+    maxC,
+    `\\text{s.t.}\\quad \\dot{${k}}_t=(r_t+\\delta)${k}_t-${growthC}${k}_t+${w}_t+${pi}_t-${c}_t`,
+    tvc,
+  ] });
+  fs.dec.push({ agent: 'Фирмы', items: [firm] });
+  fs.dec.push({ agent: 'Рынки', items: markets });
+  fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
 
   // ── централизованная
-  if (D) {
-    fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
-      tp ? `\\max_{\\{\\tilde c_t,\\,\\tilde k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objDe}`
-         : `\\max_{\\{c_t,\\,k_{t+1}\\}_{t=0}^{\\infty}}\\; V_0=${objD}`,
-      tp ? '\\text{s.t.}\\quad (1+n)(1+g)\\tilde k_{t+1}=(1-\\delta)\\tilde k_t+\\tilde k_t^{\\alpha}-\\tilde c_t,\\qquad \\tilde k_0\\ \\text{задано}'
-         : '\\text{s.t.}\\quad (1+n)k_{t+1}=(1-\\delta)k_t+k_t^{\\alpha}-c_t,\\qquad k_0>0\\ \\text{задано}',
-      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_{t+1}\\tilde k_{t+1}=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}k_{t+1}=0`,
-    ] });
-    fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
-  } else {
-    fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [
-      tp ? `\\max_{\\{\\tilde c_t\\}_{t\\ge0}}\\; V_0=${objCe}` : `\\max_{\\{c_t\\}_{t\\ge0}}\\; V_0=${objC}`,
-      tp ? '\\text{s.t.}\\quad \\dot{\\tilde k}_t=\\tilde k_t^{\\alpha}-\\tilde c_t-(n+g+\\delta)\\tilde k_t,\\qquad \\tilde k_0\\ \\text{задано}'
-         : '\\text{s.t.}\\quad \\dot k_t=k_t^{\\alpha}-c_t-(n+\\delta)k_t,\\qquad k_0>0\\ \\text{задано}',
-      tp ? `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${UpE}E_t\\tilde k_t=0`
-         : `\\text{TVC:}\\quad \\lim_{t\\to\\infty}${tvcW}${Up(cT)}k_t=0`,
-    ] });
-    fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
-  }
+  fs.cen.push({ agent: 'Центральный планировщик', system: true, items: D ? [
+    maxD,
+    `\\text{s.t.}\\quad ${growthD}${k}_{t+1}=(1-\\delta)${k}_t+${k}_t^{\\alpha}-${c}_t`,
+    tvc,
+  ] : [
+    maxC,
+    `\\text{s.t.}\\quad \\dot{${k}}_t=${k}_t^{\\alpha}-${c}_t-${growthC}${k}_t`,
+    tvc,
+  ] });
+  fs.cen.push({ agent: 'Экзогенные процессы', items: [lawLine] });
 
   // ── итоговая система (с подставленными функциями) и та же система в числах
-  const K1 = D ? `${tl('k')}_{t+1}` : `${tl('k')}_t`;
-  const mpk = `\\alpha\\cdot ${K1}^{\\alpha-1}`;
-  const mpkN = `${n4(a)}${K1}^{${n4(a - 1)}}`;
   let euler, eulerN;
   if (D) {
-    const Bt = mill ? '\\dfrac{\\beta}{1+n}' : '\\beta';
-    const BtN = n4(mill ? s.beta / (1 + nn) : s.beta);
-    // децентрализованная версия: правая часть через r_{t+1} (подстановка r — в строке FOC фирмы)
-    const R = cen ? `${Bt}\\left(${mpk}+1-\\delta\\right)` : `${Bt}(1+r_{t+1})`;
-    const RN = `${BtN}\\left(${mpkN}${pm(1 - d)}\\right)`;
+    const K1 = `${k}_{t+1}`;
+    const R = cen ? `\\left[1+\\alpha ${K1}^{\\alpha-1}-\\delta\\right]` : '(1+r_{t+1})';
+    const RN = cen ? `\\left[${n4(1 - d)}+${n4(a)}${K1}^{${n4(a - 1)}}\\right]` : '(1+r_{t+1})';
+    const rhs = mill ? `\\dfrac{\\beta${R}}{1+n}` : `\\beta${R}`;
+    const rhsN = mill ? `\\dfrac{${n4(s.beta)}${RN}}{${n4(1 + nn)}}` : `${n4(s.beta)}${RN}`;
     if (ut === 'cara') {
-      euler = `e^{\\theta(c_{t+1}-c_t)}=${R}`;
-      eulerN = `e^{${n4(s.theta)}(c_{t+1}-c_t)}=${RN}`;
+      euler = `e^{\\theta(c_{t+1}-c_t)}=${rhs}`;
+      eulerN = `e^{${n4(s.theta)}(c_{t+1}-c_t)}=${rhsN}`;
     } else {
-      const ratio = tp ? '\\dfrac{\\tilde c_{t+1}}{\\tilde c_t}' : '\\dfrac{c_{t+1}}{c_t}';
-      const growth = tp ? (ut === 'log' ? '(1+g)' : '(1+g)^{\\sigma}') : '';
-      const growthN = tp ? `${n4(1 + g)}${ut === 'log' ? '' : `^{${n4(sig)}}`}` : '';
-      euler = ut === 'log' ? `${growth}${ratio}=${R}` : `${growth}\\left(${ratio}\\right)^{\\sigma}=${R}`;
-      eulerN = ut === 'log' ? `${growthN}${ratio}=${RN}` : `${growthN}\\left(${ratio}\\right)^{${n4(sig)}}=${RN}`;
+      const ratio = tp ? `\\dfrac{(1+g)${c}_{t+1}}{${c}_t}` : `\\dfrac{${c}_{t+1}}{${c}_t}`;
+      const ratioN = tp ? `\\dfrac{${n4(1 + g)}${c}_{t+1}}{${c}_t}` : ratio;
+      euler = ut === 'log' ? `${ratio}=${rhs}` : `\\left(${ratio}\\right)^{\\sigma}=${rhs}`;
+      eulerN = ut === 'log' ? `${ratioN}=${rhsN}` : `\\left(${ratioN}\\right)^{${n4(sig)}}=${rhsN}`;
     }
   } else {
-    const k = `${tl('k')}_t`;
+    const kt = `${k}_t`;
     const nTerm = mill ? '-n' : '';
     const gTerm = ut === 'cara' ? '' : (tp ? (ut === 'log' ? '-g' : '-\\sigma g') : '');
-    const lhs = ut === 'cara' ? '\\dot c_t' : (tp ? '\\dfrac{\\dot{\\tilde c}_t}{\\tilde c_t}' : '\\dfrac{\\dot c_t}{c_t}');
+    const lhs = ut === 'cara' ? '\\dot c_t' : `\\dfrac{\\dot{${c}}_t}{${c}_t}`;
     const den = ut === 'cara' ? '\\theta' : '\\sigma';
-    const preNum = `r_t-\\rho${nTerm}${gTerm}`;
-    const num = `\\alpha\\cdot ${k}^{\\alpha-1}-\\delta-\\rho${nTerm}${gTerm}`;
-    const cst = d + s.rho + (mill ? nn : 0) + (ut === 'cara' ? 0 : sig * g);
-    const numN = `${n4(a)}${k}^{${n4(a - 1)}}${pm(-cst)}`;
-    if (ut === 'log') {
-      euler = `${lhs}=${cen ? num : preNum}`;
-      eulerN = `${lhs}=${numN}`;
-    } else {
-      euler = `${lhs}=\\dfrac{${cen ? num : preNum}}{${den}}`;
-      eulerN = `${lhs}=\\dfrac{${numN}}{${n4(ut === 'cara' ? s.theta : sig)}}`;
-    }
-  }
-  fs.system.push({ label: 'Уравнение Эйлера', tex: euler, num: eulerN });
-
-  if (!cen) {
-    const k = `${tl('k')}_t`, r = 'r_t', w = 'w_t';
-    const wl = tp ? 'w_t=(1-\\alpha)E_t' : `${w}=(1-\\alpha)`;
-    const wlN = tp ? `w_t=${n4(1 - a)}E_t` : `${w}=${n4(1 - a)}`;
-    fs.system.push({ label: 'Цены факторов (FOC фирмы)',
-      tex: `${r}=\\alpha\\cdot ${k}^{\\alpha-1}-\\delta,\\qquad ${wl}${k}^{\\alpha}`,
-      num: `${r}=${n4(a)}${k}^{${n4(a - 1)}}${pm(-d)},\\qquad ${wlN}${k}^{${n4(a)}}`,
-    });
+    const num = cen ? `\\alpha ${kt}^{\\alpha-1}-\\delta-\\rho${nTerm}${gTerm}` : `r_t-\\rho${nTerm}${gTerm}`;
+    const cst = s.rho + (mill ? nn : 0) + (ut === 'cara' ? 0 : sig * g);
+    const numN = cen ? `${n4(a)}${kt}^{${n4(a - 1)}}${pm(-(cst + d))}` : `r_t${pm(-cst)}`;
+    euler = ut === 'log' ? `${lhs}=${num}` : `${lhs}=\\dfrac{${num}}{${den}}`;
+    eulerN = ut === 'log' ? `${lhs}=${numN}` : `${lhs}=\\dfrac{${numN}}{${n4(ut === 'cara' ? s.theta : sig)}}`;
   }
 
-  let accum, accumN;
-  {
-    const k = tl('k'), c = tl('c');
-    if (D) {
-      accum = `${growthD}${k}_{t+1}=(1-\\delta)${k}_t+${k}_t^{\\alpha}-${c}_t`;
-      accumN = `${n4((1 + nn) * (1 + g))}${k}_{t+1}=${n4(1 - d)}${k}_t+${k}_t^{${n4(a)}}-${c}_t`;
-    } else {
-      accum = `\\dot{${k}}_t=${k}_t^{\\alpha}-${c}_t-${growthC}${k}_t`;
-      accumN = `\\dot{${k}}_t=${k}_t^{${n4(a)}}-${c}_t-${n4(nn + g + d)}${k}_t`;
-    }
+  const kt = `${k}_t`;
+  if (cen) {
+    fs.system.push({ label: 'Уравнение Эйлера', tex: euler, num: eulerN });
+    fs.system.push(D
+      ? { label: 'Ресурсное ограничение', tex: `${growthD}${k}_{t+1}=(1-\\delta)${kt}+${kt}^{\\alpha}-${c}_t`,
+        num: `${n4((1 + nn) * (1 + g))}${k}_{t+1}=${n4(1 - d)}${kt}+${kt}^{${n4(a)}}-${c}_t` }
+      : { label: 'Ресурсное ограничение', tex: `\\dot{${k}}_t=${kt}^{\\alpha}-${c}_t-${growthC}${kt}`,
+        num: `\\dot{${k}}_t=${kt}^{${n4(a)}}-${c}_t-${n4(nn + g + d)}${kt}` });
+  } else {
+    // система децентрализованного равновесия: два уравнения домохозяйства и два — фирмы
+    fs.system.push({ label: 'Уравнение Эйлера (домохозяйства)', tex: euler, num: eulerN });
+    fs.system.push(D
+      ? { label: 'Бюджетное ограничение (домохозяйства)', tex: `${growthD}${k}_{t+1}=(1+r_t)${kt}+${w}_t+${pi}_t-${c}_t`,
+        num: `${n4((1 + nn) * (1 + g))}${k}_{t+1}=(1+r_t)${kt}+${w}_t+${pi}_t-${c}_t` }
+      : { label: 'Бюджетное ограничение (домохозяйства)', tex: `\\dot{${k}}_t=(r_t-${tp ? 'n-g' : 'n'})${kt}+${w}_t+${pi}_t-${c}_t`,
+        num: `\\dot{${k}}_t=(r_t${pm(-(nn + g))})${kt}+${w}_t+${pi}_t-${c}_t` });
+    fs.system.push({ label: 'Спрос на капитал (фирмы)', tex: `r_t=\\alpha ${kt}^{\\alpha-1}-\\delta`, num: `r_t=${n4(a)}${kt}^{${n4(a - 1)}}${pm(-d)}` });
+    fs.system.push({ label: 'Спрос на труд (фирмы)', tex: `${w}_t=(1-\\alpha)${kt}^{\\alpha}`, num: `${w}_t=${n4(1 - a)}${kt}^{${n4(a)}}` });
+    fs.system.push({ label: 'Прибыль фирм (CRS)', tex: `${pi}_t=${kt}^{\\alpha}-(r_t+\\delta)${kt}-${w}_t=0`,
+      num: `${pi}_t=${kt}^{${n4(a)}}-(r_t${pm(d)})${kt}-${w}_t=0` });
   }
-  fs.system.push({ label: cen ? 'Ресурсное ограничение' : 'Динамика капитала (бюджет + рынок + FOC фирмы)', tex: accum, num: accumN });
 
   // ── шок
   const tg = s.shockTarget;
@@ -588,7 +558,7 @@ export function formulas(s) {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prof}\\big)`;
     shockNum = `\\varphi=${n4(s.shockSize / 100)}`;
   } else if (tg === 'k') {
-    shockTex = 'k_{\\hat t}=(1+\\varphi_k)k_{\\hat t}^{-}';
+    shockTex = `${k}_{\\hat t}=(1+\\varphi_k)${k}_{\\hat t}^{-}`;
     shockNum = `\\varphi_k=${n4(s.shockSize / 100)}`;
   } else {
     const sym = { beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta', delta: '\\delta', n: 'n' }[tg];
@@ -598,54 +568,252 @@ export function formulas(s) {
   shockNum += `,\\qquad \\hat t=${s.tHat}`;
   if (persistent) shockNum += s.tempMode === 'fixed' ? `,\\qquad N=${s.shockDur}` : `,\\qquad \\rho_s=${n4(s.rhoS)}`;
   fs.shock.push({ tex: shockTex, num: shockNum });
-
-  // ── стационар (с подстановкой и в числах)
-  const sigT = ut === 'cara' ? '' : (ut === 'log' ? '' : '^{\\sigma}');
-  let rss, rv;
-  const RS = cen ? 'F^{\\prime}_K-\\delta' : 'r^*';
-  const FKs = cen ? 'F^{\\prime}_K' : 'r^*+\\delta';
-  const WS = cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : tl('w') + '^*';
-  if (D) {
-    const numer = [mill ? '(1+n)' : '', tp && ut !== 'cara' ? `(1+g)${sigT}` : ''].filter(Boolean).join('');
-    rss = `1+${RS}=\\dfrac{${numer || '1'}}{\\beta}`;
-    rv = ((mill ? 1 + nn : 1) * Math.pow(1 + g, ut === 'cara' ? 0 : sig)) / s.beta - 1;
-  } else {
-    rss = `${RS}=\\rho${mill ? '+n' : ''}${tp && ut !== 'cara' ? (ut === 'log' ? '+g' : '+\\sigma g') : ''}`;
-    rv = s.rho + (mill ? nn : 0) + (ut === 'cara' ? 0 : sig * g);
-  }
-  const dep = D ? (1 + nn) * (1 + g) - 1 + d : nn + g + d;
-  const depTex = D ? (tp ? '\\big[(1+n)(1+g)-1+\\delta\\big]' : '(n+\\delta)') : growthC;
-  const kv = Math.pow(a / (rv + d), 1 / (1 - a));
-  const cv = Math.pow(kv, a) - dep * kv;
-  fs.ss = [
-    { tex: rss, num: `${RS}=${n4(rv)}` },
-    { tex: `${tl('k')}^*=\\left(\\dfrac{\\alpha}{${FKs}}\\right)^{\\frac{1}{1-\\alpha}}`,
-      num: `${tl('k')}^*=${n4(kv)}` },
-    { tex: `${WS}=(1-\\alpha)\\left(${tl('k')}^*\\right)^{\\alpha}`, num: `${WS}=${n4((1 - a) * Math.pow(kv, a))}` },
-    { tex: `${tl('c')}^*=\\left(${tl('k')}^*\\right)^{\\alpha}-${depTex}${tl('k')}^*`,
-      num: `${tl('c')}^*=${n4(cv)}` },
-  ];
   return fs;
 }
 
+// Траектория сбалансированного роста: одна таблица «величина — смысл — формула — значение»
 export function steadyTable(s, res) {
   const tp = s.variant === 'tp';
   const cen = s.version === 'centralized';
   const D = s.time === 'discrete';
+  const mill = s.objective !== 'bentham';
+  const ut = s.utility;
   const e = tp ? 'на эфф. работника' : 'на работника';
-  const invName = D
-    ? (tp ? `инвестиции ${e} $[(1+n)(1+g)-1+\\delta]\\tilde k^*$` : `инвестиции ${e} $(n+\\delta)k^*$`)
-    : (tp ? `инвестиции ${e} $(n+g+\\delta)\\tilde k^*$` : `инвестиции ${e} $(n+\\delta)k^*$`);
+  const tl = (v) => (tp ? `\\tilde ${v}` : v);
+  const [k, y, i, c] = ['k', 'y', 'i', 'c'].map((v) => `${tl(v)}^*`);
+  const RS = cen ? 'F^{\\prime}_K-\\delta' : 'r^*';
+  const gS = tp && ut !== 'cara' ? (ut === 'log' ? '(1+g)' : '(1+g)^{\\sigma}') : '';
+  let rTex;
+  if (D) {
+    const numer = mill ? (gS ? `(1+n)${gS}` : '1+n') : gS || '1';
+    rTex = `\\dfrac{${numer}}{\\beta}-1`;
+  } else rTex = `\\rho${mill ? '+n' : ''}${gS ? (ut === 'log' ? '+g' : '+\\sigma g') : ''}`;
+  const depTex = D ? (tp ? '\\big[(1+n)(1+g)-1+\\delta\\big]' : '(n+\\delta)') : (tp ? '(n+g+\\delta)' : '(n+\\delta)');
   const rows = [
-    { sym: tp ? '\\tilde k^*' : 'k^*', name: `капиталовооружённость${tp ? ' на эфф. работника' : ''}`, key: 'k' },
-    { sym: tp ? '\\tilde y^*' : 'y^*', name: `выпуск ${e}`, key: 'y' },
-    { sym: tp ? '\\tilde i^*' : 'i^*', name: invName, key: 'i' },
-    { sym: tp ? '\\tilde c^*' : 'c^*', name: `потребление ${e}`, key: 'c' },
-    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : (tp ? '\\tilde w^*' : 'w^*'), name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w' },
-    { sym: cen ? 'F^{\\prime}_K-\\delta' : 'r^*', name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true },
-    { sym: 's^*', name: tp ? 'норма сбережения $\\tilde i^*/\\tilde y^*$' : 'норма сбережения $i^*/y^*$', key: 's', pct: true },
+    { sym: k, name: `капиталовооружённость${tp ? ' на эфф. работника' : ''}`, key: 'k',
+      tex: `\\left(\\dfrac{\\alpha}{${cen ? 'F^{\\prime}_K' : 'r^*+\\delta'}}\\right)^{\\frac{1}{1-\\alpha}}` },
+    { sym: y, name: `выпуск ${e}`, key: 'y', tex: `\\left(${k}\\right)^{\\alpha}` },
+    { sym: i, name: `инвестиции ${e}`, key: 'i', tex: `${depTex}${k}` },
+    { sym: c, name: `потребление ${e}`, key: 'c', tex: `${y}-${i}` },
+    { sym: cen ? (tp ? '\\tilde F^{\\prime}_L' : 'F^{\\prime}_L') : `${tl('w')}^*`, name: cen ? 'предельный продукт труда' : 'зарплата', key: 'w',
+      tex: `(1-\\alpha)${y}` },
+    { sym: RS, name: cen ? 'отдача от капитала' : 'ставка процента', key: 'r', pct: true, tex: rTex },
+    { sym: 's^*', name: 'норма сбережения', key: 's', pct: true, tex: `\\dfrac{${i}}{${y}}` },
   ];
-  const v = (ss, r, Z) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key] / Z, 3));
   const ZF = tp ? res.ZF : 1;
-  return rows.map((r) => ({ ...r, before: v(res.ss0, r, 1), after: v(res.ssF, r, ZF) }));
+  const v = (ss, r, Z) => (r.pct ? `${(100 * ss[r.key]).toFixed(2)}%` : fmt(ss[r.key] / Z, 3));
+  return rows.map((r) => ({ ...r, before: v(res.ss0, r, 1), after: v(res.ssF, r, ZF), value: res.ss0[r.key] }));
+}
+
+// ───────────── Дополнительные блоки: сходимость, ТСР и основная (фазовая) диаграмма ─────────────
+
+const PC = tcMap({
+  dk: '#3d8acb', dk1: '#86c2f0', dc: '#7c62d8', dc1: '#c2b2f7', saddle: '#d9638f', path: '#23214a', ss: '#7d7ca5', from: '#3d8acb',
+});
+
+// решения для рисования повторяются при каждом перерисовывании — кешируем
+const memo = new Map();
+const cached = (key, fn) => {
+  if (!memo.has(key)) { if (memo.size > 60) memo.clear(); memo.set(key, fn()); }
+  return memo.get(key);
+};
+const MODEL_KEYS = ['time', 'variant', 'objective', 'utility', 'alpha', 'beta', 'rho', 'delta', 'sigma', 'theta', 'g', 'n', 'dt'];
+
+// стационар (точные формулы) при параметрах s
+function ssOf(s) {
+  const g = s.variant === 'tp' ? s.g : 0;
+  return steady(s, buildPaths({ ...s, shockSize: 0 }, 1, 1, 0), 0, 1, g, true);
+}
+
+// Путь без шока из k̃0: экономика сразу встаёт на седловую траекторию. Решается как неожиданный
+// сдвиг капиталовооружённости в t = 0 относительно стационара той же сетки.
+function pathFrom(s, k0, horizon, dt) {
+  return cached(JSON.stringify([MODEL_KEYS.map((x) => s[x]), k0, horizon, dt]), () => {
+    const h = s.time === 'discrete' ? 1 : dt;
+    const g = s.variant === 'tp' ? s.g : 0;
+    const kss = steady(s, buildPaths({ ...s, shockSize: 0 }, 1, h, 0), 0, h, g).k;
+    const res = solve({ ...s, dt, shockTarget: 'k', shockSize: 100 * (k0 / kss - 1), tHat: 0, t0: 0,
+      shockTiming: 'unexpected', shockPersistence: 'permanent', horizon });
+    return res.ok ? res : null;
+  });
+}
+
+// седловая траектория системы s: два пути — снизу (из kLo) и сверху (из kHi) — к стационару
+function saddleLine(s, kLo, kHi) {
+  const dt = 0.05; // для рисования в непрерывном времени хватает более крупного шага
+  const lo = pathFrom(s, kLo, 150, dt), hi = pathFrom(s, kHi, 150, dt);
+  const pts = (r) => (r ? r.eff.k.map((x, j) => [x, r.eff.c[j]]) : []);
+  return [...pts(lo), ...pts(hi).reverse()];
+}
+
+// подписи локусов: Δk̃_{t+1} = 0 и Δc̃_{t+1} = 0 (в непрерывном времени — производные)
+function locusLabels(s) {
+  const tp = s.variant === 'tp', D = s.time === 'discrete';
+  const kS = tp ? '\\tilde k' : 'k', cS = tp ? '\\tilde c' : 'c';
+  return { kS, cS, lk: D ? `\\Delta ${kS}_{t+1}=0` : `\\dot{${kS}}_t=0`, lc: D ? `\\Delta ${cS}_{t+1}=0` : `\\dot{${cS}}_t=0` };
+}
+
+// линии фазовой диаграммы системы s: локусы и (по желанию) седловая траектория
+function systemSeries(s, xmax, ymax, style) {
+  const a = s.alpha, ss = ssOf(s);
+  const locus = (x) => Math.pow(x, a) - ss.dep * x;
+  const { lk, lc } = locusLabels(s);
+  const sfx = style.suffix ? `\\ \\text{${style.suffix}}` : '';
+  const out = [
+    { label: `$${lk}${sfx}$`, color: style.kColor, width: style.width ?? 2.2, dash: style.dash, fn: locus, data: sample(locus, 0, xmax) },
+    { label: `$${lc}${sfx}$`, color: style.cColor, width: style.width ?? 2.2, dash: style.dash, data: [[ss.k, 0], [ss.k, ymax]] },
+  ];
+  if (style.saddle) out.push({ label: 'седловая траектория', color: PC.saddle, width: 2.4, data: style.saddle.filter(([x]) => x <= xmax) });
+  return out;
+}
+
+// максимум кривой Δk̃ = 0 на отрезке [0, xmax] — для высоты диаграммы
+function locusTop(s, xmax) {
+  const a = s.alpha, ss = ssOf(s);
+  const kGR = Math.min(Math.pow(a / ss.dep, 1 / (1 - a)), xmax);
+  return Math.pow(kGR, a) - ss.dep * kGR;
+}
+
+export function extraBlocks(s, res) {
+  return [{ ...convergenceBlock(s), beforeSS: true }, diagramBlock(s, res)];
+}
+
+function convergenceBlock(s) {
+  const a = s.alpha, tp = s.variant === 'tp', disc = s.time === 'discrete';
+  const g0 = tp ? s.g : 0, ss = ssOf(s);
+  const r = pathFrom(s, s.k0, s.horizon, 0.02);
+  const { kS, cS, lk, lc } = locusLabels(s);
+  const yS = tp ? '\\tilde y' : 'y', x = (v) => `${v}_t`;
+  const e = tp ? 'на эфф. работника' : 'на работника';
+  const color = tc('#3d8acb'), HL = tc('#7c62d8');
+  const out = { k: [], y: [], c: [], gy: [] };
+  if (r) {
+    const dep = ss.dep;
+    r.t.forEach((t, j) => {
+      const kj = r.eff.k[j], yj = r.eff.y[j];
+      out.k.push([t, kj]); out.y.push([t, yj]); out.c.push([t, r.eff.c[j]]);
+      if (disc) { if (j >= 1) out.gy.push([t, 100 * ((yj / r.eff.y[j - 1]) * (1 + g0) - 1)]); }
+      else out.gy.push([t, 100 * (a * (Math.pow(kj, a) - r.eff.c[j] - dep * kj) / kj + g0)]);
+    });
+  }
+  const mk = (title, sym, key, hl, unit) => {
+    const hh = halfLife(out[key], hl, disc);
+    return { title, sym, unit, series: [{ label: `$${sym}$`, data: out[key], color, width: 2.6 }],
+      opts: { xLabel: 't', xmin: 0, xmax: s.horizon, discrete: disc, hlines: [{ y: hl, color: tc('#7d7ca5') }], marksOnAxis: true,
+        vlines: hh ? [{ x: hh.x, yTo: hh.y, color: HL, dots: true, label: `t_{1/2}=${fmtTex(hh.x, disc ? 0 : 1)}` }] : [] } };
+  };
+
+  // фазовая диаграмма: локусы, седловая траектория и путь экономики из k̃0 (точки раз в период)
+  const xmax = Math.max(2 * ss.k, 1.25 * s.k0);
+  const saddle = saddleLine(s, Math.min(0.25 * ss.k, s.k0), xmax);
+  const step = disc ? 1 : Math.round(1 / 0.1);
+  const path = r ? r.eff.k.filter((_, j) => j % step === 0).map((kk, j) => [kk, r.eff.c[j * step]]) : [];
+  const ymax = 1.15 * Math.max(locusTop(s, xmax), ...saddle.map((p) => p[1]), ...path.map((p) => p[1]));
+  const series = [
+    ...systemSeries(s, xmax, ymax, { kColor: PC.dk, cColor: PC.dc, saddle }),
+    { label: `путь экономики из $${kS}_0$`, data: path, color: PC.path, points: true },
+  ];
+  const c0 = path[0]?.[1] ?? ss.c;
+  return {
+    title: 'Сходимость к стационару',
+    sections: [
+      { legend: [{ label: `траектория из $${kS}_0 = ${fmtTex(s.k0, 3)}$`, color }, { label: 'стационарное значение', color: tc('#7d7ca5'), dash: true }, { label: 'период полусходимости', color: HL, dots: true }],
+        charts: [
+          mk(`Капиталовооружённость${tp ? ' на эфф. работника' : ''}`, x(kS), 'k', ss.k, ''),
+          mk(`Выпуск ${e}`, x(yS), 'y', ss.y, ''),
+          mk(`Потребление ${e}`, x(cS), 'c', ss.c, ''),
+          mk('Темп роста выпуска на работника', 'g_{y,t}', 'gy', 100 * g0, '%'),
+        ] },
+      { subtitle: 'Основная диаграмма модели', diagram: true,
+        legend: [{ label: `$${lk}$`, color: PC.dk }, { label: `$${lc}$`, color: PC.dc }, { label: 'седловая траектория', color: PC.saddle },
+          { label: `путь экономики из $${kS}_0$`, color: PC.path, point: true }],
+        charts: [{ series, opts: { xLabel: `${kS}_t`, yLabel: `${cS}_t`, xmin: 0, xmax, ymin: 0, ymax, zoom: true, marksOnAxis: true,
+          vlines: [{ x: s.k0, color, label: `${kS}_0`, yTo: c0 }, { x: ss.k, color: PC.ss, label: `${kS}^*`, yTo: ss.c }] } }] },
+    ],
+  };
+}
+
+// Графики под таблицей ТСР: величины на работника — теоретическая ТСР и путь из k̃0 к ней
+export function ssCharts(s, res, scale = 'log') {
+  const disc = s.time === 'discrete';
+  const r = pathFrom(s, s.k0, s.horizon, 0.02);
+  const pick = (src, key) => (r ? r.t.map((t, j) => [t, src[key][j]]) : []);
+  const color = tc('#3d8acb'), BG = tc('#7d7ca5');
+  const k0 = `${s.variant === 'tp' ? '\\tilde k' : 'k'}_0`;
+  const mk = (title, sym, key) => ({ title, sym, unit: '',
+    series: [{ label: 'ТСР', data: pick(r?.baseLevels ?? {}, key), color: BG, width: 2, dash: [6, 4] }, { label: `$${sym}$`, data: pick(r?.levels ?? {}, key), color, width: 2.6 }],
+    opts: { xLabel: 't', xmin: 0, xmax: s.horizon, ymin: scale === 'log' ? undefined : 0, log: scale === 'log', discrete: disc, marksOnAxis: true } });
+  return {
+    subtitle: 'Сходимость к траектории сбалансированного роста',
+    scaleToggle: true,
+    legend: [{ label: 'ТСР', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
+    charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c')],
+  };
+}
+
+// Основная диаграмма с шоком: старые/новые локусы, седловая траектория той системы,
+// к которой экономика приходит, и путь экономики с моментами t₀, t̂, t̂ + N на оси
+function diagramBlock(s, res) {
+  const disc = s.time === 'discrete';
+  const tg = s.shockTarget, size = s.shockSize;
+  const isState = SHOCK_TARGETS[tg].kind === 'state' || tg === 'tfp';
+  const permanent = !isState && s.shockPersistence === 'permanent';
+  const sNew = isState ? s : { ...s, [tg]: s[tg] + size };   // параметры после шока / во время шока
+  const sMain = permanent ? sNew : s;                        // система, к стационару которой приходит экономика
+  const ss0 = ssOf(s), ssM = ssOf(sMain);
+  const { kS, cS, lk, lc } = locusLabels(s);
+
+  // путь экономики раз в период (в непрерывном времени — по целым t)
+  const step = disc ? 1 : Math.round(1 / 0.1);
+  const pt = (j) => [res.eff.k[j], res.eff.c[j]];
+  const idx = (t) => res.t.findIndex((x) => Math.abs(x - t) < 1e-9);
+  const expected = res.marks.t0 != null;
+  const jStart = idx(expected ? res.marks.t0 : s.tHat), jHat = idx(s.tHat);
+  const A = [ss0.k, ss0.c];
+  const jumps = [];
+  // новость: c̃ прыгает; при неожиданном шоке состояния в тот же момент сдвигается и k̃
+  const pS = pt(jStart);
+  jumps.push(Math.abs(pS[0] - A[0]) > 1e-9 ? [A, [pS[0], A[1]], pS] : [A, pS]);
+  // ожидаемый шок состояния в t̂: k̃ сдвигается, уровень потребления не прыгает
+  let pre = null;
+  if (expected && isState) {
+    const p = pt(jHat), f = 1 + size / 100;
+    pre = tg === 'tfp' ? [p[0] * f, p[1] * f] : [p[0] / f, p[1]];
+    jumps.push([pre, p]);
+  }
+  const seg = (j0, j1) => { const o = []; for (let j = j0; j <= j1; j += step) o.push(pt(j)); return o; };
+  const jEnd = res.t.length - 1;
+  const paths = expected && isState ? [[...seg(jStart, jHat - step), pre], seg(jHat, jEnd)] : [seg(jStart, jEnd)];
+  const allPts = [A, ...paths.flat(), ...(pre ? [pre] : [])];
+
+  const xmax = Math.max(2 * Math.max(ss0.k, ssM.k), 1.15 * Math.max(...allPts.map((p) => p[0])));
+  const saddle = saddleLine(sMain, Math.min(0.25 * ssM.k, ...allPts.map((p) => 0.9 * p[0])), xmax);
+  const ymax = 1.15 * Math.max(locusTop(s, xmax), locusTop(sNew, xmax), ...saddle.map((p) => p[1]), ...allPts.map((p) => p[1]));
+
+  const series = [];
+  const legend = [];
+  const alt = permanent ? s : isState ? null : sNew;   // вторая система: до шока (перманентный) или во время шока (временный)
+  const altSfx = permanent ? '(до шока)' : s.tempMode === 'fixed' ? '(во время шока)' : '(в момент шока)';
+  if (alt) {
+    series.push(...systemSeries(alt, xmax, ymax, { kColor: PC.dk1, cColor: PC.dc1, dash: [7, 4], width: 2, suffix: altSfx }));
+    legend.push({ label: `$${lk}\\ \\text{${altSfx}}$`, color: PC.dk1, dash: true }, { label: `$${lc}\\ \\text{${altSfx}}$`, color: PC.dc1, dash: true });
+  }
+  series.push(...systemSeries(sMain, xmax, ymax, { kColor: PC.dk, cColor: PC.dc, saddle }));
+  legend.unshift({ label: `$${lk}$`, color: PC.dk }, { label: `$${lc}$`, color: PC.dc }, { label: 'седловая траектория', color: PC.saddle });
+  for (const J of jumps) series.push({ label: 'скачок', data: J, color: PC.path, width: 1.6, dash: [5, 4] });
+  paths.forEach((P) => series.push({ label: 'путь экономики', data: P, color: PC.path, points: true }));
+  legend.push({ label: 'путь экономики', color: PC.path, point: true }, { label: 'скачок', color: PC.path, dash: true });
+
+  // моменты на оси k̃: объявление, шок, конец шока — в точке, где в этот момент находится экономика
+  const vlines = [];
+  const mark = (t, label) => { const j = idx(t); if (j >= 0) { const p = pt(j); vlines.push({ x: p[0], color: PC.ss, label, yTo: p[1] }); } };
+  if (expected) mark(res.marks.t0, 't_0');
+  mark(s.tHat, '\\hat t');
+  if (res.marks.tEnd != null) mark(res.marks.tEnd, `\\hat t+${s.shockDur}`);
+
+  return {
+    title: 'Основная диаграмма модели', diagram: true,
+    legend,
+    charts: [{ series, opts: { xLabel: `${kS}_t`, yLabel: `${cS}_t`, xmin: 0, xmax, ymin: 0, ymax, vlines, zoom: true, marksOnAxis: true } }],
+  };
 }
