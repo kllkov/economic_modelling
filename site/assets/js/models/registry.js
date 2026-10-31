@@ -246,7 +246,7 @@ export const MODELS = [
         { title: 'Домохозяйства', eqs: [
           { label: 'Задача', tex: '\\max_{C_t,\\,N_t,\\,\\frac{M_t}{P_t},\\,B_t}\\ \\mathbb E_0\\Big\\{\\sum_{t=0}^{\\infty}\\beta^t u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)\\Big\\}' },
           { label: 'Бюджетное ограничение', tex: '\\int_0^1 P_{it}C_{it}\\,di+M_t+Q_tB_t\\le M_{t-1}+B_{t-1}+W_tN_t+D_t' },
-          { label: 'Полезность', tex: 'u=\\dfrac{C_t^{1-\\sigma}-1}{1-\\sigma}-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}' },
+          { label: 'Полезность', tex: 'u=\\dfrac{C_t^{1-\\sigma}-1}{1-\\sigma}-\\dfrac{N_t^{1+\\chi}}{1+\\chi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}' },
           { label: 'Уравнение Эйлера (лог-лин.)', tex: 'c_t=\\mathbb E_t c_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-\\mathbb E_t\\pi_{t+1}-\\rho\\big),\\qquad \\rho=-\\ln\\beta' },
         ] },
         { title: 'Фирмы', eqs: [
@@ -256,7 +256,7 @@ export const MODELS = [
         ] },
         { title: 'Три уравнения', eqs: [
           { label: 'Dynamic IS', tex: '\\tilde y_t=E^*_t\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-E^*_t\\pi_{t+1}-r^N_t\\big)' },
-          { label: 'PC', tex: '\\pi_t=\\beta E^*_t\\pi_{t+1}+\\kappa\\tilde y_t+u_t,\\qquad \\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big)' },
+          { label: 'PC', tex: '\\pi_t=\\beta E^*_t\\pi_{t+1}+\\kappa\\tilde y_t+u_t,\\qquad \\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\chi+\\alpha}{1-\\alpha}\\Big)' },
           { label: 'MPR', tex: 'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\tilde y_t+v_t' },
           { label: 'Принцип Тейлора', tex: '\\kappa(\\phi_\\pi-1)+(1-\\beta)\\phi_y>0' },
         ] },

@@ -20,7 +20,7 @@ const SHOCK_TARGETS = {
 
 export const defaults = {
   time: 'discrete', expectations: 'rational',
-  beta: 0.99, sigma: 1, varphi: 1, alpha: 0.33, epsilon: 6, theta: 0.67,
+  beta: 0.99, sigma: 1, chi: 1, alpha: 0.33, epsilon: 6, theta: 0.67,
   phiPi: 1.5, phiY: 0.125, gamma: 0.2, pie0: 4,
   shockTarget: 'v', shockSize: 1, shockTiming: 'unexpected', tHat: 5, t0: 2,
   shockPersistence: 'temporary', rhoS: 0.5, tempMode: 'ar', shockDur: 5,
@@ -37,7 +37,7 @@ export const controls = [
   { section: 'Параметры' },
   { id: 'beta', label: '$\\beta$ — дисконт-фактор', type: 'number', min: 0.5, max: 0.999, step: 0.005 },
   { id: 'sigma', label: '$\\sigma$ — неприятие риска', type: 'number', min: 0.1, max: 10, step: 0.1 },
-  { id: 'varphi', label: '$\\varphi$ — обратная эластичность Фриша', type: 'number', min: 0, max: 10, step: 0.1 },
+  { id: 'chi', label: '$\\chi$ — обратная эластичность Фриша', type: 'number', min: 0, max: 10, step: 0.1 },
   { id: 'alpha', label: '$\\alpha$ — доля капитала', type: 'number', min: 0, max: 0.9, step: 0.01 },
   { id: 'epsilon', label: '$\\varepsilon$ — эластичность замещения товаров', type: 'number', min: 1.1, max: 50, step: 0.5 },
   { id: 'theta', label: '$\\theta$ — доля фирм без пересмотра цены', type: 'number', min: 0.01, max: 0.99, step: 0.01 },
@@ -86,7 +86,7 @@ export function normalize(st, changed) {
 // ───────────────────────────── Структурные коэффициенты ─────────────────────────────
 
 export function coefs(st) {
-  const { beta: b, sigma: s, varphi: ph, alpha: a, epsilon: e, theta: th } = st;
+  const { beta: b, sigma: s, chi: ph, alpha: a, epsilon: e, theta: th } = st;
   const Theta = (1 - a) / (1 - a + a * e);
   const lambda = ((1 - th) * (1 - b * th) / th) * Theta;
   const kappa = lambda * (s + (ph + a) / (1 - a));
@@ -156,7 +156,7 @@ function validate(st) {
   const errs = [];
   if (!(st.beta > 0 && st.beta < 1)) errs.push('$\\beta$ должна лежать в $(0,1)$.');
   if (!(st.sigma > 0)) errs.push('$\\sigma$ должна быть положительной.');
-  if (!(st.varphi >= 0)) errs.push('$\\varphi$ не может быть отрицательной.');
+  if (!(st.chi >= 0)) errs.push('$\\chi$ не может быть отрицательной.');
   if (!(st.alpha >= 0 && st.alpha < 1)) errs.push('$\\alpha$ должна лежать в $[0,1)$.');
   if (!(st.epsilon > 1)) errs.push('$\\varepsilon$ должна быть больше 1.');
   if (!(st.theta > 0 && st.theta < 1)) errs.push('$\\theta$ должна лежать в $(0,1)$.');
@@ -299,7 +299,7 @@ export function formulas(st) {
   fs.problem.push({ agent: 'Домохозяйства', items: [
     '\\max_{C_t,\\,N_t,\\,\\frac{M_t}{P_t},\\,B_t}\\ \\mathbb E_0\\Big\\{\\sum_{t=0}^{\\infty}\\beta^t u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)\\Big\\}',
     '\\text{s.t.}\\ \\int_0^1 P_{it}C_{it}\\,di+M_t+Q_tB_t\\le M_{t-1}+B_{t-1}+W_tN_t+D_t',
-    'u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)=\\begin{cases}\\dfrac{C_t^{1-\\sigma}-1}{1-\\sigma}-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}, & \\sigma\\ne1\\\\[8pt] \\ln C_t-\\dfrac{N_t^{1+\\varphi}}{1+\\varphi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}, & \\sigma=1\\end{cases}',
+    'u\\Big(C_t,N_t,\\dfrac{M_t}{P_t}\\Big)=\\begin{cases}\\dfrac{C_t^{1-\\sigma}-1}{1-\\sigma}-\\dfrac{N_t^{1+\\chi}}{1+\\chi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}, & \\sigma\\ne1\\\\[8pt] \\ln C_t-\\dfrac{N_t^{1+\\chi}}{1+\\chi}+\\dfrac{\\left(M_t/P_t\\right)^{1-\\nu}-1}{1-\\nu}, & \\sigma=1\\end{cases}',
   ] });
   fs.problem.push({ agent: 'Фирмы', items: [
     'Y_{it}=A_tN_{it}^{1-\\alpha},\\qquad \\Pr\\{\\text{цена не пересматривается}\\}=\\theta',
@@ -319,7 +319,7 @@ export function formulas(st) {
     tex: `\\pi_t=\\beta\\,${Ex}\\pi_{t+1}+\\kappa\\,\\tilde y_t+u_t`,
     num: `\\pi_t=${n4(b)}\\,${Ex}\\pi_{t+1}+${n4(C.kappa)}\\,\\tilde y_t+u_t` });
   fs.system.push({ label: 'Наклон кривой Филлипса',
-    tex: '\\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big),\\qquad \\lambda=\\dfrac{(1-\\theta)(1-\\beta\\theta)}{\\theta}\\cdot\\dfrac{1-\\alpha}{1-\\alpha+\\alpha\\varepsilon}',
+    tex: '\\kappa=\\lambda\\Big(\\sigma+\\dfrac{\\chi+\\alpha}{1-\\alpha}\\Big),\\qquad \\lambda=\\dfrac{(1-\\theta)(1-\\beta\\theta)}{\\theta}\\cdot\\dfrac{1-\\alpha}{1-\\alpha+\\alpha\\varepsilon}',
     num: `\\kappa=${n4(C.kappa)},\\qquad \\lambda=${n4(C.lambda)}` });
   fs.system.push({ label: 'Правило ДКП (MPR)',
     tex: 'i_t=\\rho+\\phi_\\pi\\pi_t+\\phi_y\\,\\tilde y_t+v_t',
@@ -330,7 +330,7 @@ export function formulas(st) {
     tex: `r^N_t=\\rho+\\sigma\\psi_{ya}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=-\\ln\\beta`,
     num: `r^N_t=${n4(C.rho)}+${n4(s * C.psi)}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=${n4(C.rho)}\\%` });
   fs.system.push({ label: 'Выпуск',
-    tex: 'y_t=y^N_t+\\tilde y_t,\\qquad y^N_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\varphi}{\\sigma(1-\\alpha)+\\varphi+\\alpha}',
+    tex: 'y_t=y^N_t+\\tilde y_t,\\qquad y^N_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\chi}{\\sigma(1-\\alpha)+\\chi+\\alpha}',
     num: `\\psi_{ya}=${n4(C.psi)}` });
   if (st.expectations === 'naive')
     fs.system.push({ label: 'Ожидания', tex: 'E^*_t\\pi_{t+1}=0,\\qquad E^*_t\\tilde y_{t+1}=0' });
@@ -373,7 +373,7 @@ export function steadyTable(st, res) {
   const v = (ss, r) => `${fmt(ss[r.key], 3)}%`;
   const out = rows.map((r) => ({ ...r, before: v(res.ss0, r), after: v(res.ssF, r) }));
   out.push({ sym: '\\rho', name: 'ставка дисконтирования', tex: '-\\ln\\beta', before: `${fmt(res.C.rho, 3)}%`, after: `${fmt(res.C.rho, 3)}%` });
-  out.push({ sym: '\\kappa', name: 'наклон кривой Филлипса', tex: '\\lambda\\Big(\\sigma+\\dfrac{\\varphi+\\alpha}{1-\\alpha}\\Big)', before: fmt(res.C.kappa, 4), after: fmt(res.C.kappa, 4) });
+  out.push({ sym: '\\kappa', name: 'наклон кривой Филлипса', tex: '\\lambda\\Big(\\sigma+\\dfrac{\\chi+\\alpha}{1-\\alpha}\\Big)', before: fmt(res.C.kappa, 4), after: fmt(res.C.kappa, 4) });
   if (!naive) {
     const ok = res.C.det > 0 ? 'выполнен' : 'нарушен';
     out.push({ sym: `${det}>0`, name: 'принцип Тейлора', tex: '', before: ok, after: ok });

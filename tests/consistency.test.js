@@ -233,7 +233,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
         assert.ok(res.ok, JSON.stringify(st) + res.errors);
         const F = ispcmpr.formulas(st), C = res.C, S = res.sim;
         const Ex = expectations === 'rational' ? '\\mathbb E_t' : 'E^*_t';
-        const P = { '\\beta': st.beta, '\\sigma': st.sigma, '\\varphi': st.varphi, '\\alpha': st.alpha, '\\varepsilon': st.epsilon,
+        const P = { '\\beta': st.beta, '\\sigma': st.sigma, '\\chi': st.chi, '\\alpha': st.alpha, '\\varepsilon': st.epsilon,
           '\\theta': st.theta, '\\phi_\\pi': st.phiPi, '\\phi_y': st.phiY, '\\gamma': st.gamma,
           '\\kappa': C.kappa, '\\lambda': C.lambda, '\\psi_{ya}': C.psi };
         const where = `IS–PC–MPR ${expectations} ${shockTarget} ${shockPersistence} ${shockTiming}`;
