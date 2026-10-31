@@ -483,9 +483,9 @@ export function drawDiagram(canvas, series, opts) {
         texLayer: { xLabel, yLabel: opts.yLabel, prepare: (chart) => prepareMarks(chart, vlines, !!opts.marksOnAxis), draw: curveLabels },
         zoom: opts.zoom ? {
           limits: { x: { min: opts.xmin ?? 0, max: opts.xmax, minRange: (opts.xmax - (opts.xmin ?? 0)) * 1e-3 }, y: { min: opts.ymin ?? 'original', max: 'original' } },
-          // как в Plotly: рамка мышью увеличивает область, колесо и щипок масштабируют, Shift + перетаскивание сдвигает
+          // увеличение только рамкой, выделенной мышью; колесо и щипок не масштабируют (иначе мешают листать страницу), Shift + перетаскивание сдвигает
           zoom: {
-            wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy', onZoomComplete: onDone,
+            mode: 'xy', onZoomComplete: onDone,
             drag: { enabled: true, backgroundColor: 'rgba(124, 98, 216, .12)', borderColor: tc('#7c62d8'), borderWidth: 1 },
           },
           pan: { enabled: true, mode: 'xy', modifierKey: 'shift', onPanComplete: onDone },
