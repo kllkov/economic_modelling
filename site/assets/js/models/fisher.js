@@ -404,7 +404,7 @@ export function formulas(s) {
   const prof = persistent && s.tempMode === 'fixed' ? '\\text{𝟙}\\{\\hat t\\le t<\\hat t+N\\}' : persistent ? '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}' : '\\text{𝟙}\\{t\\ge\\hat t\\}';
   let shockTex, shockNum;
   if (tg === 'b') {
-    shockTex = 'b_{\\hat t}=b_{\\hat t}^{-}+\\Delta b';
+    shockTex = 'b^{\\prime}_{\\hat t}=b_{\\hat t}+\\Delta b';
     shockNum = `\\Delta b=${n4(s.shockSize)}`;
   } else if (tg === 'w') {
     shockTex = `w_t=${D ? (grow ? 'w_0(1+g_w)^t' : 'w') : (grow ? 'w_0e^{g_wt}' : 'w')}\\big(1+\\varphi\\cdot ${prof}\\big)`;

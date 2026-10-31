@@ -407,7 +407,7 @@ export function formulas(st) {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
     shockNum = `\\varphi=${n4(st.shockSize / 100)}`;
   } else if (tg === 'k') {
-    shockTex = 'K_{\\hat t}=(1+\\varphi_k)K_{\\hat t}^{-}';
+    shockTex = 'K^{\\prime}_{\\hat t}=(1+\\varphi_k)K_{\\hat t}';
     shockNum = `\\varphi_k=${n4(st.shockSize / 100)}`;
   } else {
     const sym = { s: 's', n: 'n', g: 'g', delta: '\\delta' }[tg];
