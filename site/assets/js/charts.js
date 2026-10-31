@@ -238,7 +238,7 @@ function axes(xTitleSize) {
 }
 const tooltipOpts = (title) => ({
   enabled: false, external: tooltip,
-  callbacks: { title, label: (it) => { const l = it.dataset.label, v = fmtNum(it.parsed.y); return l.startsWith('$') && l.endsWith('$') ? `${l.slice(0, -1)} = ${v}$` : `${l}: ${v}`; } },
+  callbacks: { title, label: (it) => { const l = it.dataset.label, v = fmtNum(it.parsed.y); if (/=0(\\ \\text\{[^}]*\})?\$$/.test(l)) return l; return l.startsWith('$') && l.endsWith('$') ? `${l.slice(0, -1)} = ${v}$` : `${l}: ${v}`; } },
 });
 
 // Период полусходимости: момент, когда отклонение от стационарного значения ss впервые вдвое меньше начального.

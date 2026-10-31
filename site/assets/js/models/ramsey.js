@@ -747,7 +747,7 @@ export function ssCharts(s, res, scale = 'log') {
     subtitle: 'Сходимость к траектории сбалансированного роста',
     scaleToggle: true,
     legend: [{ label: 'ТСР', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
-    charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c')],
+    charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c'), mk(s.version === 'centralized' ? 'Предельный продукт труда' : 'Зарплата', s.version === 'centralized' ? 'F^{\\prime}_L' : 'w_t', 'w')],
   };
 }
 

@@ -620,11 +620,11 @@ export function ssCharts(st, res, scale = 'log') {
   const a = st.alpha;
   const { disc, h, N, P, ss, g0, sim, stride } = convPath(st);
   const G = (t) => (disc ? Math.pow(1 + g0, t) : Math.exp(g0 * t));
-  const out = { k: [], y: [], c: [] }, bgp = { k: [], y: [], c: [] };
+  const out = { k: [], y: [], c: [], w: [] }, bgp = { k: [], y: [], c: [], w: [] };
   for (let j = 0; j <= N - 1; j += stride) {
     const t = +(j * h).toFixed(6), kj = sim.x[j], yj = Math.pow(kj, a), Gt = G(t);
-    out.k.push([t, kj * Gt]); out.y.push([t, yj * Gt]); out.c.push([t, (1 - P.s) * yj * Gt]);
-    bgp.k.push([t, ss.k * Gt]); bgp.y.push([t, ss.y * Gt]); bgp.c.push([t, ss.c * Gt]);
+    out.k.push([t, kj * Gt]); out.y.push([t, yj * Gt]); out.c.push([t, (1 - P.s) * yj * Gt]); out.w.push([t, (1 - a) * yj * Gt]);
+    bgp.k.push([t, ss.k * Gt]); bgp.y.push([t, ss.y * Gt]); bgp.c.push([t, ss.c * Gt]); bgp.w.push([t, (1 - a) * ss.y * Gt]);
   }
   const color = tc('#3d8acb'), BG = tc('#7d7ca5');
   const k0 = `${st.variant === 'tp' ? '\\tilde k' : 'k'}_0`;
@@ -635,6 +635,6 @@ export function ssCharts(st, res, scale = 'log') {
     subtitle: 'Сходимость к траектории сбалансированного роста',
     scaleToggle: true,
     legend: [{ label: 'ТСР', color: BG, dash: true }, { label: `путь из $${k0}$`, color }],
-    charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c')],
+    charts: [mk('Капиталовооружённость', 'k_t', 'k'), mk('Выпуск на работника', 'y_t', 'y'), mk('Потребление на работника', 'c_t', 'c'), mk(st.version === 'centralized' ? 'Предельный продукт труда' : 'Зарплата', st.version === 'centralized' ? 'F^{\\prime}_L' : 'w_t', 'w')],
   };
 }

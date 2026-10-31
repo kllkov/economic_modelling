@@ -346,7 +346,7 @@ function run() {
   const sys = el('div', { class: 'sys' },
     F.system.map((r) => el('div', { class: 'sys-row' }, el('div', { class: 'lab' }, r.label), eqWithNum(r.tex, r.num))),
     el('div', { class: 'sys-row shock' }, el('div', { class: 'lab' }, 'Шок'), eqWithNum(F.shock[0].tex, F.shock[0].num)));
-  out.append(block(2, F.systemTitle || 'Условия равновесия', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys));
+  out.append(block(2, F.systemTitle || 'Уравнения динамики', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys));
 
   const res = mod.solve(state);
   if (!res.ok) {
