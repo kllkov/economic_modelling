@@ -274,14 +274,14 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
 {
   let n = 0;
   const SH = { tfp: 1, k: -10, beta: 0.002, theta: 0.4, chi: 0.5, delta: 0.005 };
-  for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'n', 'tp', 'both'])
+  for (const utility of ['log', 'leis']) for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'n', 'tp', 'both'])
     for (const shockTarget of Object.keys(SH)) for (const shockPersistence of ['temporary', 'permanent']) {
       const isPar = !['tfp', 'k'].includes(shockTarget);
-      if (!isPar && shockPersistence === 'permanent') continue;
-      const where = `RBC ${version} ${variant} ${shockTarget} ${shockPersistence}`;
+      if ((!isPar && shockPersistence === 'permanent') || (utility === 'leis' && shockTarget === 'chi')) continue;
+      const where = `RBC ${utility} ${version} ${variant} ${shockTarget} ${shockPersistence}`;
       const hasN = variant === 'n' || variant === 'both', hasG = variant === 'tp' || variant === 'both';
       const mode = hasG ? 'eff' : hasN ? 'pc' : 'agg';
-      const base = { ...rbc.defaults, version, variant, shockTarget, shockSize: SH[shockTarget], shockPersistence, tHat: 3, horizon: 40 };
+      const base = { ...rbc.defaults, utility, theta: utility === 'leis' ? 1 : rbc.defaults.theta, version, variant, shockTarget, shockSize: SH[shockTarget], shockPersistence, tHat: 3, horizon: 40 };
       const P = { '\\alpha': base.alpha, '\\beta': base.beta, '\\delta': base.delta, '\\theta': base.theta, '\\chi': base.chi, '\\rho': base.rho,
         n: hasN ? base.n : 0, g: hasG ? base.g : 0 };
       const X = (L0, lo) => (mode === 'eff' ? `\\tilde ${lo}` : mode === 'pc' ? lo : L0);
@@ -314,7 +314,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
         const st = { ...base, method: 'linear' };
         const res = rbc.solve(st);
         assert.ok(res.ok, where);
-        const [B] = rbc.systemBlocks(st), I = res.irf, S = res.ss0, pol = res.pol, Lv = res.levels;
+        const BB = rbc.systemBlocks(st), B = BB[0], I = res.irf, S = res.ss0, pol = res.pol, Lv = res.levels;
         const h = (L0, lo) => (mode === 'eff' ? `\\hat{\\tilde ${lo}}` : mode === 'pc' ? `\\hat ${lo}` : `\\hat ${L0}`);
         const Y = (L0, lo) => (mode === 'eff' ? `\\tilde ${lo}^*` : mode === 'pc' ? `${lo}^*` : `${L0}^*`);
         for (const i of [3, 4, 10, 25]) {
@@ -328,7 +328,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
             Object.assign(V, { '\\hat\\beta_t': Math.log(p / p0), '\\hat\\theta_t': Math.log(p / p0), '\\Delta\\chi_t': p - p0, '\\Delta\\delta_t': p - p0,
               '\\beta_t': p, '\\theta_t': p, '\\chi_t': p, '\\delta_t': p });
           }
-          const rows = B.groups.flatMap((G) => G.rows);
+          const rows = BB.flatMap((b) => b.groups).flatMap((G) => G.rows);
           // функции политики (K̂, Â) верны только без шока параметров; шок параметров — вне состояния (k̂, Â)
           for (const r of isPar ? B.groups[0].rows : rows) {
             check(r.tex, V, { abs: 1e-10, rel: 1e-10 }, `${where}, лог-лин. «${r.label}», t=${i}`, true);

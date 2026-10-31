@@ -76,7 +76,10 @@ for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
 
 // 7. Блоки страницы: лог-линейная система, сходимость, ТСР
 {
-  const [lin] = systemBlocks(defaults);
+  const [lin, pf] = systemBlocks(defaults);
+  assert.equal(pf.title, 'Функции политики', 'функции политики — отдельный блок');
+  assert.equal(pf.groups[0].rows.length, 3, 'функции политики: потребление, капитал, часы');
+  assert.deepEqual(systemBlocks({ ...defaults, method: 'nonlinear' }), [], 'у нелинейного решателя лог-линейной системы нет');
   assert.equal(lin.groups[0].rows.length, 8, 'лог-линейная система — 8 уравнений');
   assert.equal(formulas(defaults).system.length, 8, 'уравнения динамики — 8 уравнений');
   assert.equal(formulas({ ...defaults, version: 'centralized' }).system.length, 6, 'у планировщика — 6 уравнений');
@@ -114,7 +117,9 @@ for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
   const F = formulas({ ...defaults, variant: 'n' });
   assert.ok(F.system[0].tex.startsWith('(1+n)c_{t+1}'), 'на душу: Эйлер с (1+n) и строчными буквами');
   assert.ok(/\(1\+g\)\\tilde c_\{t\+1\}/.test(formulas({ ...defaults, variant: 'tp' }).system[0].tex), 'с ТП: (1+g) и тильда');
-  assert.deepEqual(formulas(defaults).dec.find((g) => g.agent === 'Рынки').items, ['K_t^D=K_t^S', 'N_t^D=N_t^S', 'Y_t=C_t+I_t'], 'рынки: спрос D и предложение S');
+  const ag = formulas(defaults).dec.map((g) => g.agent);
+  assert.deepEqual(formulas(defaults).dec.find((g) => g.agent === 'Рынки').items, ['K_t^D=K_t^S', 'N_t^D=N_t^S'], 'рынки: спрос D и предложение S');
+  assert.deepEqual(ag.slice(-2), ['Балансовые соотношения', 'Экзогенные процессы'], 'балансовые соотношения перед экзогенными процессами');
   for (const variant of ['n', 'tp', 'both']) run({ variant, method: 'nonlinear' });
 }
 
@@ -150,5 +155,23 @@ for (const tg of ['beta', 'theta', 'chi', 'delta']) {
   const h = { beta: 1e-6, theta: 1e-5, chi: 1e-5, delta: 1e-6 }[tg];
   const r = run({ shockTarget: tg, shockSize: h, shockPersistence: 'permanent', horizon: 200 });
   for (const v of ['k', 'c']) near(r.irf[v][200] / 100, Math.log(r.ssF[v] / r.ss0[v]), 2e-3 * Math.abs(Math.log(r.ssF[v] / r.ss0[v])) + 1e-12, `${tg}: стационар лог-линейной системы (${v})`);
+}
+
+// 9. Полезность с логарифмом досуга: ln C + θ ln(1 − N)
+{
+  const L = { utility: 'leis', theta: 1 }, ss = steady({ ...defaults, ...L });
+  near(L.theta * ss.c / (1 - ss.N), ss.w, 1e-12, 'стационар: θC/(1−N) = w');
+  const p = policy({ ...defaults, ...L }, ss), e = ss.N / (1 - ss.N);
+  near(p.NK, (defaults.alpha - p.cK) / (e + defaults.alpha), 1e-12, 'η_NK с N*/(1−N*) вместо χ');
+  for (const shockTarget of ['tfp', 'k', 'theta', 'beta']) {
+    const o = { ...L, shockTarget, shockSize: { tfp: 1, k: -10, theta: 0.05, beta: 0.002 }[shockTarget], tHat: 2 };
+    const nl = run({ ...o, method: 'nonlinear' }), E = nl.eff, Lv = nl.levels;
+    for (let j = 2; j < 38; j++) near((shockTarget === 'theta' ? Lv.par[j] : 1) * E.c[j] / (1 - Lv.N[j]), E.w[j], 1e-9, `логарифм досуга, ${shockTarget}: «труд — досуг»`);
+    const sm = { ...o, shockSize: o.shockSize / 100 }, a1 = run({ ...sm, method: 'nonlinear' }).irf, b1 = run({ ...sm, method: 'linear' }).irf;
+    const m = Math.max(...b1.c.map(Math.abs), ...b1.N.map(Math.abs));
+    for (const v of ['c', 'N', 'k']) for (let j = 0; j <= 40; j++) near(a1[v][j], b1[v][j], 0.01 * m, `логарифм досуга, ${shockTarget}: нелинейное ≈ лог-линейное (${v}, t=${j})`);
+  }
+  // эластичность Фриша (1 − N*)/N* > 1/χ = 1 при близких N*: часы реагируют сильнее
+  assert.ok(run({ ...L }).irf.N[0] > run().irf.N[0], 'логарифм досуга: часы реагируют сильнее');
 }
 console.log('Модель RBC: все проверки пройдены');
