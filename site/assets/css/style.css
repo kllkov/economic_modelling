@@ -314,6 +314,7 @@ table.ss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .ss.ss-full td.name { min-width: 130px; }
 .ss.ss-full td.f .katex { font-size: 1.02em; }
 .sub-head { margin: 26px 0 12px; font-size: 17px; font-weight: 700; color: var(--ink); }
+.eq-text { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
 .ss td.name { color: var(--ink-2); }
 
 .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--ink-2); margin-bottom: 12px; }

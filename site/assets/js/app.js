@@ -347,6 +347,14 @@ function run() {
     F.system.map((r) => el('div', { class: 'sys-row' }, el('div', { class: 'lab' }, r.label), eqWithNum(r.tex, r.num))),
     el('div', { class: 'sys-row shock' }, el('div', { class: 'lab' }, 'Шок'), eqWithNum(F.shock[0].tex, F.shock[0].num)));
   out.append(block(2, F.systemTitle || 'Уравнения динамики', el('span', { class: 'note' }, 'серым — при текущих значениях параметров'), sys));
+  let num = 3;
+  // блоки с уравнениями сразу за уравнениями динамики (например, лог-линеаризованная система RBC)
+  for (const X of mod.systemBlocks ? mod.systemBlocks(state) : []) {
+    out.append(block(num++, X.title, X.note ? el('span', { class: 'note' }, X.note) : null, ...X.groups.flatMap((G) => [
+      G.subtitle ? el('h3', { class: 'sub-head' }, G.subtitle) : null,
+      G.text ? rich(G.text, 'p', { class: 'eq-text' }) : null,
+      el('div', { class: 'sys' }, G.rows.map((r) => el('div', { class: 'sys-row' }, rich(r.label, 'div', { class: 'lab' }), eqWithNum(r.tex, r.num))))])));
+  }
 
   const res = mod.solve(state);
   if (!res.ok) {
@@ -368,7 +376,6 @@ function run() {
       withTex ? el('td', { class: 'f' }, r.tex ? texInline(r.tex) : null) : null,
       el('td', { class: 'v' }, r.before),
       showAfter ? el('td', { class: `v${r.after !== r.before ? ' chg' : ''}` }, r.after) : null))));
-  let num = 3;
   const extraDraws = [];
   // группа графиков: легенда + сетка (у блока их может быть несколько, у каждой — свой подзаголовок)
   const section = (X) => {
@@ -393,11 +400,12 @@ function run() {
   const extras = mod.extraBlocks ? mod.extraBlocks(state, res) : [];
   extras.filter((X) => X.beforeSS).forEach(addExtra);
 
+  const ssc = mod.ssCharts ? mod.ssCharts(state, res, view.convScale) : null;
   const ssBody = withTex ? el('div', { style: 'overflow-x:auto' }, table)
     : el('div', { class: 'ss-grid' }, el('div', {}, F.ss.map((r) => eqWithNum(r.tex, r.num))), el('div', { style: 'overflow-x:auto' }, table));
   out.append(block(num++, F.ssTitle || 'Стационарное состояние', el('span', { class: 'note' }, F.ssNote ? F.ssNote(showAfter) : showAfter ? 'Перманентный шок сдвигает стационар'
       : res.permanentChange ? 'В единицах на эффективного работника стационар не меняется' : 'Шок не меняет стационар'),
-    ssBody, mod.ssCharts ? section(mod.ssCharts(state, res, view.convScale)) : null));
+    ssBody, ...(ssc ? section(ssc) : [])));
 
   // 4. IRF и 5. уровни
   const specs = mod.chartSpecs(state);
@@ -460,9 +468,9 @@ function run() {
       const irfY = seriesOf(res, sp, uI).irf;
       const c1 = el('canvas');
       irfGrid.append(el('div', { class: 'chart-card' },
-        el('div', { class: 'ct' }, el('span', {}, `${titleOf(uI)}, `, texInline(symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
+        el('div', { class: 'ct' }, el('span', {}, `${titleOf(uI)}, `, texInline(sp.irfSym ? sp.irfSym(uI) : symOf(uI))), rich(sp.irfUnit, 'span', { class: 'u' })),
         el('div', { class: 'chart-box' }, c1)));
-      current.charts.push(drawChart(c1, [{ label: sp.irfUnit.includes('%') ? '$\\Delta_{\\%}$' : '$\\Delta$', data: pairs(irfY) }],
+      current.charts.push(drawChart(c1, [{ label: sp.irfLabel || (sp.irfUnit.includes('%') ? '$\\Delta_{\\%}$' : '$\\Delta$'), data: pairs(irfY) }],
         { discrete, zero: true, lines, xmax, lagJump: sp.lagJump }));
     }
 
@@ -493,7 +501,8 @@ const shownIn = (mode, sp) => !sp.levelOnly || mode === 'agg';
 function seriesOf(res, sp, u) {
   const level = u === 'eff' ? res.eff[sp.id] : u === 'agg' ? res.agg[sp.id] : res.levels[sp.id];
   const base = u === 'eff' ? res.baseEff[sp.id] : u === 'agg' ? res.baseAgg[sp.id] : res.baseLevels[sp.id];
-  const irf = u === 'worker' ? res.irf[sp.id] : level.map((v, i) => 100 * (v / base[i] - 1));
+  // отклик: в % от базового пути; у моделей с лог-отклонениями (RBC) — 100·ln(X/X_base)
+  const irf = u === 'worker' ? res.irf[sp.id] : level.map((v, i) => (res.logIrf ? 100 * Math.log(v / base[i]) : 100 * (v / base[i] - 1)));
   return { irf, level, base };
 }
 
