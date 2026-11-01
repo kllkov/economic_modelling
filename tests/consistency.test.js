@@ -93,9 +93,9 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
 {
   let n = 0;
   for (const time of ['discrete', 'continuous']) for (const version of ['decentralized', 'centralized'])
-    for (const variant of ['base', 'tp']) for (const utility of ['crra', 'log', 'cara']) for (const objective of ['mill', 'bentham']) {
+    for (const variant of ['base', 'tp']) for (const utility of ['crra', 'log', 'cara']) for (const objective of ['mill', 'bentham']) for (const shockTarget of ['k', 'L']) {
       if (utility === 'cara' && variant === 'tp') continue;
-      const st = { ...ramsey.defaults, time, version, variant, utility, objective, n: 0.01, shockTarget: 'k', shockSize: -30, tHat: 0, horizon: 60 };
+      const st = { ...ramsey.defaults, time, version, variant, utility, objective, n: 0.01, shockTarget, shockSize: -30, tHat: 0, horizon: 60 };
       const res = ramsey.solve(st);
       assert.ok(res.ok, JSON.stringify(st) + res.errors);
       const F = ramsey.formulas(st);
@@ -125,7 +125,10 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
         Object.assign(V, { [tp ? '\\tilde k_t^D' : 'k_t^D']: kv, [tp ? '\\tilde k_t^S' : 'k_t^S']: kv, 'L_t^D': L.L[i], 'L_t^S': L.L[i] });
         const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 3e-4, rel: 2e-3 };
         const tolN = D ? { abs: 2e-4, rel: 2e-4 } : { abs: 5e-4, rel: 3e-3 };
-        for (const g of version === 'centralized' ? F.cen : F.dec) for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${res.t[i]}`);
+        for (const g of version === 'centralized' ? F.cen : F.dec) {
+          if (shockTarget === 'L' && g.agent === 'Экзогенные процессы') continue;   // закон роста L записан для тренда; шок на L сдвигает его уровень
+          for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${res.t[i]}`);
+        }
         for (const r of F.system) { check(r.tex, V, tol, `${where}, «${r.label}», t=${res.t[i]}`); check(r.num, V, tolN, `${where}, «${r.label}» (числа), t=${res.t[i]}`); }
       }
       // стационар
@@ -145,8 +148,8 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
 // ─────────────── модель Солоу ───────────────
 {
   let n = 0;
-  for (const time of ['discrete', 'continuous']) for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'tp']) {
-    const st = { ...solow.defaults, time, version, variant, shockTarget: 'k', shockSize: -40, tHat: 0, horizon: 60 };
+  for (const time of ['discrete', 'continuous']) for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'tp']) for (const shockTarget of ['k', 'L']) {
+    const st = { ...solow.defaults, time, version, variant, shockTarget, shockSize: -40, tHat: 0, horizon: 60 };
     const res = solow.solve(st);
     assert.ok(res.ok);
     const F = solow.formulas(st);
@@ -173,7 +176,10 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
       }
       const tol = D ? { abs: 1e-9, rel: 1e-9 } : { abs: 1e-5, rel: 1e-4 };
       const tolN = D ? { abs: 2e-4, rel: 2e-4 } : { abs: 2e-4, rel: 2e-4 };
-      for (const g of version === 'centralized' ? F.cen : F.dec) for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${res.t[i]}`);
+      for (const g of version === 'centralized' ? F.cen : F.dec) {
+          if (shockTarget === 'L' && g.agent === 'Экзогенные процессы') continue;   // закон роста L записан для тренда; шок на L сдвигает его уровень
+          for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${res.t[i]}`);
+        }
       for (const r of F.system) { check(r.tex, V, tol, `${where}, «${r.label}», t=${res.t[i]}`); check(r.num, V, tolN, `${where}, «${r.label}» (числа), t=${res.t[i]}`); }
     }
     const S = res.ss0;
@@ -273,10 +279,11 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
 // ─────────────── модель RBC ───────────────
 {
   let n = 0;
-  const SH = { tfp: 1, k: -10, beta: 0.002, theta: 0.4, chi: 0.5, delta: 0.005 };
+  const SH = { tfp: 1, k: -10, E: 10, L: 10, beta: 0.002, theta: 0.4, chi: 0.5, delta: 0.005 };
   for (const utility of ['log', 'leis']) for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'n', 'tp', 'both'])
     for (const shockTarget of Object.keys(SH)) for (const shockPersistence of ['temporary', 'permanent']) {
-      const isPar = !['tfp', 'k'].includes(shockTarget);
+      const isPar = !['tfp', 'k', 'E', 'L'].includes(shockTarget);
+      if ((shockTarget === 'E' && !['tp', 'both'].includes(variant)) || (shockTarget === 'L' && !['n', 'both'].includes(variant))) continue;
       if ((!isPar && shockPersistence === 'permanent') || (utility === 'leis' && shockTarget === 'chi')) continue;
       const where = `RBC ${utility} ${version} ${variant} ${shockTarget} ${shockPersistence}`;
       const hasN = variant === 'n' || variant === 'both', hasG = variant === 'tp' || variant === 'both';

@@ -17,6 +17,8 @@ import { newtonTridiagonal } from '../solver.js';
 const SHOCK_TARGETS = {
   tfp:   { label: 'TFP $A_t$', kind: 'exo', unit: '%', def: 1, step: 0.5 },
   k:     { label: 'Капитал $K_t$', kind: 'exo', unit: '%', def: -10, step: 1 },
+  E:     { label: 'Уровень технологии $E_t$', kind: 'exo', unit: '%', def: 10, step: 1, trend: 'hasG' },
+  L:     { label: 'Уровень населения $L_t$', kind: 'exo', unit: '%', def: 10, step: 1, trend: 'hasN' },
   beta:  { label: 'Дисконт-фактор $\\beta$ (шок предпочтений)', kind: 'param', sym: '\\beta', unit: 'Δ', def: 0.002, step: 0.001 },
   theta: { label: 'Тягость труда $\\theta$', kind: 'param', sym: '\\theta', unit: 'Δ', def: 0.4, step: 0.1 },
   chi:   { label: 'Обратная эластичность Фриша $\\chi$', kind: 'param', sym: '\\chi', unit: 'Δ', def: 0.5, step: 0.1 },
@@ -39,7 +41,7 @@ export const defaults = {
 // тренды: hasN — рост населения, hasG — трудосберегающий ТП
 const trends = (s) => ({ hasN: s.variant === 'n' || s.variant === 'both', hasG: s.variant === 'tp' || s.variant === 'both' });
 
-const shockTargetsFor = (s) => Object.entries(SHOCK_TARGETS).filter(([v]) => !(isLeis(s) && v === 'chi'))
+const shockTargetsFor = (s) => Object.entries(SHOCK_TARGETS).filter(([v, d]) => !(isLeis(s) && v === 'chi') && (!d.trend || trends(s)[d.trend]))
   .map(([v, d]) => ({ v, l: v === 'theta' ? `${thetaTitle(s)} $\\theta$` : d.label }));
 
 export const controls = [
@@ -73,11 +75,13 @@ export const controls = [
 
   { section: 'Шок' },
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
-    groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'param' ? 'параметры' : 'технология и капитал') },
+    groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'param' ? 'параметры' : 'технология, капитал и труд') },
   { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta_{\\%}$' : 'Величина, $\\Delta$'),
     type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.5,
     hint: (s) => (s.shockTarget === 'tfp' ? 'Неожиданный шок $\\varepsilon$ в $\\hat t$; дальше $\\ln A_t$ затухает с персистентностью $\\rho$'
-      : s.shockTarget === 'k' ? 'Неожиданное разрушение (или прирост) капитала в $\\hat t$' : 'Неожиданное изменение параметра в $\\hat t$') },
+      : s.shockTarget === 'k' ? 'Неожиданное разрушение (или прирост) капитала в $\\hat t$'
+      : s.shockTarget === 'E' || s.shockTarget === 'L' ? `Неожиданный сдвиг уровня ${s.shockTarget === 'E' ? 'технологии' : 'населения'} в $\\hat t$; дальше он растёт прежним темпом`
+      : 'Неожиданное изменение параметра в $\\hat t$') },
   { id: 'tHat', label: 'Момент шока $\\hat t$', type: 'number', min: 0, max: 100, step: 1 },
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }], show: isPar },
@@ -99,8 +103,8 @@ export function normalize(s, changed) {
   if (!['log', 'leis'].includes(s.utility)) s.utility = 'log';
   // у логарифма досуга θ — другой параметр (вес досуга): при θ = 1 часы в стационаре почти как при θ = 4, χ = 1
   if (changed === 'utility') s.theta = isLeis(s) ? 1 : defaults.theta;
-  if (!SHOCK_TARGETS[s.shockTarget] || (isLeis(s) && s.shockTarget === 'chi')) { s.shockTarget = 'tfp'; changed = 'shockTarget'; }
   if (!['base', 'n', 'tp', 'both'].includes(s.variant)) s.variant = 'base';
+  if (!shockTargetsFor(s).some((o) => o.v === s.shockTarget)) { s.shockTarget = 'tfp'; changed = 'shockTarget'; }
   if (changed === 'shockTarget') s.shockSize = SHOCK_TARGETS[s.shockTarget].def;
   s.tHat = Math.max(0, Math.round(+s.tHat || 0));
   s.horizon = Math.max(10, Math.round(+s.horizon || 40));
@@ -155,7 +159,7 @@ function validate(s) {
   checkParams(s, baseParams(s), e);
   if (!(s.rho >= 0 && s.rho < 1)) e.push('Персистентность $\\rho$ должна лежать в $[0,1)$.');
   if (!(s.k0 > 0)) e.push('Начальный капитал должен быть положительным.');
-  if (s.shockTarget === 'k' && !(s.shockSize > -100)) e.push('Капитал не может упасть больше чем на 100%.');
+  if (['k', 'E', 'L'].includes(s.shockTarget) && !(s.shockSize > -100)) e.push(`${{ k: 'Капитал', E: 'Уровень технологии', L: 'Население' }[s.shockTarget]} не может упасть больше чем на 100%.`);
   if (isPar(s)) checkParams(s, parAt(s, 0), e, ' (в том числе после шока)');
   if (e.length) return e;
   checkSteady(s, baseParams(s), e);
@@ -374,7 +378,9 @@ export function solve(s) {
   if (!pol) return { ok: false, errors: ['Не удалось найти седловую траекторию лог-линейной системы.'] };
   const { hasN, hasG } = trends(s), H = s.horizon, tH = s.tHat, par = isPar(s), tg = s.shockTarget;
   const T = Math.max(H - tH, 0) + 150;
-  const k0 = tg === 'k' ? ss.k * (1 + s.shockSize / 100) : ss.k;
+  // шок состояния: K′ = (1+φ)K сдвигает k̃ на (1+φ), E′ = (1+φ)E и L′ = (1+φ)L — на 1/(1+φ); E и L дальше растут от нового уровня
+  const phi = s.shockSize / 100, fl = tg === 'E' || tg === 'L' ? 1 + phi : 1;
+  const k0 = tg === 'k' ? ss.k * (1 + phi) : ss.k / fl;
   const a0 = tg === 'tfp' ? s.shockSize / 100 : 0;
   const pars = par ? Array.from({ length: T + 1 }, (_, q) => parAt(s, q)) : null;
   const P = pathFrom(s, k0, a0, T, pars);
@@ -387,23 +393,24 @@ export function solve(s) {
   for (const v of ['c', 'k', 'y', 'i']) { agg[v] = []; baseAgg[v] = []; }
   let Nmax = 0;
   for (let j = 0; j <= H; j++) {
-    const E = Math.pow(gE, j), L = Math.pow(gL, j);
+    const Eb = Math.pow(gE, j), Lb = Math.pow(gL, j);
     const q = j >= tH ? j - tH : -1;   // до шока экономика в стационаре
+    const E = q >= 0 && tg === 'E' ? Eb * fl : Eb, L = q >= 0 && tg === 'L' ? Lb * fl : Lb;
     const at = (v) => (q < 0 ? (v === 'r' ? ss.r : v === 'A' ? 1 : ss[v]) : P[v][q]);
     t.push(j);
     for (const v of VARS) {
       const x = at(v);
       eff[v].push(x); baseEff[v].push(ss[v]);
-      levels[v].push(x * E); baseLevels[v].push(ss[v] * E);
+      levels[v].push(x * E); baseLevels[v].push(ss[v] * Eb);
       irf[v].push(100 * Math.log(x / ss[v]));
     }
-    for (const v of ['c', 'k', 'y', 'i']) { agg[v].push(at(v) * E * L); baseAgg[v].push(ss[v] * E * L); }
+    for (const v of ['c', 'k', 'y', 'i']) { agg[v].push(at(v) * E * L); baseAgg[v].push(ss[v] * Eb * Lb); }
     const N = at('N'); Nmax = Math.max(Nmax, N);
     levels.N.push(N); baseLevels.N.push(ss.N); irf.N.push(100 * Math.log(N / ss.N));
     levels.r.push(100 * at('r')); baseLevels.r.push(100 * ss.r); irf.r.push(100 * (at('r') - ss.r));
     levels.A.push(at('A')); baseLevels.A.push(1); irf.A.push(100 * Math.log(at('A')));
-    levels.E.push(E); baseLevels.E.push(E); irf.E.push(0);
-    levels.L.push(L); baseLevels.L.push(L); irf.L.push(0);
+    levels.E.push(E); baseLevels.E.push(Eb); irf.E.push(100 * (E / Eb - 1));
+    levels.L.push(L); baseLevels.L.push(Lb); irf.L.push(100 * (L / Lb - 1));
     if (par) { const p = parAt(s, q)[tg], p0 = s[tg]; levels.par.push(p); baseLevels.par.push(p0); irf.par.push(p - p0); }
   }
   if (Nmax >= 1) return { ok: false, errors: [`Часы упираются в потолок $N_t\\le 1$ (максимум $${fmtTex(Nmax, 3)}$): шок слишком велик для этой калибровки.`] };
@@ -441,8 +448,8 @@ export function chartSpecs(s) {
   const v = (id, title, L, lo, extra = {}) => ({ id, title, sym: mode === 'agg' ? `${L}_t` : `${lo}_t`, ...(mode !== 'agg' ? { aggSym: `${L}_t` } : {}),
     irfUnit: u, irfLabel: '$\\Delta_{\\ln}\\times100$', irfSym: hat(L, lo), ...extra });
   const specs = [
-    ...(hasG ? [{ id: 'E', title: 'Трудосберегающий ТП', sym: 'E_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: true }] : []),
-    ...(hasN ? [{ id: 'L', title: 'Население', sym: 'L_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: true }] : []),
+    ...(hasG ? [{ id: 'E', title: 'Трудосберегающий ТП', sym: 'E_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: s.shockTarget !== 'E' }] : []),
+    ...(hasN ? [{ id: 'L', title: 'Население', sym: 'L_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: s.shockTarget !== 'L' }] : []),
     { id: 'A', title: 'TFP', sym: 'A_t', irfUnit: '%', irfLabel: '$\\hat A_t\\times100$', irfSym: () => '\\hat A_t', noEff: true },
     v('y', 'Выпуск', 'Y', 'y'),
     v('c', 'Потребление', 'C', 'c'),
@@ -545,7 +552,10 @@ export function formulas(s) {
   if (tg === 'tfp') fs.shock.push({
     tex: '\\ln A_{\\hat t}=\\rho\\ln A_{\\hat t-1}+\\varepsilon,\\qquad \\varepsilon_t=0\\ \\text{при}\\ t\\ne\\hat t',
     num: `\\varepsilon=${n4(s.shockSize / 100)},\\qquad ${hat}` });
-  else if (tg === 'k') fs.shock.push({ tex: `${K}^{\\prime}_{\\hat t}=(1+\\varphi_k)${K}_{\\hat t}`, num: `\\varphi_k=${n4(s.shockSize / 100)},\\qquad ${hat}` });
+  else if (tg === 'k' || tg === 'E' || tg === 'L') {
+    const Q = tg === 'k' ? 'K' : tg;
+    fs.shock.push({ tex: `${Q}^{\\prime}_{\\hat t}=(1+\\varphi_${Q})${Q}_{\\hat t}`, num: `\\varphi_${Q}=${n4(s.shockSize / 100)},\\qquad ${hat}` });
+  }
   else {
     const sym = SHOCK_TARGETS[tg].sym, perm = s.shockPersistence === 'permanent', fixed = !perm && s.tempMode === 'fixed';
     const pr = perm ? '\\text{𝟙}\\{t\\ge\\hat t\\}' : fixed ? '\\text{𝟙}\\{\\hat t\\le t<\\hat t+N\\}' : '\\rho_s^{\\,t-\\hat t}\\,\\text{𝟙}\\{t\\ge\\hat t\\}';

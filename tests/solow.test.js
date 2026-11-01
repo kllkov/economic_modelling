@@ -181,4 +181,18 @@ for (const time of ['discrete', 'continuous']) {
   const j = idx(f, 15), k = f.eff.k[j], y = Math.pow(k, defaults.alpha);
   near(f.eff.c[j], (1 - defaults.s) * y, 1e-9, `в t̂+N норма сбережения снова s (${time})`);
 }
+// 14. Шоки состояния K и L: в t̂ агрегатный K не скачет при шоке на L, k̃ сдвигается на 1/(1+φ);
+//     население дальше растёт от нового уровня, а k̃ возвращается к стационару
+for (const time of ['discrete', 'continuous']) for (const variant of ['base', 'tp']) {
+  const o = { time, variant, shockTarget: 'L', shockSize: 25, tHat: 5, horizon: 600 };
+  const r = run(o), j = idx(r, 5), jm = idx(r, 4);
+  near(r.eff.k[j], r.ss0.k / 1.25, 1e-9, `k̃ в t̂ после шока на L (${time}, ${variant})`);
+  near(r.irf.L[j], 25, 1e-9, 'L′ = 1.25 L'); near(r.irf.L[jm], 0, 1e-12, 'до шока L на тренде');
+  near(r.irf.L.at(-1), 25, 1e-9, 'уровень L остаётся сдвинутым');
+  near(r.agg.k[j] / r.baseAgg.k[j], 1, 1e-9, 'агрегатный K в t̂ не скачет');
+  near(r.agg.y.at(-1) / r.baseAgg.y.at(-1), 1.25, 1e-6, 'выпуск в долгом периоде выше на φ_L');
+  near(r.irf.k.at(-1), 0, 1e-6, 'k̃ возвращается к стационару');
+  const q = run({ ...o, shockTarget: 'k', shockSize: -20 });
+  near(q.agg.k[j] / q.baseAgg.k[j], 0.8, 1e-9, 'шок на K: агрегатный K ниже на 20%'); near(q.irf.L[j], 0, 1e-12, 'шок на K не трогает L');
+}
 console.log('Модель Солоу: все проверки пройдены');

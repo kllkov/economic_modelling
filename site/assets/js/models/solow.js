@@ -10,8 +10,9 @@
 import { sample, halfLife, tc, tcMap } from '../charts.js';
 
 const SHOCK_TARGETS = {
+  k:     { label: 'Капитал $K_t$', kind: 'state', unit: '%', def: -30, step: 1 },
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
-  k:     { label: 'Капиталовооружённость $k_t$', kind: 'state', unit: '%', def: -30, step: 1 },
+  L:     { label: 'Уровень населения $L_t$', kind: 'state', unit: '%', def: 10, step: 1 },
   s:     { label: 'Норма сбережения $s$', kind: 'param', unit: 'Δ', def: 0.05, step: 0.01 },
   n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
   g:     { label: 'Темп роста технологии $g$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, variant: 'tp' },
@@ -161,7 +162,8 @@ function validate(st) {
   if (tg === 'tfp' && st.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
   if (tg === 'g' && st.variant !== 'tp') errors.push('Шок темпа роста технологии доступен только в вариации с технологическим прогрессом.');
   if (!(st.k0 > 0)) errors.push('Начальный капитал должен быть положительным.');
-  if (tg === 'k' && d <= -100) errors.push('Капиталовооружённость не может упасть больше чем на 100%.');
+  if (tg === 'k' && d <= -100) errors.push('Капитал не может упасть больше чем на 100%.');
+  if (tg === 'L' && d <= -100) errors.push('Население не может упасть больше чем на 100%.');
   if (tg === 'tfp' && d <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
   return errors;
 }
@@ -173,7 +175,9 @@ function simulate(st, h, N, scale, x0 = null) {
   const g0 = st.variant === 'tp' ? st.g : 0;
   const ss0 = steady(st, params(st, 0, 0));
   const jHat = Math.round(st.tHat / h);
-  const D = st.shockTarget === 'k' && scale ? 1 + st.shockSize / 100 : 1;
+  // шок состояния в t̂: K′ = (1+φ)K сдвигает x = K/(L·(1+g)^t) на (1+φ); L′ = (1+φ)L сдвигает его на 1/(1+φ), а население дальше растёт от нового уровня
+  const phi = scale ? st.shockSize / 100 : 0;
+  const D = st.shockTarget === 'k' ? 1 + phi : st.shockTarget === 'L' ? 1 / (1 + phi) : 1;
   const x = new Float64Array(N + 1), Ar = new Float64Array(N + 1), L = new Float64Array(N + 1);
   const disc = st.time === 'discrete';
 
@@ -217,6 +221,7 @@ function simulate(st, h, N, scale, x0 = null) {
     if (j + 1 === jHat) x[j + 1] *= D;
     if (!(x[j + 1] > 0) || !Number.isFinite(x[j + 1])) return null;
   }
+  if (st.shockTarget === 'L') for (let j = jHat; j <= N; j++) L[j] *= 1 + phi;
   return { x, Ar, L, ss0, g0 };
 }
 
@@ -295,7 +300,7 @@ export function chartSpecs(st) {
   const cen = st.version === 'centralized';
   const tp = st.variant === 'tp';
   const x = (v) => `${v}_t`;
-  const showL = Math.abs(st.n) > 0 || st.shockTarget === 'n';
+  const showL = Math.abs(st.n) > 0 || st.shockTarget === 'n' || st.shockTarget === 'L';
   const specs = [
     ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
     ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
@@ -405,9 +410,10 @@ export function formulas(st) {
   if (tg === 'tfp') {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prf}\\big)`;
     shockNum = `\\varphi=${n4(st.shockSize / 100)}`;
-  } else if (tg === 'k') {
-    shockTex = 'K^{\\prime}_{\\hat t}=(1+\\varphi_k)K_{\\hat t}';
-    shockNum = `\\varphi_k=${n4(st.shockSize / 100)}`;
+  } else if (tg === 'k' || tg === 'L') {
+    const Q = tg === 'k' ? 'K' : 'L';
+    shockTex = `${Q}^{\\prime}_{\\hat t}=(1+\\varphi_${Q})${Q}_{\\hat t}`;
+    shockNum = `\\varphi_${Q}=${n4(st.shockSize / 100)}`;
   } else {
     const sym = { s: 's', n: 'n', g: 'g', delta: '\\delta' }[tg];
     shockTex = `${sym}_t=${sym}+\\Delta ${sym}\\cdot ${prf}`;

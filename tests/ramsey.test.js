@@ -124,4 +124,16 @@ near(r.levels.L[11] / r.levels.L[10], 1.03, 1e-12, 'L после шока рас
   assert.ok(!/b_/.test(all), 'в децентрализованной версии нет b');
   assert.ok(/\\tilde\\pi_t/.test(all) && /\(r_t\+\\delta\)\\tilde k_t/.test(all), 'доход: аренда капитала и прибыль фирм');
 }
+// 12. Шок состояния на население: L′ = (1+φ)L, k̃ сдвигается на 1/(1+φ), агрегатный K не скачет, дальше k̃ возвращается к стационару
+for (const time of ['discrete', 'continuous']) for (const shockTiming of ['unexpected', 'expected']) {
+  const x = run({ time, variant: 'tp', n: 0.01, shockTarget: 'L', shockSize: 25, tHat: 10, t0: 4, shockTiming, horizon: 120 });
+  assert.ok(x.ok, JSON.stringify(x.errors));
+  const j = x.t.findIndex((v) => Math.abs(v - 10) < 1e-9);
+  near(x.irf.L[j], 25, 1e-9, 'L′ = 1.25 L'); near(x.irf.L.at(-1), 25, 1e-9, 'L остаётся сдвинутым');
+  if (shockTiming === 'unexpected') {
+    near(x.eff.k[j], x.ss0.k / 1.25, 2e-3, `k̃ в t̂ после шока на L (${time})`);
+    near(x.agg.k[j] / x.baseAgg.k[j], 1, 2e-3, 'агрегатный K в t̂ не скачет');
+  }
+  near(x.irf.k.at(-1), 0, 1e-4, 'k̃ возвращается к стационару');
+}
 console.log('Все проверки пройдены');

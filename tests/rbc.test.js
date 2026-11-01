@@ -1,7 +1,7 @@
 // Модель RBC: числа из лекции (стационар, отклики при разных ρ), точность нелинейного решения,
 // тренды (слайд «Отклики с трендами и без») и блоки страницы.
 import assert from 'node:assert/strict';
-import { defaults, solve, steady, policy, steadyTable, systemBlocks, extraBlocks, ssCharts, chartSpecs, formulas } from '../site/assets/js/models/rbc.js';
+import { defaults, controls, normalize, solve, steady, policy, steadyTable, systemBlocks, extraBlocks, ssCharts, chartSpecs, formulas } from '../site/assets/js/models/rbc.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 const run = (o = {}) => { const r = solve({ ...defaults, ...o }); assert.ok(r.ok, JSON.stringify(o) + r.errors); return r; };
@@ -173,5 +173,23 @@ for (const tg of ['beta', 'theta', 'chi', 'delta']) {
   }
   // эластичность Фриша (1 − N*)/N* > 1/χ = 1 при близких N*: часы реагируют сильнее
   assert.ok(run({ ...L }).irf.N[0] > run().irf.N[0], 'логарифм досуга: часы реагируют сильнее');
+}
+// 10. Шоки состояния E и L: детрендированный k̃ сдвигается на 1/(1+φ), агрегатный K не скачет, уровень E (L) остаётся сдвинутым
+for (const [tg, variant] of [['E', 'tp'], ['L', 'n'], ['E', 'both'], ['L', 'both']]) for (const method of ['linear', 'nonlinear']) {
+  const r = run({ variant, method, shockTarget: tg, shockSize: 20, tHat: 3, horizon: 200 });
+  near(r.irf.k[3], -100 * Math.log(1.2), 1e-6, `k̃ в t̂ после шока на ${tg} (${variant}, ${method})`);
+  near(r.irf[tg][3], 20, 1e-9, `${tg}′ = 1.2 ${tg}`); near(r.irf[tg][2], 0, 1e-12, 'до шока на тренде'); near(r.irf[tg].at(-1), 20, 1e-9, 'уровень остаётся сдвинутым');
+  near(r.agg.k[3] / r.baseAgg.k[3], 1, 1e-9, 'агрегатный K в t̂ не скачет');
+  near(r.irf.k.at(-1), 0, 1e-2, 'k̃ возвращается к стационару');
+  assert.ok(chartSpecs({ ...defaults, variant, shockTarget: tg }).find((c) => c.id === tg).noIrf === false, 'отклик тренда показывается при шоке на него');
+}
+{
+  // недоступные шоки: без соответствующего тренда выбор сбрасывается на TFP
+  assert.equal(solve({ ...defaults, variant: 'base', shockTarget: 'E' }).ok, true);
+  const ids = (variant) => controls.find((c) => c.id === 'shockTarget').options({ ...defaults, variant }).map((o) => o.v);
+  assert.ok(!ids('base').includes('E') && !ids('base').includes('L'), 'без трендов нет шоков E и L');
+  assert.ok(ids('tp').includes('E') && !ids('tp').includes('L') && ids('n').includes('L') && !ids('n').includes('E'), 'E — при ТП, L — при росте населения');
+  const st = normalize({ ...defaults, variant: 'base', shockTarget: 'E' }, 'variant');
+  assert.equal(st.shockTarget, 'tfp');
 }
 console.log('Модель RBC: все проверки пройдены');

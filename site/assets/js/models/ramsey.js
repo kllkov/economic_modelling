@@ -14,8 +14,9 @@ import { sample, halfLife, tc, tcMap } from '../charts.js';
 const MIT_NOTE = 'Только неожиданный перманентный: при смене функции полезности во времени сравнение $u\'(c_t)$ и $u\'(c_{t+1})$ зависело бы от единиц измерения $c$';
 
 const SHOCK_TARGETS = {
+  k:     { label: 'Капитал $K_t$', kind: 'state', unit: '%', def: -20, step: 1 },
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
-  k:     { label: 'Капиталовооружённость $k_t$', kind: 'state', unit: '%', def: -20, step: 1 },
+  L:     { label: 'Уровень населения $L_t$', kind: 'state', unit: '%', def: 10, step: 1 },
   n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
   beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete' },
   rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous' },
@@ -174,7 +175,8 @@ function buildPaths(s, N, h, scale) {
     P.theta[j] = s.theta + (target === 'theta' ? size * prof : 0);
     P.n[j] = s.n + (target === 'n' ? size * prof : 0);
     P.Z[j] = 1 + (target === 'tfp' ? (size / 100) * prof : 0);
-    P.D[j] = target === 'k' && j === jHat ? 1 + size / 100 : 1;
+    // скачок k̃ в t̂: K′ = (1+φ)K сдвигает его на (1+φ), L′ = (1+φ)L — на 1/(1+φ)
+    P.D[j] = j !== jHat ? 1 : target === 'k' ? 1 + size / 100 : target === 'L' ? 1 / (1 + size / 100) : 1;
   }
   return P;
 }
@@ -232,7 +234,8 @@ function validate(s) {
     errors.push('Для ожидаемого шока момент объявления $t_0$ должен быть раньше $\\hat t$.');
   if (s.shockTarget === 'tfp' && s.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
   if (!(s.k0 > 0)) errors.push('Начальная капиталовооружённость должна быть положительной.');
-  if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капиталовооружённость не может упасть больше чем на 100%.');
+  if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капитал не может упасть больше чем на 100%.');
+  if (s.shockTarget === 'L' && s.shockSize <= -100) errors.push('Население не может упасть больше чем на 100%.');
   if (s.shockTarget === 'tfp' && s.shockSize <= -100) errors.push('Уровень $E_t$ не может упасть больше чем на 100%.');
   return errors;
 }
@@ -349,6 +352,7 @@ export function solve(s) {
   const Lp = new Float64Array(Np + 1), Lb = new Float64Array(Np + 1);
   Lp[0] = 1; Lb[0] = 1;
   for (let j = 0; j < Np; j++) { Lp[j + 1] = Lp[j] * (1 + P.n[j] * h); Lb[j + 1] = Lb[j] * (1 + base.n[j] * h); }
+  if (s.shockTarget === 'L') for (let j = Math.round(s.tHat / h); j <= Np; j++) Lp[j] *= 1 + s.shockSize / 100;
   const stride = Math.max(1, Math.round(0.1 / h)); // на графики — точки с шагом 0.1
   for (let j = 0; j <= Np; j += stride) {
     const G = Math.exp(j * lnG1);
@@ -396,7 +400,7 @@ export function chartSpecs(s) {
   const cen = s.version === 'centralized';
   const tp = s.variant === 'tp';
   const x = (v) => `${v}_t`;
-  const showL = Math.abs(s.n) > 0 || s.shockTarget === 'n';
+  const showL = Math.abs(s.n) > 0 || s.shockTarget === 'n' || s.shockTarget === 'L';
   const specs = [
     ...(tp ? [{ id: 'E', title: 'Технология', sym: x('E'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
     ...(showL ? [{ id: 'L', title: 'Население', sym: x('L'), irfUnit: '$\\Delta_{\\%}$ от тренда', noEff: true, levelOnly: true }] : []),
@@ -557,9 +561,10 @@ export function formulas(s) {
   if (tg === 'tfp') {
     shockTex = `${D ? 'E_t=(1+g)^t' : 'E_t=e^{gt}'}\\big(1+\\varphi\\cdot ${prof}\\big)`;
     shockNum = `\\varphi=${n4(s.shockSize / 100)}`;
-  } else if (tg === 'k') {
-    shockTex = `${k}^{\\prime}_{\\hat t}=(1+\\varphi_k)${k}_{\\hat t}`;
-    shockNum = `\\varphi_k=${n4(s.shockSize / 100)}`;
+  } else if (tg === 'k' || tg === 'L') {
+    const Q = tg === 'k' ? 'K' : 'L';
+    shockTex = `${Q}^{\\prime}_{\\hat t}=(1+\\varphi_${Q})${Q}_{\\hat t}`;
+    shockNum = `\\varphi_${Q}=${n4(s.shockSize / 100)}`;
   } else {
     const sym = { beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta', delta: '\\delta', n: 'n' }[tg];
     shockTex = `${sym}_t=${sym}+\\Delta ${sym}\\cdot ${prof}`;
@@ -788,7 +793,7 @@ function diagramBlock(s, res) {
   let pre = null;
   if (expected && isState) {
     const p = pt(jHat), f = 1 + size / 100;
-    pre = tg === 'tfp' ? [p[0] * f, p[1] * f] : [p[0] / f, p[1]];
+    pre = tg === 'tfp' ? [p[0] * f, p[1] * f] : tg === 'L' ? [p[0] * f, p[1]] : [p[0] / f, p[1]];
     jumps.push([pre, p]);
   }
   const seg = (j0, j1) => { const o = []; for (let j = j0; j <= j1; j += step) o.push(pt(j)); return o; };
