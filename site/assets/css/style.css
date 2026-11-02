@@ -195,8 +195,6 @@ table.grading { width: 100%; border-collapse: collapse; font-size: 14.5px; min-w
 .grading td.w { font-weight: 800; color: var(--lilac-800); white-space: nowrap; }
 .grading td.bonus { color: var(--teal-600); }
 .grading .muted { color: var(--muted); }
-.yes { color: var(--teal-600); font-weight: 800; }
-.no { color: var(--muted); }
 .weight-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; margin: 18px 0 8px; }
 .weight-bar span { display: block; height: 100%; }
 .legend-row { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
