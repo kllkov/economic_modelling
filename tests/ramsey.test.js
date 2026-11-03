@@ -136,4 +136,18 @@ for (const time of ['discrete', 'continuous']) for (const shockTiming of ['unexp
   }
   near(x.irf.k.at(-1), 0, 1e-4, 'k̃ возвращается к стационару');
 }
+// 13. Уравнение Эйлера через скачок при ожидаемом шоке (вывод из задачи домохозяйства с весами ω_t в целевой функции):
+//     u'(c_{t̂−1}) = β(1+r_t̂)·Θ·u'(c_t̂), Θ = (ω_{t̂}/ω_{t̂−1})(L_{t̂−1}/L_{t̂}) для шока на L (Милль: 1/((1+n)(1+φ)), Бентам: 1),
+//     для шока на K дополнительно множитель (1+φ_K) при любой целевой функции
+for (const objective of ['mill', 'bentham']) for (const [shockTarget, size] of [['L', 25], ['L', -20], ['k', -20], ['k', 30]]) {
+  const n = 0.01, o = { n, objective, shockTarget, shockSize: size, shockTiming: 'expected', tHat: 15, t0: 5, horizon: 40 };
+  const x = run(o); assert.ok(x.ok, JSON.stringify(x.errors));
+  const phi = size / 100, beta = defaults.beta, sg = defaults.sigma;
+  const theta = shockTarget === 'L' ? (objective === 'mill' ? 1 / ((1 + n) * (1 + phi)) : 1) : (1 + phi) * (objective === 'mill' ? 1 / (1 + n) : 1);
+  const lhs = Math.pow(x.levels.c[14], -sg), rhs = beta * (1 + x.levels.r[15] / 100) * theta * Math.pow(x.levels.c[15], -sg);
+  near(lhs / rhs, 1, 1e-9, `Эйлер через скачок (${objective}, ${shockTarget}, ${size}%)`);
+  // вне скачка — обычный Эйлер: Милль с множителем 1/(1+n), Бентам без него
+  const th0 = objective === 'mill' ? 1 / (1 + n) : 1;
+  near(Math.pow(x.levels.c[9], -sg) / (beta * (1 + x.levels.r[10] / 100) * th0 * Math.pow(x.levels.c[10], -sg)), 1, 1e-9, `обычный Эйлер (${objective}, ${shockTarget})`);
+}
 console.log('Все проверки пройдены');

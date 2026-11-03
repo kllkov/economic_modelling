@@ -291,7 +291,9 @@ function solvePath(s, h, N, scale, guess) {
     for (let i = 0; i < nUnk; i++) {
       const j = jStart + i;
       const r1 = a * Math.pow(k[j + 1] / P.Z[j + 1], a - 1) - P.delta[j + 1];
-      const gross = P.D[j + 1] * (1 + h * r1);
+      // скачок k̃ входит в доходность сбережений: переоценка капитала (шок на K) — при любой целевой функции;
+      // разбавление населением (шок на L) — только у Милля, у Бентама его сокращает вес L_t в целевой функции
+      const gross = (s.shockTarget === 'L' && !mill ? 1 : P.D[j + 1]) * (1 + h * r1);
       if (!(gross > 0)) return null;
       const popAdj = mill ? Math.log(1 + P.n[j] * h) : 0;
       F[i] = lnMU(c[j], j) - lnB(j) - Math.log(gross) + popAdj - lnMU(c[j + 1], j + 1);
