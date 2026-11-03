@@ -417,7 +417,7 @@ export function chartSpecs(s) {
     { id: 's', title: 'Норма сбережения', sym: 's_t = i_t/y_t', irfUnit: '$\\Delta$ от s.s.', lvlUnit: '%', noEff: true },
   ];
   const par = PAR_CHART[s.shockTarget];
-  if (par) specs.unshift({ id: 'par', title: par[0], sym: par[1], irfUnit: '$\\Delta$ от s.s.', noEff: true, noLog: true });
+  if (par) specs.unshift({ id: 'par', title: par[0], sym: par[1], irfUnit: '$\\Delta$', noEff: true, noLog: true });
   return specs.map((c) => ({ ...c, effAvailable: tp && !c.noEff }));
 }
 

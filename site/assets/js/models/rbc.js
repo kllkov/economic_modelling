@@ -463,7 +463,7 @@ export function chartSpecs(s) {
   ];
   if (isPar(s)) {
     const sym = SHOCK_TARGETS[s.shockTarget].sym;
-    specs.unshift({ id: 'par', title: s.shockTarget === 'theta' ? thetaTitle(s) : PAR_TITLE[s.shockTarget], sym: `${sym}_t`, irfUnit: '$\\Delta$ от s.s.', irfLabel: '$\\Delta$',
+    specs.unshift({ id: 'par', title: s.shockTarget === 'theta' ? thetaTitle(s) : PAR_TITLE[s.shockTarget], sym: `${sym}_t`, irfUnit: '$\\Delta$', irfLabel: '$\\Delta$',
       irfSym: () => `\\Delta ${sym}_t`, noEff: true, noLog: true });
   }
   return specs.map((c) => ({ ...c, effAvailable: hasG && !c.noEff }));
