@@ -474,8 +474,6 @@ export function formulas(s) {
   const maxC = `\\max_{\\{${c}_t\\}_{t\\ge0}}\\; V_0=${obj}`;
   const firm = tp ? '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}(E_tL_t)^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t'
     : '\\max_{K_t,L_t}\\; \\pi_t=K_t^{\\alpha}L_t^{1-\\alpha}-w_tL_t-(r_t+\\delta)K_t';
-  const markets = [`${k}_t^D=${k}_t^S`,
-    'L_t^D=L_t^S'];
 
   // ── децентрализованная
   fs.dec.push({ agent: 'Домохозяйства', system: true, items: D ? [
@@ -488,7 +486,6 @@ export function formulas(s) {
     tvc,
   ] });
   fs.dec.push({ agent: 'Фирмы', items: [firm] });
-  fs.dec.push({ agent: 'Рынки', items: markets });
   fs.dec.push({ agent: 'Экзогенные процессы', items: [lawLine] });
 
   // ── централизованная
