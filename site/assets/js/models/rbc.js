@@ -23,8 +23,10 @@ const SHOCK_TARGETS = {
   theta: { label: 'Тягость труда $\\theta$', kind: 'param', sym: '\\theta', unit: 'Δ', def: 0.4, step: 0.1 },
   chi:   { label: 'Обратная эластичность Фриша $\\chi$', kind: 'param', sym: '\\chi', unit: 'Δ', def: 0.5, step: 0.1 },
   delta: { label: 'Выбытие капитала $\\delta$', kind: 'param', sym: '\\delta', unit: 'Δ', def: 0.005, step: 0.001 },
+  n:     { label: 'Темп роста населения $n$', kind: 'param', sym: 'n', unit: 'Δ', def: 0.002, step: 0.001, trend: 'hasN' },
+  g:     { label: 'Темп роста технологии $g$', kind: 'param', sym: 'g', unit: 'Δ', def: 0.002, step: 0.001, trend: 'hasG' },
 };
-const PAR_TITLE = { beta: 'Дисконт-фактор', chi: 'Обратная эластичность Фриша', delta: 'Выбытие капитала' };
+const PAR_TITLE = { beta: 'Дисконт-фактор', chi: 'Обратная эластичность Фриша', delta: 'Выбытие капитала', n: 'Темп роста населения', g: 'Темп роста технологии' };
 const isPar = (s) => SHOCK_TARGETS[s.shockTarget]?.kind === 'param';
 // полезность с логарифмом досуга: θ — вес досуга, χ нет
 const isLeis = (s) => s.utility === 'leis';
@@ -111,7 +113,7 @@ export function normalize(s, changed) {
 
 // ───────────────────────────── Параметры во времени ─────────────────────────────
 
-const baseParams = (s) => ({ beta: s.beta, theta: s.theta, chi: s.chi, delta: s.delta });
+const baseParams = (s) => { const { hasN, hasG } = trends(s); return { beta: s.beta, theta: s.theta, chi: s.chi, delta: s.delta, n: hasN ? s.n : 0, g: hasG ? s.g : 0 }; };
 // профиль шока параметра через q периодов после t̂ (q ≥ 0)
 function prof(s, q) {
   if (!isPar(s) || q < 0) return 0;
@@ -125,8 +127,8 @@ const parAt = (s, q) => { const p = baseParams(s), tg = s.shockTarget; if (isPar
 
 // Стационар при параметрах par (на ТСР — в единицах на эффективного работника или на душу)
 export function steady(s, par = baseParams(s)) {
-  const a = s.alpha, { hasN, hasG } = trends(s);
-  const G = (hasN ? 1 + s.n : 1) * (hasG ? 1 + s.g : 1);   // темп роста агрегатов на ТСР
+  const a = s.alpha;
+  const G = (1 + par.n) * (1 + par.g);   // темп роста агрегатов на ТСР
   const dep = G - 1 + par.delta;                              // i* = dep·k*
   const r = G / par.beta - 1;
   const kap = Math.pow(a / (r + par.delta), 1 / (1 - a));   // k*/N*
@@ -138,6 +140,7 @@ export function steady(s, par = baseParams(s)) {
 }
 
 function checkParams(s, p, e, tag = '') {
+  if (!(p.n > -1 && p.g > -1)) e.push(`Темпы роста $n$ и $g$ должны быть больше $-1$${tag}.`);
   if (!(p.beta > 0 && p.beta < 1)) e.push(`$\\beta$ должен лежать в $(0,1)$${tag}.`);
   if (!(p.delta >= 0 && p.delta <= 1)) e.push(`$\\delta$ должна лежать в $[0,1]$${tag}.`);
   if (isLeis(s) ? !(p.theta > 0) : !(p.theta > 0) || !(p.chi > 0)) e.push(`${isLeis(s) ? '$\\theta$ должен быть положительным' : '$\\theta$ и $\\chi$ должны быть положительными'}${tag}.`);
@@ -195,7 +198,9 @@ function mkPath(T) {
 }
 
 // отклонения параметров для лог-линейной системы: β̂ = ln β_t − ln β, θ̂ = ln θ_t − ln θ, Δχ, Δδ
-const devOf = (b, p) => ({ bh: Math.log(p.beta / b.beta), th: Math.log(p.theta / b.theta), dchi: p.chi - b.chi, dd: p.delta - b.delta });
+// ĝ = ln G_t − ln G — отклонение темпа роста агрегатов ((1+n_t)(1+g_t))
+const devOf = (b, p) => ({ bh: Math.log(p.beta / b.beta), th: Math.log(p.theta / b.theta), dchi: p.chi - b.chi, dd: p.delta - b.delta,
+  gh: Math.log(((1 + p.n) * (1 + p.g)) / ((1 + b.n) * (1 + b.g))) });
 
 // Лог-линейная система с отклонениями параметров: один шаг по времени
 function linStep(s, ss, kh, ah, ch, dv) {
@@ -204,16 +209,17 @@ function linStep(s, ss, kh, ah, ch, dv) {
   const yh = ah + a * kh + (1 - a) * nh;
   const ih = (ss.y * yh - ss.c * ch) / ss.i;
   const dr = (ss.r + s.delta) * (yh - kh) - dv.dd;
-  const kh1 = (ss.dep * ih + (1 - s.delta) * kh - dv.dd) / ss.G;
+  const kh1 = (ss.dep * ih + (1 - s.delta) * kh - dv.dd) / ss.G - dv.gh;
   return { nh, yh, ih, dr, kh1 };
 }
 
 // Стационар лог-линейной системы при постоянных отклонениях параметров (k̂*, ĉ*)
 function linSteady(s, ss, dv) {
   const a = s.alpha, chi = chiE(s, ss), lnN = Math.log(ss.N);
-  const z = (-(ss.G * dv.bh) / s.beta + dv.dd) / (ss.r + s.delta);       // ŷ − k̂
-  const kh = (-(chi + a) * z / (1 - a) - (ss.y * z - (ss.i * dv.dd) / ss.dep) / ss.c - dv.th - dv.dchi * lnN) / (chi + 1);
-  const ch = (ss.y * (kh + z) - ss.i * (kh + dv.dd / ss.dep)) / ss.c;
+  const z = ((ss.G * (dv.gh - dv.bh)) / s.beta + dv.dd) / (ss.r + s.delta);       // ŷ − k̂
+  const dDep = dv.dd + ss.G * dv.gh;                                              // отклонение dep = G − 1 + δ
+  const kh = (-(chi + a) * z / (1 - a) - (ss.y * z - (ss.i * dDep) / ss.dep) / ss.c - dv.th - dv.dchi * lnN) / (chi + 1);
+  const ch = (ss.y * (kh + z) - ss.i * (kh + dDep / ss.dep)) / ss.c;
   return { kh, ch };
 }
 
@@ -225,7 +231,7 @@ function fillLin(s, ss, out, t, kh, ah, ch, st) {
 
 // путь из (k̂_0, Â_0) по функциям политики (без шоков параметров); уровни на t = 0..T
 function linPath(s, ss, pol, T, kh0, ah0) {
-  const out = mkPath(T), z = { bh: 0, th: 0, dchi: 0, dd: 0 };
+  const out = mkPath(T), z = { bh: 0, th: 0, dchi: 0, dd: 0, gh: 0 };
   let kh = kh0;
   for (let t = 0; t <= T; t++) {
     const ah = ah0 * Math.pow(s.rho, t), ch = pol.cK * kh + pol.cA * ah;
@@ -247,7 +253,7 @@ function linPF(s, ss, pol, T, kh0, ah0, pars) {
   const cOf = (t) => {
     const e = dv[t].th + dv[t].dchi * lnN;
     const B = ah[t] + a * K[t] + ((1 - a) * (ah[t] + a * K[t] - e)) / (chi + a);
-    const Q = ss.G * K[t + 1] - (1 - s.delta) * K[t] + dv[t].dd;
+    const Q = ss.G * (K[t + 1] + dv[t].gh) - (1 - s.delta) * K[t] + dv[t].dd;
     return (ss.y * B - ss.k * Q) / ((ss.y * (1 - a)) / (chi + a) + ss.c);
   };
   const run = (x) => {
@@ -259,7 +265,7 @@ function linPF(s, ss, pol, T, kh0, ah0, pars) {
   const residual = (x) => {
     run(x);
     const R = new Float64Array(T);
-    for (let t = 0; t < T; t++) R[t] = Cc[t + 1] - Cc[t] - (s.beta / ss.G) * DR[t + 1] - dv[t].bh;
+    for (let t = 0; t < T; t++) R[t] = Cc[t + 1] - Cc[t] - (s.beta / ss.G) * DR[t + 1] - dv[t].bh + dv[t].gh;
     return R;
   };
   const guess = linPath(s, ss, pol, T, kh0, ah0);
@@ -279,13 +285,14 @@ function linPF(s, ss, pol, T, kh0, ah0, pars) {
 // Хвост: k_{T+1} — по лог-линейной функции политики около стационара при параметрах периода T.
 // В уравнении Эйлера между t и t+1 — β_t и δ_{t+1}.
 function nlPath(s, T, k0, a0, pars, guess) {
-  const a = s.alpha, ssT = steady(s, pars[T]), polT = policy(s, ssT, pars[T]), G = ssT.G, leis = isLeis(s);
+  const a = s.alpha, ssT = steady(s, pars[T]), polT = policy(s, ssT, pars[T]), leis = isLeis(s);
+  const Gt = (t) => (1 + pars[t].n) * (1 + pars[t].g);   // рост агрегатов от t к t+1
   if (!polT) return null;
   const lnA = Float64Array.from({ length: T + 1 }, (_, t) => a0 * Math.pow(s.rho, t));
   const P = mkPath(T);
   // часы и потребление периода t по k_t и k_{t+1}
   const period = (t, k, k1) => {
-    const p = pars[t], Aka = Math.exp(lnA[t]) * Math.pow(k, a), rest = (1 - p.delta) * k - G * k1;
+    const p = pars[t], Aka = Math.exp(lnA[t]) * Math.pow(k, a), rest = (1 - p.delta) * k - Gt(t) * k1;
     // θN^χ c = (1−α)A k^α N^{−α} или, при логарифме досуга, θc/(1−N) = (1−α)A k^α N^{−α}
     const dis = leis ? (u) => -a * u + Math.log(-Math.expm1(u)) : (u) => -(p.chi + a) * u;
     const g = (u) => { const N = Math.exp(u), c = Aka * Math.pow(N, 1 - a) + rest; return c > 0 ? Math.log((1 - a) * Aka) - Math.log(p.theta) + dis(u) - Math.log(c) : Infinity; };
@@ -311,7 +318,7 @@ function nlPath(s, T, k0, a0, pars, guess) {
     const R = new Float64Array(T);
     for (let t = 0; t < T; t++) {
       const gross = 1 + (a * P.y[t + 1]) / P.k[t + 1] - pars[t + 1].delta;
-      R[t] = Math.log((G * P.c[t + 1]) / P.c[t]) - Math.log(pars[t].beta * gross);
+      R[t] = Math.log((Gt(t) * P.c[t + 1]) / P.c[t]) - Math.log(pars[t].beta * gross);
       if (!Number.isFinite(R[t])) return null;
     }
     return R;
@@ -387,11 +394,13 @@ export function solve(s) {
   for (const v of [...VARS, 'N', 'r', 'A', 'E', 'L', 'par']) { irf[v] = []; levels[v] = []; baseLevels[v] = []; }
   for (const v of VARS) { eff[v] = []; baseEff[v] = []; }
   for (const v of ['c', 'k', 'y', 'i']) { agg[v] = []; baseAgg[v] = []; }
-  let Nmax = 0;
+  let Nmax = 0, E = 1, L = 1;   // E_j, L_j: до t̂ — прежние тренды; шок темпа роста n или g меняет их приращения с t̂
   for (let j = 0; j <= H; j++) {
     const Eb = Math.pow(gE, j), Lb = Math.pow(gL, j);
     const q = j >= tH ? j - tH : -1;   // до шока экономика в стационаре
-    const E = q >= 0 && tg === 'E' ? Eb * fl : Eb, L = q >= 0 && tg === 'L' ? Lb * fl : Lb;
+    if (j <= tH) { E = Eb; L = Lb; }
+    if (j === tH) { if (tg === 'E') E *= fl; if (tg === 'L') L *= fl; }
+    else if (j > tH) { const pp = parAt(s, q - 1); E *= 1 + pp.g; L *= 1 + pp.n; }
     const at = (v) => (q < 0 ? (v === 'r' ? ss.r : v === 'A' ? 1 : ss[v]) : P[v][q]);
     t.push(j);
     for (const v of VARS) {
@@ -422,11 +431,13 @@ export function solve(s) {
 // ───────────────────────────── Обозначения ─────────────────────────────
 
 // без трендов — агрегаты (C_t), с ростом населения — на душу (c_t), с ТП — на эффективного работника (c̃_t)
-function names(s) {
+function names(s, shocked = false) {
   const { hasN, hasG } = trends(s);
+  // в динамике шокированный темп роста — n_t или g_t; в лог-линейной системе множитель постоянный
+  const nS = shocked && s.shockTarget === 'n' ? 'n_t' : 'n', gS = shocked && s.shockTarget === 'g' ? 'g_t' : 'g';
   const mode = hasG ? 'eff' : hasN ? 'pc' : 'agg';
   const X = (L, lo) => (mode === 'eff' ? `\\tilde ${lo}` : mode === 'pc' ? lo : L);
-  const G = hasN && hasG ? '(1+n)(1+g)' : hasN ? '(1+n)' : hasG ? '(1+g)' : '';
+  const G = hasN && hasG ? `(1+${nS})(1+${gS})` : hasN ? `(1+${nS})` : hasG ? `(1+${gS})` : '';
   return { hasN, hasG, mode, C: X('C', 'c'), K: X('K', 'k'), Y: X('Y', 'y'), I: X('I', 'i'),
     W: hasG ? '\\tilde w' : 'w', Pi: mode === 'eff' ? '\\tilde\\pi' : mode === 'pc' ? '\\pi' : '\\Pi',
     H: (L, lo) => (mode === 'eff' ? `\\hat{\\tilde ${lo}}` : mode === 'pc' ? `\\hat ${lo}` : `\\hat ${L}`),
@@ -444,8 +455,8 @@ export function chartSpecs(s) {
   const v = (id, title, L, lo, extra = {}) => ({ id, title, sym: mode === 'agg' ? `${L}_t` : `${lo}_t`, ...(mode !== 'agg' ? { aggSym: `${L}_t` } : {}),
     irfUnit: u, irfLabel: '$\\Delta_{\\ln}\\times100$', irfSym: hat(L, lo), ...extra });
   const specs = [
-    ...(hasG ? [{ id: 'E', title: 'Трудосберегающий ТП', sym: 'E_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: s.shockTarget !== 'E' }] : []),
-    ...(hasN ? [{ id: 'L', title: 'Население', sym: 'L_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: s.shockTarget !== 'L' }] : []),
+    ...(hasG ? [{ id: 'E', title: 'Трудосберегающий ТП', sym: 'E_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: s.shockTarget !== 'E' && s.shockTarget !== 'g' }] : []),
+    ...(hasN ? [{ id: 'L', title: 'Население', sym: 'L_t', irfUnit: '% от тренда', noEff: true, levelOnly: true, noIrf: s.shockTarget !== 'L' && s.shockTarget !== 'n' }] : []),
     { id: 'A', title: 'TFP', sym: 'A_t', irfUnit: '%', irfLabel: '$\\hat A_t\\times100$', irfSym: () => '\\hat A_t', noEff: true },
     v('y', 'Выпуск', 'Y', 'y'),
     v('c', 'Потребление', 'C', 'c'),
@@ -483,7 +494,7 @@ const pw = (x) => (Math.abs(x - 1) < 5e-5 ? '' : `^{${n4(x)}}`);
 const term = (x, v, first = false) => (Math.abs(x) < 5e-5 ? '' : `${x < 0 ? '-' : first ? '' : '+'}${n4(Math.abs(x))}${v}`);
 
 export function formulas(s) {
-  const { hasN, hasG, mode, C, K, Y, I, W, Pi, G } = names(s);
+  const { hasN, hasG, mode, C, K, Y, I, W, Pi, G } = names(s, true);
   const cen = s.version === 'centralized', tg = s.shockTarget;
   const a = s.alpha, d = s.delta, Gv = steady(s).G;
   const fs = { dec: [], cen: [], system: [], shock: [], problemTitle: 'Модель', systemTitle: 'Уравнения динамики' };
@@ -504,7 +515,7 @@ export function formulas(s) {
   const labPow = hasN || hasG ? `(${lab})^{1-\\alpha}` : 'N_t^{1-\\alpha}';
   fs.dec.push({ agent: 'Фирмы', items: [`\\max_{K_t,\\,N_t}\\; \\Pi_t=A_tK_t^{\\alpha}${labPow}-w_t${hasN ? 'L_t' : ''}N_t-(r_t+${ps('delta', '\\delta')})K_t`] });
   fs.dec.push({ agent: 'Балансовые соотношения', items: ['Y_t=C_t+I_t'] });
-  const lawN = 'L_{t+1}=(1+n)L_t', lawG = 'E_{t+1}=(1+g)E_t';
+  const lawN = `L_{t+1}=(1+${tg === 'n' ? 'n_t' : 'n'})L_t`, lawG = `E_{t+1}=(1+${tg === 'g' ? 'g_t' : 'g'})E_t`;
   const trendLine = hasN && hasG ? `${lawN},\\qquad ${lawG},\\qquad L_0=E_0=1` : hasN ? `${lawN},\\qquad L_0=1`
     : hasG ? `${lawG},\\qquad E_0=1,\\qquad L_t=1` : 'L_t=1';
   const exo = ['\\ln A_{t+1}=\\rho\\ln A_t+\\varepsilon_{t+1}', trendLine];
@@ -514,7 +525,8 @@ export function formulas(s) {
   fs.cen.push({ agent: 'Экзогенные процессы', items: exo });
 
   // ── уравнения динамики (как в лекции) и они же в числах; у шокированного параметра — индекс времени
-  const Gn = G ? n4(Gv) : '';
+  const fN = hasN ? (tg === 'n' ? '(1+n_t)' : n4(1 + s.n)) : '', fG = hasG ? (tg === 'g' ? '(1+g_t)' : n4(1 + s.g)) : '';
+  const Gn = !G ? '' : tg === 'n' || tg === 'g' ? (fN.startsWith('(') ? fG + fN : fN + fG) : n4(Gv);
   const bN = tg === 'beta' ? '\\beta_t' : n4(s.beta);
   const thN = tg === 'theta' ? '\\theta_t' : co(s.theta), thL = tg === 'theta' ? '\\theta_t' : n4(s.theta);
   const leis = isLeis(s), thT = ps('theta', '\\theta').trim();
@@ -572,8 +584,10 @@ export function systemBlocks(s) {
   const sB = tg === 'beta' ? '+\\hat\\beta_t' : '', sTh = tg === 'theta' ? '-\\hat\\theta_t' : '';
   const sCh = tg === 'chi' ? '+\\ln N^*\\,\\Delta\\chi_t' : '', sChN = tg === 'chi' ? `${pm(Math.log(ss.N))}\\Delta\\chi_t` : '';
   const sD = tg === 'delta' ? '-\\Delta\\delta_t' : '';
+  const gHat = tg === 'n' ? '\\hat n_t' : tg === 'g' ? '\\hat g_t' : '';   // ĝ_t = ln G_t − ln G
+  const sG = gHat ? `-${gHat}` : '', sGk = gHat ? `-${G}${gHat}` : '', sGkN = gHat ? `-${n4(ss.G)}${gHat}` : '';
   const rows = [
-    { label: 'Уравнение Эйлера', tex: `${c}_{t+1}-${c}_t=${bG}\\Delta r_{t+1}${sB}`, num: `${c}_{t+1}-${c}_t=${n4(s.beta / ss.G)}\\Delta r_{t+1}${sB}` },
+    { label: 'Уравнение Эйлера', tex: `${c}_{t+1}-${c}_t=${bG}\\Delta r_{t+1}${sB}${sG}`, num: `${c}_{t+1}-${c}_t=${n4(s.beta / ss.G)}\\Delta r_{t+1}${sB}${sG}` },
     isLeis(s) ? { label: '«Труд — досуг»', tex: `\\dfrac{N^*}{1-N^*}\\hat N_t=${w}_t-${c}_t${sTh}`, num: `${n4(chiE(s, ss))}\\hat N_t=${w}_t-${c}_t${sTh}` }
       : { label: '«Труд — досуг»', tex: `\\chi\\hat N_t${sCh}=${w}_t-${c}_t${sTh}`, num: `${co(s.chi)}\\hat N_t${sChN}=${w}_t-${c}_t${sTh}` },
     { label: 'Спрос на труд', tex: `${w}_t=${y}_t-\\hat N_t`, num: `${w}_t=${y}_t-\\hat N_t` },
@@ -581,13 +595,14 @@ export function systemBlocks(s) {
     { label: 'Производство', tex: `${y}_t=\\hat A_t+\\alpha${k}_t+(1-\\alpha)\\hat N_t`, num: `${y}_t=\\hat A_t+${n4(a)}${k}_t+${n4(1 - a)}\\hat N_t` },
     { label: 'Ресурсы', tex: `${S('Y', 'y')}${y}_t=${S('C', 'c')}${c}_t+${S('I', 'i')}${i}_t`,
       num: `${n4(ss.y)}${y}_t=${n4(ss.c)}${c}_t+${n4(ss.i)}${i}_t` },
-    { label: 'Накопление капитала', tex: `${G}${k}_{t+1}=${dep}${i}_t+(1-\\delta)${k}_t${sD}`,
-      num: `${G ? n4(ss.G) : ''}${k}_{t+1}=${n4(ss.dep)}${i}_t+${n4(1 - d)}${k}_t${sD}` },
+    { label: 'Накопление капитала', tex: `${G}${k}_{t+1}=${dep}${i}_t+(1-\\delta)${k}_t${sD}${sGk}`,
+      num: `${G ? n4(ss.G) : ''}${k}_{t+1}=${n4(ss.dep)}${i}_t+${n4(1 - d)}${k}_t${sD}${sGkN}` },
     { label: 'Технология', tex: '\\hat A_{t+1}=\\rho\\hat A_t', num: `\\hat A_{t+1}=${n4(s.rho)}\\hat A_t` },
   ];
   if (isPar(s)) {
     const def = { beta: '\\hat\\beta_t=\\ln\\beta_t-\\ln\\beta', theta: '\\hat\\theta_t=\\ln\\theta_t-\\ln\\theta',
-      chi: '\\Delta\\chi_t=\\chi_t-\\chi', delta: '\\Delta\\delta_t=\\delta_t-\\delta' }[tg];
+      chi: '\\Delta\\chi_t=\\chi_t-\\chi', delta: '\\Delta\\delta_t=\\delta_t-\\delta',
+      n: '\\hat n_t=\\ln\\dfrac{1+n_t}{1+n}', g: '\\hat g_t=\\ln\\dfrac{1+g_t}{1+g}' }[tg];
     rows.push({ label: 'Шок параметра', tex: def });
   }
   const note = mode === 'agg' ? 'лог-отклонения от стационара, ставка — в п. п.' : 'лог-отклонения от ТСР, ставка — в п. п.';

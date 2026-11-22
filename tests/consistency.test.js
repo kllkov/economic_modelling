@@ -279,11 +279,12 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
 // ─────────────── модель RBC ───────────────
 {
   let n = 0;
-  const SH = { tfp: 1, k: -10, E: 10, L: 10, beta: 0.002, theta: 0.4, chi: 0.5, delta: 0.005 };
+  const SH = { tfp: 1, k: -10, E: 10, L: 10, beta: 0.002, theta: 0.4, chi: 0.5, delta: 0.005, n: 0.002, g: 0.002 };
   for (const utility of ['log', 'leis']) for (const version of ['decentralized', 'centralized']) for (const variant of ['base', 'n', 'tp', 'both'])
     for (const shockTarget of Object.keys(SH)) for (const shockPersistence of ['temporary', 'permanent']) {
       const isPar = !['tfp', 'k', 'E', 'L'].includes(shockTarget);
-      if ((shockTarget === 'E' && !['tp', 'both'].includes(variant)) || (shockTarget === 'L' && !['n', 'both'].includes(variant))) continue;
+      if ((shockTarget === 'E' && !['tp', 'both'].includes(variant)) || (shockTarget === 'L' && !['n', 'both'].includes(variant))
+        || (shockTarget === 'n' && !['n', 'both'].includes(variant)) || (shockTarget === 'g' && !['tp', 'both'].includes(variant))) continue;
       if ((!isPar && shockPersistence === 'permanent') || (utility === 'leis' && shockTarget === 'chi')) continue;
       const where = `RBC ${utility} ${version} ${variant} ${shockTarget} ${shockPersistence}`;
       const hasN = variant === 'n' || variant === 'both', hasG = variant === 'tp' || variant === 'both';
@@ -304,7 +305,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
             E_0: 1, L_0: 1, K_t: A.k[i], Y_t: A.y[i], C_t: A.c[i], I_t: A.i[i], 'K_t^D': A.k[i], 'K_t^S': A.k[i], 'N_t^D': L.N[i], 'N_t^S': L.N[i],
             [`${X('C', 'c')}_{t+1}`]: E.c[i + 1], [`${X('C', 'c')}_t`]: E.c[i], [`${X('K', 'k')}_{t+1}`]: E.k[i + 1], [`${X('K', 'k')}_t`]: E.k[i],
             [`${X('Y', 'y')}_t`]: E.y[i], [`${X('I', 'i')}_t`]: E.i[i], [hasG ? '\\tilde w_t' : 'w_t']: E.w[i] };
-          if (isPar) { const sym = { beta: '\\beta', theta: '\\theta', chi: '\\chi', delta: '\\delta' }[shockTarget]; V[`${sym}_t`] = L.par[i]; V[`${sym}_{t+1}`] = L.par[i + 1]; }
+          if (isPar) { const sym = { beta: '\\beta', theta: '\\theta', chi: '\\chi', delta: '\\delta', n: 'n', g: 'g' }[shockTarget]; V[`${sym}_t`] = L.par[i]; V[`${sym}_{t+1}`] = L.par[i + 1]; }
           const tol = { abs: 1e-9, rel: 1e-9 }, tolN = { abs: 2e-4, rel: 2e-4 };
           for (const g of version === 'centralized' ? F.cen : F.dec) for (const it of g.items) check(it, V, tol, `${where}, блок «${g.agent}», t=${i}`);
           for (const r of F.system) { check(r.tex, V, tol, `${where}, «${r.label}», t=${i}`); check(r.num, V, tolN, `${where}, «${r.label}» (числа), t=${i}`); }
@@ -332,8 +333,8 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
             '\\eta_{CK}': pol.cK, '\\eta_{CA}': pol.cA, '\\eta_{KK}': pol.KK, '\\eta_{KA}': pol.KA, '\\eta_{NK}': pol.NK, '\\eta_{NA}': pol.NA };
           if (isPar) {
             const p = Lv.par[i], p0 = st[shockTarget];
-            Object.assign(V, { '\\hat\\beta_t': Math.log(p / p0), '\\hat\\theta_t': Math.log(p / p0), '\\Delta\\chi_t': p - p0, '\\Delta\\delta_t': p - p0,
-              '\\beta_t': p, '\\theta_t': p, '\\chi_t': p, '\\delta_t': p });
+            Object.assign(V, { '\\hat\\beta_t': Math.log(p / p0), '\\hat n_t': Math.log((1 + p) / (1 + p0)), '\\hat g_t': Math.log((1 + p) / (1 + p0)), '\\hat\\theta_t': Math.log(p / p0), '\\Delta\\chi_t': p - p0, '\\Delta\\delta_t': p - p0,
+              '\\beta_t': p, 'n_t': p, 'g_t': p, '\\theta_t': p, '\\chi_t': p, '\\delta_t': p });
           }
           const rows = BB.flatMap((b) => b.groups).flatMap((G) => G.rows);
           // функции политики (K̂, Â) верны только без шока параметров; шок параметров — вне состояния (k̂, Â)

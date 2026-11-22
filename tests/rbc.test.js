@@ -192,4 +192,20 @@ for (const [tg, variant] of [['E', 'tp'], ['L', 'n'], ['E', 'both'], ['L', 'both
   const st = normalize({ ...defaults, variant: 'base', shockTarget: 'E' }, 'variant');
   assert.equal(st.shockTarget, 'tfp');
 }
+// 11. Шоки темпов роста n и g (при трендах): лог-линейное решение совпадает с нелинейным до второго порядка,
+//     а шок в t̂ = 0 даёт тот же путь, что модель с новым темпом роста, стартующая из старого стационара
+for (const [variant, tg] of [['n', 'n'], ['tp', 'g'], ['both', 'n'], ['both', 'g']]) {
+  const out = {};
+  for (const method of ['linear', 'nonlinear']) out[method] = run({ method, variant, shockTarget: tg, shockSize: 0.0005, shockPersistence: 'permanent', tHat: 3 });
+  let md = 0, mx = 0;
+  for (const v of ['c', 'k', 'y', 'i', 'N']) for (let j = 0; j < 40; j++) { md = Math.max(md, Math.abs(out.linear.irf[v][j] - out.nonlinear.irf[v][j])); mx = Math.max(mx, Math.abs(out.nonlinear.irf[v][j])); }
+  assert.ok(md / mx < 1e-2, `лин. и нелин. решения при шоке ${tg} (${variant}): ${md / mx}`);
+  const d = 0.003, base = { method: 'nonlinear', variant };
+  const a = run({ ...base, shockTarget: tg, shockSize: d, shockPersistence: 'permanent', tHat: 0 });
+  const sso = steady({ ...defaults, ...base }), ssn = steady({ ...defaults, ...base, [tg]: defaults[tg] + d });
+  const b = run({ ...base, [tg]: defaults[tg] + d, shockTarget: 'k', shockSize: 100 * (sso.k / ssn.k - 1), tHat: 0 });
+  for (const v of ['c', 'k', 'y', 'i']) for (let j = 0; j < 40; j++) assert.ok(Math.abs(a.eff[v][j] - b.eff[v][j]) < 1e-9, `шок ${tg} в t̂=0 = модель с новым темпом (${variant}, ${v}, ${j})`);
+  const e = run({ ...base, shockTarget: tg, shockSize: d, shockPersistence: 'permanent', tHat: 5 });
+  assert.ok(Math.abs(e.irf[tg === 'g' ? 'E' : 'L'][5]) < 1e-9 && e.irf[tg === 'g' ? 'E' : 'L'].at(-1) > 0, 'уровень тренда расходится только после t̂');
+}
 console.log('Модель RBC: все проверки пройдены');
