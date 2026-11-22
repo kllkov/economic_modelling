@@ -310,7 +310,7 @@ const deriv = (arr, i, h) => (arr[i + 1] - arr[i - 1]) / (2 * h);
           for (const r of F.system) { check(r.tex, V, tol, `${where}, «${r.label}», t=${i}`); check(r.num, V, tolN, `${where}, «${r.label}» (числа), t=${i}`); }
         }
         const S = res.ss0, Y = (L0, lo) => (mode === 'eff' ? `\\tilde ${lo}^*` : mode === 'pc' ? `${lo}^*` : `${L0}^*`);
-        const VS = { ...P, 'r^*': S.r, 'N^*': S.N, [Y('K', 'k')]: S.k, [Y('Y', 'y')]: S.y, [Y('C', 'c')]: S.c, [Y('I', 'i')]: S.i, [hasG ? '\\tilde w^*' : 'w^*']: S.w };
+        const VS = { ...P, 'A^*': S.A, 'r^*': S.r, 'N^*': S.N, [Y('K', 'k')]: S.k, [Y('Y', 'y')]: S.y, [Y('C', 'c')]: S.c, [Y('I', 'i')]: S.i, [hasG ? '\\tilde w^*' : 'w^*']: S.w };
         for (const r of rbc.steadyTable(st, res)) {
           check(`${r.sym}=${r.tex}`, VS, { abs: 1e-10, rel: 1e-10 }, `${where}, таблица стационара (${r.name})`);
           check(`${r.sym}=${r.value}`, VS, { abs: 1e-12, rel: 1e-12 }, `${where}, таблица стационара: значение (${r.name})`);

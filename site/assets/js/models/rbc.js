@@ -134,7 +134,7 @@ export function steady(s, par = baseParams(s)) {
   const cN = Math.pow(kap, a) - dep * kap;                   // c*/N*
   const N = isLeis(s) ? w / (w + par.theta * cN) : Math.pow(w / (par.theta * cN), 1 / (1 + par.chi));
   const k = kap * N, y = Math.pow(kap, a) * N, c = cN * N, i = dep * k;
-  return { G, dep, r, kap, w, cN, N, k, y, c, i, KY: k / y };
+  return { A: 1, G, dep, r, kap, w, cN, N, k, y, c, i, KY: k / y };
 }
 
 function checkParams(s, p, e, tag = '') {
@@ -507,7 +507,7 @@ export function formulas(s) {
   const lawN = 'L_{t+1}=(1+n)L_t', lawG = 'E_{t+1}=(1+g)E_t';
   const trendLine = hasN && hasG ? `${lawN},\\qquad ${lawG},\\qquad L_0=E_0=1` : hasN ? `${lawN},\\qquad L_0=1`
     : hasG ? `${lawG},\\qquad E_0=1,\\qquad L_t=1` : 'L_t=1';
-  const exo = ['\\ln A_{t+1}=\\rho\\ln A_t+\\varepsilon_{t+1},\\qquad A^*=1', trendLine];
+  const exo = ['\\ln A_{t+1}=\\rho\\ln A_t+\\varepsilon_{t+1}', trendLine];
   fs.dec.push({ agent: 'Экзогенные процессы', items: exo });
   fs.cen.push({ agent: 'Центральный планировщик', system: true, items: [maxH,
     `\\text{s.t.}\\quad ${C}_t+${lhsK}=A_t${K}_t^{\\alpha}N_t^{1-\\alpha}+(1-${ps('delta', '\\delta')})${K}_t`, bounds, tvc] });
@@ -610,6 +610,7 @@ export function steadyTable(s, res) {
   const kap = `\\dfrac{${kS}}{N^*}`, cN = `\\dfrac{${cS}}{N^*}`;
   const e = mode === 'eff' ? ' на эфф. работника' : mode === 'pc' ? ' на душу' : '';
   const rows = [
+    { sym: 'A^*', name: 'технология', key: 'A', tex: '1' },
     { sym: 'r^*', name: 'ставка процента', key: 'r', pct: true, tex: G ? `\\dfrac{${G}}{\\beta}-1` : '\\dfrac{1}{\\beta}-1' },
     { sym: kap, name: 'капитал на единицу труда', key: 'kap', tex: '\\left(\\dfrac{\\alpha}{r^*+\\delta}\\right)^{\\frac{1}{1-\\alpha}}' },
     { sym: wS, name: `зарплата${hasG ? ' на эфф. единицу труда' : ''}`, key: 'w', tex: `(1-\\alpha)\\left(${kap}\\right)^{\\alpha}` },

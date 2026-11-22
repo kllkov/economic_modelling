@@ -17,6 +17,7 @@ const SHOCK_TARGETS = {
   k:     { label: 'Капитал $K_t$', kind: 'state', unit: '%', def: -20, step: 1 },
   tfp:   { label: 'Уровень технологии $E_t$', kind: 'param', group: 'state', unit: '%', def: 10, step: 1, variant: 'tp' },
   L:     { label: 'Уровень населения $L_t$', kind: 'state', unit: '%', def: 10, step: 1 },
+  g:     { label: 'Темп роста технологии $g$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, variant: 'tp', notUtility: 'cara' },
   n:     { label: 'Темп роста населения $n$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005 },
   beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', unit: 'Δ', def: 0.01, step: 0.005, time: 'discrete' },
   rho:   { label: 'Ставка дисконтирования $\\rho$', kind: 'param', unit: 'Δ', def: -0.01, step: 0.005, time: 'continuous' },
@@ -29,7 +30,7 @@ const SHOCK_TARGETS = {
 
 // параметр, путь которого показывается отдельным графиком при его шоке (как δ_t в материалах курса)
 const PAR_CHART = { delta: ['Норма выбытия капитала', '\\delta_t'], beta: ['Дисконт-фактор', '\\beta_t'], rho: ['Ставка дисконтирования', '\\rho_t'],
-  sigma: ['Неприятие риска', '\\sigma_t'], theta: ['Неприятие риска', '\\theta_t'] };
+  sigma: ['Неприятие риска', '\\sigma_t'], theta: ['Неприятие риска', '\\theta_t'], g: ['Темп роста технологии', 'g_t'] };
 
 export const defaults = {
   time: 'discrete', version: 'centralized', variant: 'tp', objective: 'mill',
@@ -43,7 +44,7 @@ export const defaults = {
 function shockTargetsFor(s) {
   return Object.entries(SHOCK_TARGETS)
     .filter(([, d]) => (!d.time || d.time === s.time) && (!d.utility || d.utility === s.utility)
-      && (!d.variant || d.variant === s.variant))
+      && (!d.variant || d.variant === s.variant) && d.notUtility !== s.utility)
     .sort(([, a], [, b]) => ((a.group ?? a.kind) === 'state' ? 0 : 1) - ((b.group ?? b.kind) === 'state' ? 0 : 1))
     .map(([v, d]) => ({ v, l: d.label }));
 }
@@ -160,7 +161,7 @@ function buildPaths(s, N, h, scale) {
   const P = {
     beta: new Float64Array(N + 2), rho: new Float64Array(N + 2), delta: new Float64Array(N + 2),
     sigma: new Float64Array(N + 2), theta: new Float64Array(N + 2), Z: new Float64Array(N + 2),
-    n: new Float64Array(N + 2), D: new Float64Array(N + 2),
+    n: new Float64Array(N + 2), D: new Float64Array(N + 2), g: new Float64Array(N + 2),
   };
   const target = s.shockTarget;
   const size = s.shockSize * scale;
@@ -174,6 +175,7 @@ function buildPaths(s, N, h, scale) {
     P.sigma[j] = s.utility === 'log' ? 1 : s.sigma + (target === 'sigma' ? size * prof : 0);
     P.theta[j] = s.theta + (target === 'theta' ? size * prof : 0);
     P.n[j] = s.n + (target === 'n' ? size * prof : 0);
+    P.g[j] = (s.variant === 'tp' ? s.g : 0) + (target === 'g' ? size * prof : 0);
     P.Z[j] = 1 + (target === 'tfp' ? (size / 100) * prof : 0);
     // скачок k̃ в t̂: K′ = (1+φ)K сдвигает его на (1+φ), L′ = (1+φ)L — на 1/(1+φ)
     P.D[j] = j !== jHat ? 1 : target === 'k' ? 1 + size / 100 : target === 'L' ? 1 / (1 + size / 100) : 1;
@@ -183,8 +185,8 @@ function buildPaths(s, N, h, scale) {
 
 // Стационар в единицах «на работника, детрендированные по (1+g)^t» для сетки с шагом h
 // (h = 1 — дискретное время; exact = true — точные формулы непрерывного времени).
-function steady(s, P, j, h, g, exact = false) {
-  const a = s.alpha, d = P.delta[j], Z = P.Z[j], n = P.n[j];
+function steady(s, P, j, h, g0, exact = false) {
+  const a = s.alpha, d = P.delta[j], Z = P.Z[j], n = P.n[j], g = P.g[j];
   const mill = s.objective !== 'bentham';
   const sig = s.utility === 'cara' ? 0 : P.sigma[j];
   let r, dep; // dep — инвестиции, нужные для поддержания k̃ (на единицу k̃)
@@ -232,6 +234,7 @@ function validate(s) {
     errors.push('Шок параметра неприятия риска допускается только неожиданным и перманентным.');
   if (s.shockTiming === 'expected' && !(s.t0 < s.tHat))
     errors.push('Для ожидаемого шока момент объявления $t_0$ должен быть раньше $\\hat t$.');
+  if (s.shockTarget === 'g' && (s.variant !== 'tp' || s.utility === 'cara')) errors.push('Шок темпа роста технологии доступен только с технологическим прогрессом и не для CARA.');
   if (s.shockTarget === 'tfp' && s.variant !== 'tp') errors.push('Шок технологии доступен только в вариации с технологическим прогрессом.');
   if (!(s.k0 > 0)) errors.push('Начальная капиталовооружённость должна быть положительной.');
   if (s.shockTarget === 'k' && s.shockSize <= -100) errors.push('Капитал не может упасть больше чем на 100%.');
@@ -254,7 +257,8 @@ function solvePath(s, h, N, scale, guess) {
   const jHat = Math.round(s.tHat / h);
   const expected = s.shockTiming === 'expected' && s.t0 < s.tHat;
   const jStart = Math.min(expected ? Math.round(s.t0 / h) : jHat, N - 5);
-  const lnG1 = Math.log(1 + g * h);
+  const lnG = new Float64Array(N + 3);   // ln E_j = Σ_{i<j} ln(1+g_i h): накопленный тренд технологии
+  for (let j = 0; j <= N + 1; j++) lnG[j + 1] = lnG[j] + Math.log(1 + P.g[j] * h);
   const util = s.utility;
 
   const k = new Float64Array(N + 2);
@@ -265,13 +269,13 @@ function solvePath(s, h, N, scale, guess) {
 
   const c = new Float64Array(N + 1);
   const lnMU = (cj, j) => {
-    const lnLevel = Math.log(cj) + j * lnG1;
+    const lnLevel = Math.log(cj) + lnG[j];
     if (util === 'crra') return -P.sigma[j] * lnLevel;
     if (util === 'log') return -lnLevel;
-    return -P.theta[j] * cj * Math.exp(j * lnG1);
+    return -P.theta[j] * cj * Math.exp(lnG[j]);
   };
   const lnB = (j) => (s.time === 'discrete' ? Math.log(P.beta[j]) : -P.rho[j] * h);
-  const gam = (j) => (1 + g * h) * (1 + P.n[j] * h); // (1+n)(1+g): рост числа эффективных работников
+  const gam = (j) => (1 + P.g[j] * h) * (1 + P.n[j] * h); // (1+n)(1+g): рост числа эффективных работников
 
   const fill = (x) => {
     for (let i = 0; i < nUnk; i++) k[jStart + 1 + i] = x[i];
@@ -317,7 +321,7 @@ function solvePath(s, h, N, scale, guess) {
   if (!res.ok) return { ok: false, x: res.x, reason: 'Численный метод не сошёлся.' };
   fill(res.x);
   for (let j = 0; j < jStart; j++) c[j] = ss0.c;
-  return { ok: true, x: res.x, k: Float64Array.from(k), c: Float64Array.from(c), P, base, ss0, ssF, g, jStart, jHat, expected };
+  return { ok: true, x: res.x, k: Float64Array.from(k), c: Float64Array.from(c), P, base, ss0, ssF, g, lnG, jStart, jHat, expected };
 }
 
 export function solve(s) {
@@ -340,7 +344,7 @@ export function solve(s) {
   }
   if (!sol.ok) return { ok: false, errors: [sol.reason || 'Не удалось найти решение.'] };
 
-  const { k, c, P, base, ss0, g } = sol;
+  const { k, c, P, base, ss0, g, lnG } = sol;
   const a = s.alpha;
   const Np = Math.round(s.horizon / h);
   const lnG1 = Math.log(1 + g * h);
@@ -357,7 +361,7 @@ export function solve(s) {
   if (s.shockTarget === 'L') for (let j = Math.round(s.tHat / h); j <= Np; j++) Lp[j] *= 1 + s.shockSize / 100;
   const stride = Math.max(1, Math.round(0.1 / h)); // на графики — точки с шагом 0.1
   for (let j = 0; j <= Np; j += stride) {
-    const G = Math.exp(j * lnG1);
+    const G = Math.exp(lnG[j]), Gb = Math.exp(j * lnG1);
     const Z = P.Z[j];
     const yh = Math.pow(k[j], a) * Math.pow(Z, 1 - a);
     const ch = c[j];
@@ -369,15 +373,15 @@ export function solve(s) {
     for (const v of ['c', 'k', 'y', 'i', 'w']) {
       lvl[v].push(hat[v] * G);
       eff[v].push(hat[v] / Z);
-      baseLvl[v].push(ss0[v] * G);
+      baseLvl[v].push(ss0[v] * Gb);
       series[v].push(100 * (hat[v] / ss0[v] - 1));
     }
-    for (const v of ['c', 'k', 'y', 'i']) { agg[v].push(hat[v] * G * Lp[j]); baseAgg[v].push(ss0[v] * G * Lb[j]); }
+    for (const v of ['c', 'k', 'y', 'i']) { agg[v].push(hat[v] * G * Lp[j]); baseAgg[v].push(ss0[v] * Gb * Lb[j]); }
     series.r.push(100 * (r - ss0.r));
     series.s.push(100 * (ih / yh - ss0.s));
     lvl.r.push(100 * r);
     lvl.s.push((100 * ih) / yh);
-    lvl.E.push(G * Z); baseLvl.E.push(G); series.E.push(100 * (Z - 1));
+    lvl.E.push(G * Z); baseLvl.E.push(Gb); series.E.push(100 * (G * Z / Gb - 1));
     lvl.L.push(Lp[j]); baseLvl.L.push(Lb[j]); series.L.push(100 * (Lp[j] / Lb[j] - 1));
     if (parKey) { lvl.par.push(P[parKey][j]); baseLvl.par.push(base[parKey][j]); series.par.push(P[parKey][j] - base[parKey][j]); }
   }
@@ -565,7 +569,7 @@ export function formulas(s) {
     shockTex = `${Q}^{\\prime}_{\\hat t}=(1+\\varphi_${Q})${Q}_{\\hat t}`;
     shockNum = `\\varphi_${Q}=${n4(s.shockSize / 100)}`;
   } else {
-    const sym = { beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta', delta: '\\delta', n: 'n' }[tg];
+    const sym = { beta: '\\beta', rho: '\\rho', sigma: '\\sigma', theta: '\\theta', delta: '\\delta', n: 'n', g: 'g' }[tg];
     shockTex = `${sym}_t=${sym}+\\Delta ${sym}\\cdot ${prof}`;
     shockNum = `\\Delta ${sym}=${n4(s.shockSize)}`;
   }

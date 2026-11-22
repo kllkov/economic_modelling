@@ -150,4 +150,21 @@ for (const objective of ['mill', 'bentham']) for (const [shockTarget, size] of [
   const th0 = objective === 'mill' ? 1 / (1 + n) : 1;
   near(Math.pow(x.levels.c[9], -sg) / (beta * (1 + x.levels.r[10] / 100) * th0 * Math.pow(x.levels.c[10], -sg)), 1, 1e-9, `обычный Эйлер (${objective}, ${shockTarget})`);
 }
+// 14. Шок на темп роста технологии g: в t̂ = 0 путь совпадает с моделью с новым g, стартующей из старого стационара;
+//     в общем случае экономика сходится к новому стационару, а накопленный тренд E_t меняется только с t̂
+for (const objective of ['mill', 'bentham']) for (const utility of ['crra', 'log']) for (const time of ['discrete', 'continuous']) {
+  const base = { variant: 'tp', n: 0.01, objective, utility, time, horizon: 60 };
+  const a = run({ ...base, shockTarget: 'g', shockSize: 0.01, tHat: 0, shockPersistence: 'permanent' });
+  assert.ok(a.ok, JSON.stringify(a.errors));
+  const ref = run({ ...base, g: defaults.g + 0.01, shockTarget: 'k', shockSize: 0, tHat: 0 });
+  const k0 = a.ss0.k, kn = ref.ss0.k;
+  const b = run({ ...base, g: defaults.g + 0.01, shockTarget: 'k', shockSize: 100 * (k0 / kn - 1), tHat: 0 });
+  assert.ok(b.ok, JSON.stringify(b.errors));
+  const m = time === 'discrete' ? 1 : 10;
+  for (const j of [0, 5, 30].map((v) => v * m)) { near(a.eff.c[j], b.eff.c[j], 2e-3, `c̃ при шоке g = модель с новым g (${objective}, ${utility}, ${time})`); near(a.eff.k[j], b.eff.k[j], 2e-3, 'k̃'); }
+  near(a.irf.k.at(-1) / 100 + 1, a.ssF.k / a.ss0.k, 2e-3, 'сходимость к новому стационару');
+  const x = run({ ...base, shockTarget: 'g', shockSize: 0.01, tHat: 10, shockPersistence: 'permanent' });
+  near(x.irf.E[9 * m], 0, 1e-9, 'E_t до t̂ без изменений');
+  assert.ok(x.irf.E.at(-1) > 20 && x.irf.E.at(-1) < 70, 'E_t уходит от старого тренда вверх');
+}
 console.log('Все проверки пройдены');
