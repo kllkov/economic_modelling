@@ -19,7 +19,7 @@ const SHOCK_TARGETS = {
   k:     { label: 'Капитал $K_t$', kind: 'exo', unit: '%', def: -10, step: 1 },
   E:     { label: 'Уровень технологии $E_t$', kind: 'exo', unit: '%', def: 10, step: 1, trend: 'hasG' },
   L:     { label: 'Уровень населения $L_t$', kind: 'exo', unit: '%', def: 10, step: 1, trend: 'hasN' },
-  beta:  { label: 'Дисконт-фактор $\\beta$ (шок предпочтений)', kind: 'param', sym: '\\beta', unit: 'Δ', def: 0.002, step: 0.001 },
+  beta:  { label: 'Дисконт-фактор $\\beta$', kind: 'param', sym: '\\beta', unit: 'Δ', def: 0.002, step: 0.001 },
   theta: { label: 'Тягость труда $\\theta$', kind: 'param', sym: '\\theta', unit: 'Δ', def: 0.4, step: 0.1 },
   chi:   { label: 'Обратная эластичность Фриша $\\chi$', kind: 'param', sym: '\\chi', unit: 'Δ', def: 0.5, step: 0.1 },
   delta: { label: 'Выбытие капитала $\\delta$', kind: 'param', sym: '\\delta', unit: 'Δ', def: 0.005, step: 0.001 },
@@ -77,11 +77,7 @@ export const controls = [
   { id: 'shockTarget', label: 'На что шок', type: 'select', rich: true, options: shockTargetsFor,
     groupLabel: (v) => (SHOCK_TARGETS[v]?.kind === 'param' ? 'параметры' : 'технология, капитал и труд') },
   { id: 'shockSize', label: (s) => (SHOCK_TARGETS[s.shockTarget]?.unit === '%' ? 'Величина, $\\Delta_{\\%}$' : 'Величина, $\\Delta$'),
-    type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.5,
-    hint: (s) => (s.shockTarget === 'tfp' ? 'Неожиданный шок $\\varepsilon$ в $\\hat t$; дальше $\\ln A_t$ затухает с персистентностью $\\rho$'
-      : s.shockTarget === 'k' ? 'Неожиданное разрушение (или прирост) капитала в $\\hat t$'
-      : s.shockTarget === 'E' || s.shockTarget === 'L' ? `Неожиданный сдвиг уровня ${s.shockTarget === 'E' ? 'технологии' : 'населения'} в $\\hat t$; дальше он растёт прежним темпом`
-      : 'Неожиданное изменение параметра в $\\hat t$') },
+    type: 'number', step: (s) => SHOCK_TARGETS[s.shockTarget]?.step ?? 0.5 },
   { id: 'tHat', label: 'Момент шока $\\hat t$', type: 'number', min: 0, max: 100, step: 1 },
   { id: 'shockPersistence', label: 'Длительность', type: 'segmented',
     options: [{ v: 'permanent', l: 'Перманентный' }, { v: 'temporary', l: 'Временный' }], show: isPar },
@@ -507,7 +503,6 @@ export function formulas(s) {
   const lab = `${hasG ? 'E_t' : ''}${hasN ? 'L_t' : ''}N_t`;
   const labPow = hasN || hasG ? `(${lab})^{1-\\alpha}` : 'N_t^{1-\\alpha}';
   fs.dec.push({ agent: 'Фирмы', items: [`\\max_{K_t,\\,N_t}\\; \\Pi_t=A_tK_t^{\\alpha}${labPow}-w_t${hasN ? 'L_t' : ''}N_t-(r_t+${ps('delta', '\\delta')})K_t`] });
-  fs.dec.push({ agent: 'Рынки', items: ['K_t^D=K_t^S', 'N_t^D=N_t^S'] });
   fs.dec.push({ agent: 'Балансовые соотношения', items: ['Y_t=C_t+I_t'] });
   const lawN = 'L_{t+1}=(1+n)L_t', lawG = 'E_{t+1}=(1+g)E_t';
   const trendLine = hasN && hasG ? `${lawN},\\qquad ${lawG},\\qquad L_0=E_0=1` : hasN ? `${lawN},\\qquad L_0=1`
@@ -550,8 +545,8 @@ export function formulas(s) {
   // ── шок
   const hat = `\\hat t=${s.tHat}`;
   if (tg === 'tfp') fs.shock.push({
-    tex: '\\ln A_{\\hat t}=\\rho\\ln A_{\\hat t-1}+\\varepsilon,\\qquad \\varepsilon_t=0\\ \\text{при}\\ t\\ne\\hat t',
-    num: `\\varepsilon=${n4(s.shockSize / 100)},\\qquad ${hat}` });
+    tex: '\\ln A_{t+1}=\\rho\\ln A_t+\\varepsilon_{t+1},\\qquad \\varepsilon_t=0\\ \\text{при}\\ t\\ne\\hat t',
+    num: `\\varepsilon_{\\hat t}=${n4(s.shockSize / 100)},\\qquad ${hat}` });
   else if (tg === 'k' || tg === 'E' || tg === 'L') {
     const Q = tg === 'k' ? 'K' : tg;
     fs.shock.push({ tex: `${Q}^{\\prime}_{\\hat t}=(1+\\varphi_${Q})${Q}_{\\hat t}`, num: `\\varphi_${Q}=${n4(s.shockSize / 100)},\\qquad ${hat}` });

@@ -118,7 +118,7 @@ for (const variant of ['base', 'tp']) for (const shockTarget of ['tfp', 'k']) {
   assert.ok(F.system[0].tex.startsWith('(1+n)c_{t+1}'), 'на душу: Эйлер с (1+n) и строчными буквами');
   assert.ok(/\(1\+g\)\\tilde c_\{t\+1\}/.test(formulas({ ...defaults, variant: 'tp' }).system[0].tex), 'с ТП: (1+g) и тильда');
   const ag = formulas(defaults).dec.map((g) => g.agent);
-  assert.deepEqual(formulas(defaults).dec.find((g) => g.agent === 'Рынки').items, ['K_t^D=K_t^S', 'N_t^D=N_t^S'], 'рынки: спрос D и предложение S');
+  assert.ok(!ag.includes('Рынки'), 'блока «Рынки» нет');
   assert.deepEqual(ag.slice(-2), ['Балансовые соотношения', 'Экзогенные процессы'], 'балансовые соотношения перед экзогенными процессами');
   for (const variant of ['n', 'tp', 'both']) run({ variant, method: 'nonlinear' });
 }

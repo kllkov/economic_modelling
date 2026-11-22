@@ -258,7 +258,7 @@ export const MODELS = [
           { label: 'ТСР', tex: 'r^*=\\dfrac{(1+n)(1+g)}{\\beta}-1,\\qquad \\tilde i^*=\\big[(1+n)(1+g)-1+\\delta\\big]\\tilde k^*,\\qquad N_t=N^*' },
         ] },
         { title: 'Шоки', eqs: [
-          { label: 'Технология', tex: '\\ln A_{\\hat t}=\\rho\\ln A_{\\hat t-1}+\\varepsilon,\\qquad \\varepsilon_t=0\\ \\text{при}\\ t\\ne\\hat t' },
+          { label: 'Технология', tex: '\\ln A_{t+1}=\\rho\\ln A_t+\\varepsilon_{t+1},\\qquad \\varepsilon_t=0\\ \\text{при}\\ t\\ne\\hat t' },
           { label: 'Уровни $K$, $E$, $L$', tex: 'Q^{\\prime}_{\\hat t}=(1+\\varphi_Q)Q_{\\hat t},\\qquad Q\\in\\{K,\\,E,\\,L\\}' },
           { label: 'Параметр', tex: 'x_t=x+\\Delta x\\cdot p_t,\\qquad x\\in\\{\\beta,\\,\\theta,\\,\\chi,\\,\\delta\\}' },
         ] },
