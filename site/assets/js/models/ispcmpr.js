@@ -1,6 +1,6 @@
 // Трёхуравненная новокейнсианская модель IS–PC–MPR (Galí, гл. 3) в дискретном времени.
 // ỹ_t (в коде x) — разрыв выпуска, π_t — инфляция, i_t — номинальная ставка, r_t = i_t − E*_t π_{t+1} — реальная ставка,
-// r^N_t — естественная ставка (естественные величины — с индексом N, стационарные — с индексом SS). Модель лог-линеаризована вокруг стационара с нулевой инфляцией (цель ЦБ = 0).
+// r^n_t — естественная ставка (естественные величины — с индексом n, стационарные — с индексом SS). Модель лог-линеаризована вокруг стационара с нулевой инфляцией (цель ЦБ = 0).
 // Все ставки и инфляция — в процентах за период.
 //
 // Кривая Филлипса: π_t = β E*_t π_{t+1} + κ ỹ_t + u_t; правило: i_t = ρ + φ_π π_t + φ_y ỹ_t + v_t (Galí).
@@ -183,7 +183,7 @@ export function simulate(st, N, scale = 1, init = null) {
   const E = []; for (let t = 0; t <= N + 1; t++) E.push(exo(st, t, scale));
   const ex = st.expectations;
   const t0 = ex === 'rational' && st.shockTiming === 'expected' && scale ? Math.min(st.t0, st.tHat) : st.tHat;
-  // естественная ставка: r^N_t = ρ + σψ(E_t a_{t+1} − a_t) + d_t, будущая технология известна с t₀
+  // естественная ставка: r^n_t = ρ + σψ(E_t a_{t+1} − a_t) + d_t, будущая технология известна с t₀
   const rnAt = (t) => C.rho + st.sigma * C.psi * ((t >= t0 ? E[t + 1].a : E[t].a) - E[t].a) + E[t].d;
   const out = { pi: [], x: [], i: [], r: [], epi: [], ex: [], rn: [], E, t0, C };
   const ss0 = steady(st, exo(st, 0, 0), C);
@@ -273,12 +273,12 @@ export function chartSpecs(st) {
     { id: 'l', title: 'Реальные денежные остатки', sym: 'l_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
     { id: 'dm', title: 'Рост денежной массы', sym: '\\Delta m_t', irfUnit: pp, lvlUnit: '%' },
   ];
-  if (tg === 'd' || tg === 'a') specs.push({ id: 'rn', title: 'Естественная ставка', sym: 'r^N_t', irfUnit: pp, lvlUnit: '%' });
+  if (tg === 'd' || tg === 'a') specs.push({ id: 'rn', title: 'Естественная ставка', sym: 'r^n_t', irfUnit: pp, lvlUnit: '%' });
   if (tg === 'u') specs.push({ id: 'u', title: 'Шок издержек', sym: 'u_t', irfUnit: pp, lvlUnit: 'п.п.' });
   if (tg === 'v') specs.push({ id: 'v', title: 'Монетарный шок', sym: 'v_t', irfUnit: pp, lvlUnit: 'п.п.' });
   if (tg === 'a') specs.push(
     { id: 'a', title: 'Технология', sym: 'a_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
-    { id: 'yn', title: 'Естественный выпуск', sym: 'y^N_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
+    { id: 'yn', title: 'Естественный выпуск', sym: 'y^n_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' },
     { id: 'y', title: 'Выпуск', sym: 'y_t', irfUnit: '$\\Delta_{\\%}$ от s.s.', lvlUnit: '%' });
   return specs;
 }
@@ -320,8 +320,8 @@ export function formulas(st) {
   // ── 2. уравнения динамики
   const s = st.sigma, b = st.beta;
   fs.system.push({ label: 'Dynamic IS',
-    tex: `\\tilde y_t=${Ex}\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-${Ex}\\pi_{t+1}-r^N_t\\big)`,
-    num: `\\tilde y_t=${Ex}\\tilde y_{t+1}-${n4(1 / s)}\\big(i_t-${Ex}\\pi_{t+1}-r^N_t\\big)` });
+    tex: `\\tilde y_t=${Ex}\\tilde y_{t+1}-\\dfrac{1}{\\sigma}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)`,
+    num: `\\tilde y_t=${Ex}\\tilde y_{t+1}-${n4(1 / s)}\\big(i_t-${Ex}\\pi_{t+1}-r^n_t\\big)` });
   fs.system.push({ label: 'Кривая Филлипса',
     tex: `\\pi_t=\\beta\\,${Ex}\\pi_{t+1}+\\kappa\\,\\tilde y_t+u_t`,
     num: `\\pi_t=${n4(b)}\\,${Ex}\\pi_{t+1}+${n4(C.kappa)}\\,\\tilde y_t+u_t` });
@@ -334,10 +334,10 @@ export function formulas(st) {
   fs.system.push({ label: 'Реальная ставка',
     tex: `r_t=i_t-${Ex}\\pi_{t+1}` });
   fs.system.push({ label: 'Естественная ставка',
-    tex: `r^N_t=\\rho+\\sigma\\psi_{ya}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=-\\ln\\beta`,
-    num: `r^N_t=${n4(C.rho)}+${n4(s * C.psi)}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=${n4(C.rho)}\\%` });
+    tex: `r^n_t=\\rho+\\sigma\\psi_{ya}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=-\\ln\\beta`,
+    num: `r^n_t=${n4(C.rho)}+${n4(s * C.psi)}\\big(${Ex}a_{t+1}-a_t\\big)+d_t,\\qquad \\rho=${n4(C.rho)}\\%` });
   fs.system.push({ label: 'Выпуск',
-    tex: 'y_t=y^N_t+\\tilde y_t,\\qquad y^N_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\chi}{\\sigma(1-\\alpha)+\\chi+\\alpha}',
+    tex: 'y_t=y^n_t+\\tilde y_t,\\qquad y^n_t=\\psi_{ya}\\,a_t,\\qquad \\psi_{ya}=\\dfrac{1+\\chi}{\\sigma(1-\\alpha)+\\chi+\\alpha}',
     num: `\\psi_{ya}=${n4(C.psi)}` });
   fs.system.push({ label: 'Спрос на деньги',
     tex: 'l_t=\\dfrac{\\sigma}{\\nu}\\,y_t-\\eta\\,(i_t-\\rho),\\qquad l_t\\equiv m_t-p_t,\\qquad \\eta=\\dfrac{\\beta}{\\nu(1-\\beta)}',
@@ -378,9 +378,9 @@ export function steadyTable(st, res) {
     { sym: i, name: 'номинальная ставка', key: 'i', tex: `\\rho+\\phi_\\pi${pi}+\\phi_y${y}+v` },
     { sym: r, name: 'реальная ставка', key: 'r', tex: naive ? i : `${i}-${pi}` },
     { sym: SS(naive ? 'E^*\\pi' : '\\mathbb E\\pi'), name: 'инфляционные ожидания', key: 'epi', tex: naive ? '0' : pi },
-    { sym: SS('r^N'), name: 'естественная ставка', key: 'rn', tex: '\\rho+d' },
+    { sym: SS('r^n'), name: 'естественная ставка', key: 'rn', tex: '\\rho+d' },
   ];
-  if (st.shockTarget === 'a') rows.push({ sym: SS('y^N'), name: 'естественный выпуск', key: 'yn', tex: '\\psi_{ya}a' });
+  if (st.shockTarget === 'a') rows.push({ sym: SS('y^n'), name: 'естественный выпуск', key: 'yn', tex: '\\psi_{ya}a' });
   const v = (ss, r) => `${fmt(ss[r.key], 3)}%`;
   const out = rows.map((r) => ({ ...r, before: v(res.ss0, r), after: v(res.ssF, r) }));
   out.push({ sym: '\\rho', name: 'ставка дисконтирования', tex: '-\\ln\\beta', before: `${fmt(res.C.rho, 3)}%`, after: `${fmt(res.C.rho, 3)}%` });
